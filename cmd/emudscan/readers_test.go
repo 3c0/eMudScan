@@ -148,3 +148,24 @@ func TestLicensesText(t *testing.T) {
 		}
 	}
 }
+
+func TestCharRef(t *testing.T) {
+	for _, c := range []struct {
+		s    string
+		base int
+		want rune
+		ok   bool
+	}{
+		{"233", 10, 'é', true},
+		{"E9", 16, 'é', true},
+		{"10FFFF", 16, 0x10FFFF, true},
+		{"110000", 16, 0, false},     // above the last Unicode code point
+		{"4294967295", 10, 0, false}, // fits in 32 bits, not in a rune
+		{"-1", 10, 0, false},
+		{"zz", 16, 0, false},
+	} {
+		if r, ok := charRef(c.s, c.base); r != c.want || ok != c.ok {
+			t.Errorf("charRef(%q, %d) = %q, %v; want %q, %v", c.s, c.base, r, ok, c.want, c.ok)
+		}
+	}
+}

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // pkgRef is a package of a software in a package manager.
@@ -240,16 +241,26 @@ func xmlUnescape(t string) string {
 		case ent == "apos":
 			b.WriteByte('\'')
 		case strings.HasPrefix(ent, "#x") || strings.HasPrefix(ent, "#X"):
-			if n, err := strconv.ParseUint(ent[2:], 16, 32); err == nil {
-				b.WriteRune(rune(n))
+			if r, ok := charRef(ent[2:], 16); ok {
+				b.WriteRune(r)
 			}
 		case strings.HasPrefix(ent, "#"):
-			if n, err := strconv.ParseUint(ent[1:], 10, 32); err == nil {
-				b.WriteRune(rune(n))
+			if r, ok := charRef(ent[1:], 10); ok {
+				b.WriteRune(r)
 			}
 		default:
 			b.WriteString("&" + ent + ";")
 		}
 	}
 	return b.String()
+}
+
+// charRef decodes the number of a character reference (233 in &#233;, E9 in
+// &#xE9;). It returns false when the number is not a Unicode code point.
+func charRef(s string, base int) (rune, bool) {
+	n, err := strconv.ParseUint(s, base, 32)
+	if err != nil || n > unicode.MaxRune {
+		return 0, false
+	}
+	return rune(n), true
 }
