@@ -1,0 +1,87 @@
+# Builds eMudScan.exe for each push to main and each pull request, and creates a
+# draft release when a version tag (1.0, 1.1…) is pushed. See docs/building.md.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['[0-9]*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable  # the latest Go release, which receives security fixes
+          cache: false        # nothing to cache: eMudScan has no dependencies
+
+      - name: Check, test and build
+        run: sh scripts/build.sh
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: eMudScan
+          path: dist/eMudScan.exe
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write           # create the release
+      id-token: write           # sign the build attestation
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: eMudScan
+          path: dist
+
+      - name: Check the version and write the release notes
+        run: |
+          version=$(sed -n 's/^const appVersion *= *"\([^"]*\)".*/\1/p' cmd/emudscan/model.go)
+          date=$(sed -n 's/^const appDate *= *"\([^"]*\)".*/\1/p' cmd/emudscan/model.go)
+          if [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "::error::The tag $GITHUB_REF_NAME does not match appVersion \"$version\" in cmd/emudscan/model.go"
+            exit 1
+          fi
+          awk -v h="## $version ($date)" '$0 == h {on = 1; next} /^## / {on = 0} on' CHANGELOG.md > changes.md
+          if ! grep -q '[^[:space:]]' changes.md; then
+            echo "::error::CHANGELOG.md has no section \"## $version ($date)\""
+            exit 1
+          fi
+          # The release page: .github/release-notes.md, with the version's changes,
+          # the SHA-256 of the exe, the build log and the repository filled in.
+          sha=$(sha256sum dist/eMudScan.exe | cut -d ' ' -f 1)
+          log="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          awk -v sha="$sha" -v url="$log" -v repo="$GITHUB_REPOSITORY" '
+            $0 == "@CHANGES@" { while ((getline line < "changes.md") > 0) print line; next }
+            { gsub(/@SHA256@/, sha); gsub(/@BUILD_LOG@/, url); gsub(/@REPOSITORY@/, repo); print }
+          ' .github/release-notes.md > notes.md
+          echo "TITLE=eMudScan $version ($date)" >> "$GITHUB_ENV"
+
+      - uses: actions/attest@v4
+        with:
+          subject-path: dist/eMudScan.exe
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" dist/eMudScan.exe --draft --verify-tag --title "$TITLE" --notes-file notes.md

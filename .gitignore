@@ -1,0 +1,7 @@
+# Build output (releases are published as GitHub release files, not committed)
+/dist/
+*.exe
+*.test
+# Programs built by "go build" without -o
+/emudscan
+/cmd/emudscan/emudscan

@@ -1,0 +1,74 @@
+# Using eMudScan
+
+## The window
+
+From top to bottom:
+
+- **eMudScan and its version.** The ⓘ icon opens the About box: author, online
+  test, privacy, credits, licenses and disclaimer. **Language** (top right):
+  Automatic (Windows), English or Français. Changing it resets the window; the
+  choice is not saved.
+- **I accept the online test**: ticked at start. Hover it to see what is sent;
+  untick it to scan without any internet connection (see [Privacy](privacy.md)).
+- **Drives to scan**: local drives are ticked at start; DVD, removable and network
+  drives are not. Nothing on a drive that is not ticked is read or reported.
+- **Scan** starts the scan (it never starts on its own). It becomes **Stop**
+  during the scan, then **Scan again**. **Copy report** and **Save report** are on
+  the right.
+- **Log**: one line per step. Text can be selected and copied.
+- Three lists: **Windows certificate system**, **Internet software** (browsers,
+  messaging, mail, sync, VPN, remote access…) and **Third-party software**
+  (everything else). Drag the borders between them to resize them.
+
+## Statuses
+
+In the lists, each status has a shield; the log and the report use a mark.
+
+| Shield | Mark | Status | Meaning |
+|:-:|:-:|---|---|
+| <img src="images/status-ok.png" width="22" alt="green shield"> | ✅ | OK | Nothing to do |
+| <img src="images/status-info.png" width="22" alt="blue shield"> | ℹ | Information | Nothing to do, for your information |
+| <img src="images/status-warning.png" width="22" alt="yellow shield"> | ⚠ | Warning | May be affected: worth checking |
+| <img src="images/status-update.png" width="22" alt="red shield"> | ❗ | Update needed | Accepts the compromised certificates until updated |
+| <img src="images/status-problem.png" width="22" alt="dark red shield"> | ❌ | Problem | Windows itself still trusts the compromised certificates |
+
+## The software lists
+
+- **Software**: the software you know, with its version and package manager
+  (`tesseract 5.5.1 [Scoop]`).
+- **Component**: the part that is checked (certifi, Electron, Java…); empty when
+  the software itself is checked.
+- **Software date**: when the publisher last updated the software
+  ([how it is found](checks.md#software-date)). When the software needs an update
+  and is 12 months old or more, the date is in amber with its age: a newer
+  version may exist, or the software may no longer be maintained.
+- **Status**, **Outdated file**, **Software folder** and **Details**.
+
+Click a header to sort, click a path to open it in Explorer, hover a cell to see
+it in full. *Hide items with an OK status* filters a list.
+
+Right-click one or more rows for: Details, Open file location, Open software
+folder, Open homepage, Search on Google, Scan again, Copy, Copy paths, Select all.
+*Scan again* reads the installed software again first, so a program you have just
+updated shows its new version.
+
+## The details window
+
+Double-click a row (or press Enter) to see the element, its software date and
+where that date comes from, its folders, homepage and package, and **what to
+do**. Commands are shown in black blocks, with a copy button. eMudScan never runs
+them: you decide.
+
+For a browser that is not protected, links open the advisory's test pages in that
+browser, so you can see for yourself.
+
+## The report
+
+*Copy report* and *Save report* (UTF-8 text) give every element with the same
+explanations as the details windows. Saving a report is the only time eMudScan
+writes a file.
+
+## Command line
+
+- `--en`, `--fr`: the language for this run.
+- `--offline`: start with the online test unticked.

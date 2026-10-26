@@ -1,0 +1,11 @@
+# Texts with LF line endings everywhere, also on Windows (gofmt writes LF)
+* text=auto eol=lf
+
+# The reference data is embedded byte for byte, and impacted-intermediates.json is
+# checked against the SHA-256 pinned by the advisory: never convert line endings
+data/** -text
+
+# Binary files
+*.syso binary
+*.der binary
+*.exe binary
