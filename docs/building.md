@@ -6,7 +6,7 @@
 |---|---|
 | `cmd/emudscan/` | The program (Go, one package), its tests, and `rsrc_windows_amd64.syso` (icon, manifest, version information) |
 | `data/` | The reference data from emudhra.we-have-a-problem.com, with its notice and license, Go's license and a copy of `LICENSE`: all embedded into the program |
-| `docs/` | This documentation, and in `docs/images/` the screenshots and icons of the README (the icons are drawn by eMudScan's own code, `cmd/emudscan/icons.go`) |
+| `docs/` | This documentation, and in `docs/images/` the screenshots and icons it and the README show (the icons are drawn by eMudScan's own code, `cmd/emudscan/icons.go`) |
 | `scripts/` | Build scripts for your own PC |
 | `.github/` | The GitHub build (`workflows/build.yml`), the release page template (`release-notes.md`), Dependabot's settings (`dependabot.yml`) and the security policy (`SECURITY.md`) |
 

@@ -46,6 +46,9 @@ In the lists, each status has a shield; the log and the report use a mark.
   ([how it is found](checks.md#software-date)). When the software needs an update
   and is 12 months old or more, the date is in amber with its age: a newer
   version may exist, or the software may no longer be maintained.
+
+  <img src="images/software-date-amber.png" width="180" alt="Software date: 07/07/2025 · 15 months, in amber">
+
 - **Status**, **Outdated file**, **Software folder** and **Details**.
 
 Click a header to sort, click a path to open it in Explorer, hover a cell to see
@@ -70,11 +73,25 @@ them: you decide.
 For a browser that is not protected, links open the advisory's test pages in that
 browser, so you can see for yourself.
 
+<p align="center">
+  <img src="images/details-browser.png" width="560" alt="The details window of ungoogled-chromium: it may not receive the block list; links open the advisory's five test pages in it">
+</p>
+
 ## The report
 
 *Copy report* and *Save report* (UTF-8 text) give every element with the same
 explanations as the details windows. Saving a report is the only time eMudScan
 writes a file.
+
+## The About box
+
+The ⓘ icon next to the version opens it: what eMudScan does, who made it, its
+license, the online test and what it sends, the reference data and the
+disclaimer. *Licenses and notices* shows the full texts of the licenses.
+
+<p align="center">
+  <img src="images/about-box.png" width="440" alt="eMudScan's About box">
+</p>
 
 ## Command line
 
