@@ -19,9 +19,10 @@ builds `eMudScan.exe`. The exe can be downloaded from the run's page on the
 ## Publishing a version
 
 1. In `cmd/emudscan/model.go`, set `appVersion` and `appDate` (YYYYMMDD).
-2. Add a `## <version> (<date>)` section at the top of `CHANGELOG.md`. It is
-   copied to the release page, where GitHub keeps line breaks: write each
-   paragraph and each item on a single line.
+2. In `CHANGELOG.md`, rename the `## Unreleased` section, where changes are noted
+   as they are made, to `## <version> (<date>)`. It is copied to the release
+   page, where GitHub keeps line breaks: write each paragraph and each item on a
+   single line.
 3. Push these changes, then push a tag named after the version, such as `1.1`.
 
 GitHub then builds the exe and checks that the tag matches `appVersion` and that

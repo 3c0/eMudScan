@@ -14,12 +14,12 @@ import (
 )
 
 var (
-	moduser32   = syscall.NewLazyDLL("user32.dll")
-	modgdi32    = syscall.NewLazyDLL("gdi32.dll")
-	modcomctl32 = syscall.NewLazyDLL("comctl32.dll")
-	moduxtheme  = syscall.NewLazyDLL("uxtheme.dll")
-	modshell32  = syscall.NewLazyDLL("shell32.dll")
-	modole32    = syscall.NewLazyDLL("ole32.dll")
+	moduser32   = sysDLL("user32.dll")
+	modgdi32    = sysDLL("gdi32.dll")
+	modcomctl32 = syscall.NewLazyDLL("comctl32.dll") // by name: version 6, chosen by the manifest (see dll_windows.go)
+	moduxtheme  = sysDLL("uxtheme.dll")
+	modshell32  = sysDLL("shell32.dll")
+	modole32    = sysDLL("ole32.dll")
 
 	pRegisterClassExW          = moduser32.NewProc("RegisterClassExW")
 	pCreateWindowExW           = moduser32.NewProc("CreateWindowExW")
@@ -84,7 +84,7 @@ var (
 	pReleaseDC                 = moduser32.NewProc("ReleaseDC")
 	pGetKeyState               = moduser32.NewProc("GetKeyState")
 	pGetScrollInfo             = moduser32.NewProc("GetScrollInfo")
-	pGetSaveFileNameW          = syscall.NewLazyDLL("comdlg32.dll").NewProc("GetSaveFileNameW")
+	pGetSaveFileNameW          = sysDLL("comdlg32.dll").NewProc("GetSaveFileNameW")
 	pRedrawWindow              = moduser32.NewProc("RedrawWindow")
 	pSetScrollInfo             = moduser32.NewProc("SetScrollInfo")
 	pTrackMouseEvent           = moduser32.NewProc("TrackMouseEvent")

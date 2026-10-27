@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	modversion = syscall.NewLazyDLL("version.dll")
-	modwinhttp = syscall.NewLazyDLL("winhttp.dll")
-	modcrypt32 = syscall.NewLazyDLL("crypt32.dll")
-	modntdll   = syscall.NewLazyDLL("ntdll.dll")
-	modkernel  = syscall.NewLazyDLL("kernel32.dll")
+	modversion = sysDLL("version.dll")
+	modwinhttp = sysDLL("winhttp.dll")
+	modcrypt32 = sysDLL("crypt32.dll")
+	modntdll   = sysDLL("ntdll.dll")
+	modkernel  = kernel32
 
 	procGetFileVersionInfoSizeW = modversion.NewProc("GetFileVersionInfoSizeW")
 	procGetFileVersionInfoW     = modversion.NewProc("GetFileVersionInfoW")
@@ -295,7 +295,7 @@ type driveInfo struct {
 }
 
 var (
-	modshell32w        = syscall.NewLazyDLL("shell32.dll")
+	modshell32w        = sysDLL("shell32.dll")
 	procSHGetFileInfoW = modshell32w.NewProc("SHGetFileInfoW")
 	procSetErrorMode   = modkernel.NewProc("SetErrorMode")
 )
