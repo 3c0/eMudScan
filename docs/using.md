@@ -2,6 +2,10 @@
 
 ## The window
 
+<p align="center">
+  <img src="images/main-window.png" width="860" alt="eMudScan's main window after a scan: the online test option, the drives, the buttons, the log and the three lists">
+</p>
+
 From top to bottom:
 
 - **eMudScan and its version.** The ⓘ icon opens the About box: author, online
@@ -58,6 +62,10 @@ Double-click a row (or press Enter) to see the element, its software date and
 where that date comes from, its folders, homepage and package, and **what to
 do**. Commands are shown in black blocks, with a copy button. eMudScan never runs
 them: you decide.
+
+<p align="center">
+  <img src="images/details-window.png" width="560" alt="The details window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown">
+</p>
 
 For a browser that is not protected, links open the advisory's test pages in that
 browser, so you can see for yourself.
