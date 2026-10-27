@@ -17,7 +17,7 @@ These connections disclose to that third-party site:
 
 - your IP address;
 - a User-Agent that describes eMudScan and your Windows, for example:
-  `eMudScan/1.0 (20261026; Windows 11 Pro 25H2 26200.9711; +https://github.com/3c0/eMudScan)`
+  `eMudScan/1.1 (20261027; Windows 11 Pro 25H2 26200.9711; +https://github.com/3c0/eMudScan)`
 
 The site's author sees both, and the User-Agent may appear in the site's public
 statistics.
