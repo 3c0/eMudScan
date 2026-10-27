@@ -2,6 +2,10 @@
 
 Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small improvements; 1.9.x are the betas of the "Fix all!" function, from 1.9.1. Each version has a date (YYYYMMDD), shown next to its number.
 
+## Unreleased
+
+- The online test's requests name eMudScan (`?client=emudscan`); they still used an earlier name of the project.
+
 ## 1.1 (20261027)
 
 - Safer loading of Windows' DLLs: eMudScan loads them only from System32, so a DLL with the same name placed next to eMudScan.exe (in the Downloads folder, for example) can no longer be loaded instead.

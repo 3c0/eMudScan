@@ -714,7 +714,7 @@ func winhttpGet(host string, timeoutMs int) httpsResult {
 	}
 	defer procWinHttpCloseHandle.Call(conn)
 	verb, _ := syscall.UTF16PtrFromString("GET")
-	obj, _ := syscall.UTF16PtrFromString("/?client=emudhracheck")
+	obj, _ := syscall.UTF16PtrFromString("/?client=" + strings.ToLower(appName)) // "/?client=emudscan"
 	req, _, err := procWinHttpOpenRequest.Call(conn, uintptr(unsafe.Pointer(verb)), uintptr(unsafe.Pointer(obj)), 0, 0, 0, 0x00800000 /* WINHTTP_FLAG_SECURE */)
 	if req == 0 {
 		res.Err = errno(err)
