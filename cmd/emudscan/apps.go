@@ -1101,18 +1101,86 @@ func pythonVersionFromFile(fv fileVersion) string {
 	return ""
 }
 
-func pyvenvVersion(cfg string) string {
+func pyvenvVersion(cfg string) string { return pyvenvValue(cfg, "version", "version_info") }
+
+// pyvenvHome is the folder of the Python that a virtual environment runs (home =
+// in pyvenv.cfg): its python.exe is a launcher for that one, whose ssl module and
+// version are the environment's, even when pyvenv.cfg recorded an older version.
+func pyvenvHome(cfg string) string { return pyvenvValue(cfg, "home") }
+
+func pyvenvValue(cfg string, keys ...string) string {
 	data, err := os.ReadFile(cfg)
 	if err != nil {
 		return ""
 	}
 	for _, line := range strings.Split(string(data), "\n") {
 		k, v, ok := strings.Cut(line, "=")
-		if ok && (strings.TrimSpace(k) == "version" || strings.TrimSpace(k) == "version_info") {
-			return strings.TrimSpace(v)
+		if !ok {
+			continue
+		}
+		for _, key := range keys {
+			if strings.TrimSpace(k) == key {
+				return strings.TrimSpace(v)
+			}
 		}
 	}
 	return ""
+}
+
+// pyFix tells whether a Python refuses the compromised certificates itself: from
+// 3.11.18, 3.12.16, 3.13.18, 3.14.10 and 3.15.2 (CVE-2026-115557), its ssl module
+// rejects any chain containing one of the 8 compromised keys, whatever certificate
+// list is used (the Windows roots it copies, certifi, pip's copy of certifi). The
+// block list is in the ssl module's library (_ssl.pyd), where eMudScan also looks
+// for it: that recognises the fix in builds with other version numbers (conda,
+// Store, embedded or backported Pythons).
+type pyFix struct {
+	version string   // of the Python that runs: the base one, for a virtual environment
+	state   FixState // of that version
+	fixed   string   // version to update to, when outdated
+	sslLib  string   // the ssl module's library read, "" when not found
+	inSSL   bool     // the block list is in sslLib
+}
+
+// protected: secure connections made through the ssl module refuse the compromised certificates.
+func (f pyFix) protected() bool { return f.state == FixOK || f.inSSL }
+
+func (tp *appsContext) pythonFix(env pyEnv) pyFix {
+	f := pyFix{version: env.version}
+	base := env.home
+	if env.venv {
+		base = ""
+		if h := pyvenvHome(filepath.Join(env.home, "pyvenv.cfg")); h != "" && (exists(filepath.Join(h, "python.exe")) || exists(filepath.Join(h, "python3.dll"))) {
+			base = h
+			if exists(filepath.Join(h, "python.exe")) {
+				if v := pythonEnvFor(filepath.Join(h, "python.exe")).version; v != "" {
+					f.version = v
+				}
+			}
+		}
+	}
+	f.state, f.fixed = fixStatus("python", ParseVersion(f.version))
+	if base != "" {
+		for _, lib := range []string{filepath.Join(base, "DLLs", "_ssl.pyd"), filepath.Join(base, "_ssl.pyd")} {
+			if exists(lib) {
+				f.sslLib = lib
+				if found, err := tp.scan(lib, scanRoots); err == nil && found.Blocklist {
+					f.inSSL = true
+				}
+				break
+			}
+		}
+	}
+	return f
+}
+
+// pythonBlocksText says why a Python refuses the compromised certificates: its version,
+// or the block list found in its ssl module.
+func pythonBlocksText(f pyFix) string {
+	if f.state != FixOK && f.inSSL {
+		return Tf("py.sslBlocksFile", lk(f.sslLib)) + " " + T("py.sslBlocksNote")
+	}
+	return Tf("py.sslBlocksVersion", f.version, fixedVersionsList("python")) + " " + T("py.sslBlocksNote")
 }
 
 func (tp *appsContext) checkPython() {
@@ -1129,35 +1197,44 @@ func (tp *appsContext) checkPython() {
 	}
 }
 
-func (tp *appsContext) pythonOne(it *Item, exe string) {
-	env := pythonEnvFor(exe)
+func (tp *appsContext) pythonOne(it *Item, exe string) { tp.pythonOneEnv(it, pythonEnvFor(exe)) }
+
+func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
+	exe := env.exe
 	r := result{Version: env.version, Folder: env.home, File: exe, Exe: exe, ProductURL: "https://www.python.org/downloads/windows/"}
 	o := tp.withOwner(&r, env.home)
 	bundled := bundledIn(o.Name, kwPython...)
 	r.Bundled = bundled
 	r.Search = searchFor(o.Name, "Python "+env.version, bundled)
+	fx := tp.pythonFix(env)
 	var problems, cmds []string
+	listsChecked := false // pip's or certifi's list exists and was tested
 	pipVer := distInfoVersion(env.sitePackages, "pip")
 	pipBundle := filepath.Join(env.sitePackages, "pip", "_vendor", "certifi", "cacert.pem")
-	if br, ok := tp.checkBundleFile(pipBundle); ok && br.Bad() {
-		problems = append(problems, Tf("py.pipBad", pipVer, lk(pipBundle))+" "+bundleProblem(br))
-		cmds = append(cmds, pipCmd(exe, "pip"))
-		r.File = pipBundle
+	if br, ok := tp.checkBundleFile(pipBundle); ok {
+		listsChecked = true
+		if br.Bad() {
+			problems = append(problems, Tf("py.pipBad", pipVer, lk(pipBundle))+" "+bundleProblem(br))
+			cmds = append(cmds, pipCmd(exe, "pip"))
+			r.File = pipBundle
+		}
 	}
 	certifiVer := distInfoVersion(env.sitePackages, "certifi")
 	certifiBundle := filepath.Join(env.sitePackages, "certifi", "cacert.pem")
-	if br, ok := tp.checkBundleFile(certifiBundle); ok && br.Bad() {
-		problems = append(problems, Tf("py.certifiBad", certifiVer, lk(certifiBundle))+" "+bundleProblem(br))
-		cmds = append(cmds, pipCmd(exe, "certifi"))
-		if r.File == exe {
-			r.File = certifiBundle
+	if br, ok := tp.checkBundleFile(certifiBundle); ok {
+		listsChecked = true
+		if br.Bad() {
+			problems = append(problems, Tf("py.certifiBad", certifiVer, lk(certifiBundle))+" "+bundleProblem(br))
+			cmds = append(cmds, pipCmd(exe, "certifi"))
+			if r.File == exe {
+				r.File = certifiBundle
+			}
 		}
 	}
 	ensurepip := ""
 	if m, _ := filepath.Glob(filepath.Join(env.home, "Lib", "ensurepip", "_bundled", "pip-*.whl")); len(m) > 0 {
 		ensurepip = strings.SplitN(strings.TrimPrefix(filepath.Base(m[len(m)-1]), "pip-"), "-", 2)[0]
 	}
-	pyState, pyFixed := fixStatus("python", ParseVersion(env.version))
 	var dl []string
 	if pipVer != "" {
 		dl = append(dl, field(T("py.pipVerLbl"), pipVer))
@@ -1166,37 +1243,88 @@ func (tp *appsContext) pythonOne(it *Item, exe string) {
 		dl = append(dl, field(T("py.certifiVerLbl"), certifiVer))
 	}
 	details := strings.Join(dl, "\n")
-	if tp.pyStoreRisk > 0 {
-		details += "\n\n" + Tf("py.sslStore", tp.pyStoreRisk, tlsChainsTotal, refWinCopy())
+	// the pip and certifi commands, as the fix or as good practice
+	listsFix := func() string {
+		if len(cmds) == 0 {
+			return ""
+		}
+		if bundled {
+			return joinParas(bundledAdvice(o), T("py.ifYouManage")+" "+psHeader(exe)+"\n"+strings.Join(cmds, "\n"))
+		}
+		return psHeader(exe) + "\n" + strings.Join(cmds, "\n")
+	}
+	if fx.protected() {
+		// the ssl module refuses the compromised certificates: the lists no longer decide
+		r.File = exe
+		r.Status, r.Summary = StOK, T("py.sumSSLBlocks")
+		r.Details = joinParas(pythonBlocksText(fx), details)
+		if len(problems) > 0 {
+			r.Details = joinParas(r.Details, T("py.listsOldSafe")+"\n"+strings.Join(problems, "\n"), T("py.updateAnyway")+"\n"+listsFix())
+		} else if listsChecked {
+			r.Details = joinParas(r.Details, T("py.okDetails"))
+		}
+		tp.c.finish(it, r)
+		return
 	}
 	ensureOld := ensurepip != "" && ParseVersion(ensurepip).Cmp(ParseVersion("26.2.2")) < 0
 	ensureText := ""
 	if ensureOld {
-		ensureText = "\n\n" + Tf("py.ensurepip", ensurepip, pyFixedText(pyState, pyFixed))
+		ensureText = Tf("py.ensurepip", ensurepip, pyFixedText(fx.state, fx.fixed))
+	}
+	// what this Python does not do yet, and the update that brings it
+	exposed := ""
+	if fx.state != FixUnknown {
+		exposed = Tf("py.notBlocking", pyFixedVersions(fx))
+	}
+	if tp.pyStoreRisk > 0 {
+		exposed = joinParas(exposed, Tf("py.sslStore", tp.pyStoreRisk, tlsChainsTotal, refWinCopy()))
+	}
+	update := ""
+	switch fx.state {
+	case FixOutdated:
+		update = Tf("py.updateFix", fx.fixed)
+	case FixUnsupported:
+		update = Tf("py.unsupportedFix", fx.version, fixedVersionsList("python"))
+	}
+	if update != "" && bundled {
+		update = joinParas(bundledAdvice(o), T("py.ifYouManage")+" "+update)
 	}
 	switch {
 	case len(problems) > 0:
-		fix := psHeader(exe) + "\n" + strings.Join(cmds, "\n")
-		if bundled {
-			fix = joinParas(bundledAdvice(o), T("py.ifYouManage")+" "+psHeader(exe)+"\n"+strings.Join(cmds, "\n"))
-		}
 		r.Status, r.Summary = StWarn, T("py.sumBad")
-		r.Details = details + "\n\n" + strings.Join(problems, "\n") + "\n\n" + fix + ensureText
+		r.Details = joinParas(details, strings.Join(problems, "\n"), exposed, update, listsFix(), ensureText)
+	case fx.state == FixOutdated:
+		r.Status, r.Summary = StCaution, Tf("py.sumUpdate", fx.fixed)
+		r.Details = joinParas(details, exposed, update, ensureText)
+	case fx.state == FixUnsupported:
+		r.Status, r.Summary = StCaution, Tf("py.sumUnsupported", fx.version)
+		r.Details = joinParas(details, exposed, update, ensureText)
 	case ensureOld:
 		r.Status, r.Summary = StCaution, Tf("py.sumEnsurepip", ensurepip)
-		r.Details = details + ensureText
-	default:
-		r.Status, r.Summary, r.Details = StOK, T("py.sumOK"), joinParas(T("py.okDetails"), details)
+		r.Details = joinParas(details, exposed, ensureText)
+	default: // version unknown: judged by its lists, as before
+		r.Status, r.Summary, r.Details = StOK, T("py.sumOK"), joinParas(details, exposed)
+		if listsChecked {
+			r.Details = joinParas(T("py.okDetails"), r.Details)
+		}
 	}
 	tp.c.finish(it, r)
+}
+
+// pyFixedVersions is the fixed version of this Python's line, or all of them.
+func pyFixedVersions(f pyFix) string {
+	if f.state == FixOutdated && f.fixed != "" {
+		return f.fixed
+	}
+	return fixedVersionsList("python")
 }
 
 func pyFixedText(st FixState, fixed string) string {
 	switch st {
 	case FixOutdated:
 		return Tf("py.updateTo", fixed)
-	case FixNoRelease:
-		return Tf("py.noRelease", fixedVersionsList("python"))
+	case FixUnsupported:
+		return Tf("py.unsupportedLine", fixedVersionsList("python"))
 	}
 	return T("py.upgradePipEach")
 }
@@ -1943,6 +2071,13 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 	var fix string
 	bundled := o.Name != "" && (!ownsPython || bundledIn(o.Name, kwPython...))
 	r.Bundled = bundled
+	// a list of pip or certifi in a Python: harmless when that Python's ssl module
+	// refuses the compromised certificates itself (see pythonFix)
+	pyList := false
+	var fx pyFix
+	if ownsPython {
+		fx = tp.pythonFix(pythonEnvFor(py))
+	}
 	switch {
 	case dotnetRootsRe.MatchString(p):
 		r.Status, r.Summary, r.Details = StInfo, T("dotnet.sum"), details+"\n\n"+T("dotnet.details")
@@ -1958,6 +2093,7 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 		if bundled {
 			fix = joinParas(bundledAdvice(o), T("py.ifYouManage")+"\n"+pipCmd(py, "pip"))
 		}
+		pyList = true
 	case ownsPython && strings.HasSuffix(lp, `certifi\cacert.pem`):
 		sp := filepath.Dir(filepath.Dir(p))
 		r.Version = distInfoVersion(sp, "certifi")
@@ -1966,6 +2102,7 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 		if bundled {
 			fix = joinParas(bundledAdvice(o), T("py.ifYouManage")+"\n"+pipCmd(py, "certifi"))
 		}
+		pyList = true
 	case strings.HasSuffix(lp, `library\ssl\cacert.pem`):
 		fix = T("fix.header") + "\n" + cmd("conda update ca-certificates certifi")
 	default:
@@ -1980,6 +2117,12 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 		}
 	}
 	r.Search = searchFor(o.Name, filepath.Base(filepath.Dir(p))+" "+filepath.Base(p), bundled)
+	if pyList && fx.protected() {
+		r.Status, r.Summary = StInfo, T("bundle.sumPySafe")
+		r.Details = joinParas(strings.TrimSpace(details), pythonBlocksText(fx), T("py.updateAnyway")+"\n"+fix)
+		tp.c.finish(it, r)
+		return
+	}
 	r.Status, r.Summary, r.Details = StWarn, T("bundle.sumBad"), details+"\n\n"+fix
 	tp.c.finish(it, r)
 }

@@ -363,6 +363,6 @@ func checkCopy(c *checker, risk *int) func(*Item) {
 			return
 		}
 		c.finish(it, result{Status: StCaution, Summary: Tf("win.copyRisk", r.Trusted, tlsChainsTotal),
-			Details: T("win.copyDetails") + "\n\n" + Tf("win.copyRiskDetails", r.Trusted, tlsChainsTotal, strings.Join(r.RootsPresent, ", "))})
+			Details: T("win.copyDetails") + "\n\n" + Tf("win.copyRiskDetails", r.Trusted, tlsChainsTotal, strings.Join(r.RootsPresent, ", "), fixedVersionsList("python"))})
 	}
 }

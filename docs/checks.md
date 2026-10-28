@@ -18,8 +18,8 @@
   they install. They check certificates instead of Windows: only the live test
   can tell whether they refuse the compromised ones.
 - The eMudhra and Sectigo roots present (for information), and what software that
-  copies the Windows root list without its block list (Python's `ssl` module)
-  would accept.
+  copies the Windows root list without its block list (Python's `ssl` module
+  before its fixed versions) would accept.
 
 ## Internet software
 
@@ -42,6 +42,15 @@ Java (including copies bundled with other software), Electron applications, Go,
 Docker Desktop, GitHub CLI, programs with a built-in certificate list (uv, Bun,
 Deno…), and every other certificate bundle (`.pem`, `.crt`…) on the scanned
 drives.
+
+Python 3.11.18, 3.12.16, 3.13.18, 3.14.10 and 3.15.2 refuse the compromised
+certificates in their `ssl` module itself (CVE-2026-115557), whatever
+certificate list is used. eMudScan recognises this from the version and from
+the block list in the module's library (`DLLs\_ssl.pyd`), which also covers
+builds with other version numbers. Such a Python is green, and the outdated
+pip or certifi lists of its virtual environments are reported as information.
+An older Python is amber, even with pip and certifi up to date, because the
+standard library's connections remain exposed through the Windows root copy.
 
 Certificate bundles are not judged by their version: each one is tested against
 the 12 test chains, so the result says whether that file would really accept a

@@ -575,11 +575,14 @@ type fixRule struct {
 	oldLines  FixState // state for lines older than the oldest listed one
 }
 
-// Fixed versions as listed on https://emudhra.we-have-a-problem.com/ (24 October 2026).
+// Fixed versions as listed on https://emudhra.we-have-a-problem.com/ (28 October 2026).
+// Python's are those of CVE-2026-115557: from them, the ssl module refuses any chain
+// containing one of the compromised keys, whatever certificate list is used (see
+// pythonFix). Python 3.10 and older are no longer maintained and get no fix.
 var fixRules = map[string]fixRule{
 	"electron":       {1, []string{"42.11.16", "43.8.1", "44.9.1"}, FixUnsupported},
 	"node":           {1, []string{"22.23.4", "24.22.1", "26.12.1"}, FixUnsupported},
-	"python":         {2, []string{"3.13.17", "3.14.9", "3.15.1"}, FixNoRelease},
+	"python":         {2, []string{"3.11.18", "3.12.16", "3.13.18", "3.14.10", "3.15.2"}, FixUnsupported},
 	"go":             {2, []string{"1.26.10", "1.27.3"}, FixUnsupported},
 	"git":            {0, []string{"2.56.0.3"}, FixOutdated},
 	"pip":            {0, []string{"26.2.2"}, FixOutdated},
