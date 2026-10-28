@@ -1,0 +1,9 @@
+# The "New issue" chooser: the forms of this folder, no blank issue, and two links.
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/3c0/eMudScan/security/advisories/new
+    about: Report a vulnerability in eMudScan privately, not as a public issue.
+  - name: Documentation
+    url: https://github.com/3c0/eMudScan/tree/main/docs
+    about: Using eMudScan, what it checks, privacy, building it yourself.

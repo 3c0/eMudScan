@@ -1,0 +1,14 @@
+name: Something else
+description: Anything that fits none of the other forms.
+assignees: ["3c0"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a security vulnerability, please do not open an issue: use **Report a vulnerability** on the repository's Security tab.
+  - type: textarea
+    id: message
+    attributes:
+      label: Your message
+    validations:
+      required: true

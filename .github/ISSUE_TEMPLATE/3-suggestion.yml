@@ -1,0 +1,30 @@
+name: Suggestion
+description: Software that eMudScan should also check, or an improvement.
+title: "[Suggestion] "
+labels: ["enhancement"]
+assignees: ["3c0"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - "Software to add"
+        - "Improvement of a check"
+        - "Improvement of the program (window, report, texts)"
+        - "Other"
+    validations:
+      required: true
+  - type: input
+    id: software
+    attributes:
+      label: Software, with its homepage
+      description: For a software to add.
+      placeholder: "Example 3.2 - https://example.org"
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: For a software - how it verifies certificates (Windows' store, its own list, a bundled Python, Node.js, Java or Electron...), where it is installed, and what its publisher said about the eMudhra compromise (link). For an improvement - what should change, and why.
+    validations:
+      required: true
