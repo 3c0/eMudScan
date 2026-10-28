@@ -33,6 +33,7 @@ var (
 	procWinHttpQueryHeaders      = modwinhttp.NewProc("WinHttpQueryHeaders")
 	procWinHttpCloseHandle       = modwinhttp.NewProc("WinHttpCloseHandle")
 	procWinHttpSetTimeouts       = modwinhttp.NewProc("WinHttpSetTimeouts")
+	procWinHttpSetOption         = modwinhttp.NewProc("WinHttpSetOption")
 	procWinHttpSetStatusCallback = modwinhttp.NewProc("WinHttpSetStatusCallback")
 
 	procCertGetEnhancedKeyUsage = modcrypt32.NewProc("CertGetEnhancedKeyUsage")
@@ -169,9 +170,6 @@ func expandEnv(s string) string {
 	b.WriteString(s)
 	return b.String()
 }
-
-// ---------------------------------------------------------------------------
-// Settings (HKCU\Software\eMudScan)
 
 // ---------------------------------------------------------------------------
 // File version resources
@@ -721,6 +719,13 @@ func winhttpGet(host string, timeoutMs int) httpsResult {
 		return res
 	}
 	defer procWinHttpCloseHandle.Call(req)
+	// The answer must come from host itself, not from a site it redirects to, and
+	// nothing is sent beyond the request: no redirection is followed, no cookie is
+	// kept or sent. (Windows' credentials are not sent either: WinHTTP's default
+	// policy sends them only to the servers of the proxy bypass list, never to the
+	// internet; it is left as is, so that the test works through company proxies.)
+	disabled := uint32(0x1 | 0x2) // WINHTTP_DISABLE_COOKIES | WINHTTP_DISABLE_REDIRECTS
+	procWinHttpSetOption.Call(req, 63 /* WINHTTP_OPTION_DISABLE_FEATURE */, uintptr(unsafe.Pointer(&disabled)), 4)
 	secureFailMu.Lock()
 	secureFailNext++
 	ctxID := secureFailNext
