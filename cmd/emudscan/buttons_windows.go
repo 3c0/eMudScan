@@ -128,7 +128,7 @@ func newSpinner(size int) *spinner {
 			go func() {
 				defer wg.Done()
 				for f := range work {
-					s.px[f] = spinnerShield(f, spinFrames, size)
+					s.px[f] = spinnerFrame(f, size)
 				}
 			}()
 		}
@@ -142,10 +142,26 @@ func newSpinner(size int) *spinner {
 	return s
 }
 
+// spinnerFrame draws one frame. Should the drawing fail (a bug), the frame stays
+// empty, rather than the failure closing eMudScan at start-up without a word: it
+// runs on its own goroutine, out of reach of any other recovery.
+func spinnerFrame(f, size int) (px []byte) {
+	defer func() {
+		if recover() != nil {
+			px = nil
+		}
+	}()
+	return spinnerShield(f, spinFrames, size)
+}
+
+// icon is the frame's icon, 0 when the frame could not be drawn (nothing is shown).
 func (s *spinner) icon(f int) uintptr {
 	f %= spinFrames
 	if s.icons[f] == 0 {
 		<-s.done
+		if s.px[f] == nil {
+			return 0
+		}
 		s.icons[f] = iconFromRGBA(s.px[f], s.size)
 	}
 	return s.icons[f]

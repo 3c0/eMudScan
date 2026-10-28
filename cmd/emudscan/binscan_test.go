@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -206,5 +207,33 @@ func TestScanAll(t *testing.T) {
 	}
 	if f, _ := tp.scan(paths[0], scanRoots); !f.HasRoots() {
 		t.Error("cached result lost")
+	}
+}
+
+// logReporter keeps the log lines.
+type logReporter struct{ lines *[]string }
+
+func (r logReporter) Log(_ LogKind, _ Status, text string) { *r.lines = append(*r.lines, text) }
+func (logReporter) Upsert(Item)                            {}
+func (logReporter) Activity(string)                        {}
+
+// A failure of the readers on one file is an error of that file, noted in the log,
+// not the end of the program.
+func TestScanFileRecovers(t *testing.T) {
+	var lines []string
+	tp := &appsContext{c: newChecker(logReporter{&lines}, nil)} // es == nil: the readers fail at once
+	path := filepath.Join(t.TempDir(), "some-program.exe")
+	if err := os.WriteFile(path, []byte("MZ"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f, err := tp.scanFile(path, scanRoots)
+	if err == nil || !strings.Contains(err.Error(), "internal error") {
+		t.Fatalf("err = %v, want an internal error", err)
+	}
+	if f.HasRoots() || f.Blocklist {
+		t.Errorf("findings = %+v, want none", f)
+	}
+	if len(lines) != 1 || !strings.Contains(lines[0], "some-program.exe") {
+		t.Errorf("log = %q, want one line naming the file", lines)
 	}
 }

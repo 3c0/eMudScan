@@ -68,11 +68,25 @@ func (tp *appsContext) scan(path string, what scanWhat) (embedFindings, error) {
 	if ok && e.what&what == what {
 		return e.f, e.err
 	}
-	f, err := tp.es.scanFile(path, what)
+	f, err := tp.scanFile(path, what)
 	tp.scanMu.Lock()
 	tp.scanned[k] = scanEntry{what, f, err}
 	tp.scanMu.Unlock()
 	return f, err
+}
+
+// scanFile reads one file. A failure of the readers themselves (a bug, on a file
+// they did not expect) becomes an error of that file, noted in the log, instead of
+// ending eMudScan: the files are read on several goroutines, and a panic on any of
+// them would close the program without a word.
+func (tp *appsContext) scanFile(path string, what scanWhat) (f embedFindings, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			f, err = embedFindings{}, fmt.Errorf("internal error: %v", r)
+			tp.c.line(StError, Tf("log.readerFailed", path, r))
+		}
+	}()
+	return tp.es.scanFile(path, what)
 }
 
 // scanAll scans files on several processors at once. The results are in the order

@@ -6,6 +6,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 
 - The online test's requests name eMudScan (`?client=emudscan`); they still used an earlier name of the project.
 - The online test's requests follow no redirection and send no cookie: each answer is the test site's own, and nothing more than the request is sent.
+- A file that eMudScan's readers fail on (a bug of eMudScan, on a file they did not expect) is skipped with a line in the log, instead of closing eMudScan without a word.
 
 ## 1.1 (20261027)
 

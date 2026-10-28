@@ -103,6 +103,7 @@ var tr = map[string][2]string{
 	"log.bundleBad":       {"Outdated: %s", "Obsolète : %s"},
 	"act.scan":            {"Scanning %s", "Scan de %s"},
 	"act.read":            {"Reading %s", "Lecture de %s"},
+	"log.readerFailed":    {"Internal error while reading %s, file skipped: %v", "Erreur interne en lisant %s, fichier ignoré : %v"},
 	"act.connect":         {"Connecting to %s", "Connexion à %s"},
 
 	// --- Windows checks
