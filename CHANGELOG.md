@@ -2,7 +2,7 @@
 
 Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small improvements; 1.9.x are the betas of the "Fix all!" function, from 1.9.1. Each version has a date (YYYYMMDD), shown next to its number.
 
-## Unreleased
+## 1.3 (20261028)
 
 - Python 3.11.18, 3.12.16, 3.13.18, 3.14.10 and 3.15.2 refuse the compromised certificates in their ssl module itself (CVE-2026-115557), whatever certificate list is used: eMudScan recognises this from the version and from the block list in `_ssl.pyd` (which also covers conda, Store or embedded builds), and reports such a Python as green, with the outdated pip or certifi lists of its virtual environments as information. An older Python is now amber even with pip and certifi up to date, since a fix exists; 3.10 and older get none.
 - The Windows check “Software copying the Windows root list” no longer says that no update changes this for Python's ssl module.
