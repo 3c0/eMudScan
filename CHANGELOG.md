@@ -2,7 +2,7 @@
 
 Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small improvements; 1.9.x are the betas of the "Fix all!" function, from 1.9.1. Each version has a date (YYYYMMDD), shown next to its number.
 
-## Unreleased
+## 1.2 (20261028)
 
 - The online test's requests name eMudScan (`?client=emudscan`); they still used an earlier name of the project.
 - The online test's requests follow no redirection and send no cookie: each answer is the test site's own, and nothing more than the request is sent.
