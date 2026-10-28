@@ -8,7 +8,7 @@
 | `data/` | The reference data from emudhra.we-have-a-problem.com, with its notice and license, Go's license and a copy of `LICENSE`: all embedded into the program |
 | `docs/` | This documentation, and in `docs/images/` the screenshots and icons it and the README show (the icons are drawn by eMudScan's own code, `cmd/emudscan/icons.go`) |
 | `scripts/` | Build scripts for your own PC |
-| `.github/` | The GitHub build (`workflows/build.yml`), the release page template (`release-notes.md`), Dependabot's settings (`dependabot.yml`), the security policy (`SECURITY.md`) and the issue forms (`ISSUE_TEMPLATE/`) |
+| `.github/` | The GitHub build (`workflows/build.yml`), the release page template (`release-notes.md`), Dependabot's settings (`dependabot.yml`), the security policy (`SECURITY.md`), the issue forms (`ISSUE_TEMPLATE/`), the pull request template and the contributing guide |
 
 ## GitHub builds the program
 

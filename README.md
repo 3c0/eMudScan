@@ -74,6 +74,7 @@ eMudScan connects to the internet only when *I accept the online test* is ticked
 - [What eMudScan checks](docs/checks.md)
 - [Privacy](docs/privacy.md)
 - [Building and releasing](docs/building.md)
+- [Contributing](.github/CONTRIBUTING.md): issues, pull requests, the rules the program keeps
 - [Changelog](CHANGELOG.md)
 
 ## 🤖 Made with AI
