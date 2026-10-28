@@ -27,7 +27,7 @@ import (
 const manifestXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <assemblyIdentity type="win32" name="eMudScan" version="{{version}}" processorArchitecture="*"/>
-  <description>eMudScan — eMudhra certificate check</description>
+  <description>Checks whether your PC still trusts the eMudhra certificates compromised in October 2026</description>
   <dependency>
     <dependentAssembly>
       <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/>
@@ -168,15 +168,15 @@ func versionResource() []byte {
 		return versionNode(k, 1, utf16z(val), uint16(len(utf16.Encode([]rune(val)))+1))
 	}
 	table := versionNode("040904b0", 1, nil, 0,
-		str("FileDescription", "eMudScan — eMudhra certificate check"),
+		str("FileDescription", "eMudScan"), // the name Task Manager, SmartScreen and the UAC prompt show
 		str("FileVersion", appVersionDate()),
 		str("InternalName", "eMudScan"),
 		str("OriginalFilename", "eMudScan.exe"),
-		str("ProductName", "eMudScan — eMudhra certificate check"),
+		str("ProductName", "eMudScan"),
 		str("ProductVersion", appVersionDate()),
 		str("CompanyName", appAuthor),
-		str("LegalCopyright", "Copyright © 2026 "+appAuthor+" — GNU GPL 3.0 or later"),
-		str("Comments", "By "+appAuthor+" — "+appURL+". Reference data: emudhra.we-have-a-problem.com, "+dataSourceURL+" (Apache License 2.0)"),
+		str("LegalCopyright", "Copyright © 2026 "+appAuthor+" - GNU GPL 3.0 or later"),
+		str("Comments", "Checks whether your PC still trusts the eMudhra certificates compromised in October 2026. By "+appAuthor+" - "+appURL+". Reference data: emudhra.we-have-a-problem.com, "+dataSourceURL+" (Apache License 2.0)"),
 	)
 	sfi := versionNode("StringFileInfo", 1, nil, 0, table)
 	var tr bytes.Buffer
