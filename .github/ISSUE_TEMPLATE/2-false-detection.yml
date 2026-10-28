@@ -18,6 +18,12 @@ body:
     validations:
       required: true
   - type: input
+    id: windows
+    attributes:
+      label: Windows
+      description: Edition and build, as in the first line of a saved report (or Settings › System › About). Useful for the Windows section's items and for software that is not found.
+      placeholder: "Windows 11 Pro 25H2 (10.0.26200.9711)"
+  - type: input
     id: software
     attributes:
       label: Software and version
