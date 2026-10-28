@@ -34,7 +34,7 @@ In the lists, each status has a shield; the log and the report use a mark.
 | <img src="images/status-info.png" width="22" alt="blue shield"> | ℹ | Information | Nothing to do, for your information |
 | <img src="images/status-warning.png" width="22" alt="yellow shield"> | ⚠ | Warning | May be affected: worth checking |
 | <img src="images/status-update.png" width="22" alt="red shield"> | ❗ | Update needed | Accepts the compromised certificates until updated |
-| <img src="images/status-problem.png" width="22" alt="dark red shield"> | ❌ | Problem | Windows itself still trusts the compromised certificates |
+| <img src="images/status-problem.png" width="22" alt="dark red shield"> | ❌ | Critical | Windows itself still trusts the compromised certificates |
 
 ## The software lists
 

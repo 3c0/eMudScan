@@ -48,7 +48,7 @@ Each line gets a coloured shield:
 | <img src="docs/images/status-info.png" width="22" alt=""> | Information | Nothing to do, for your information |
 | <img src="docs/images/status-warning.png" width="22" alt=""> | Warning | May be affected: worth checking |
 | <img src="docs/images/status-update.png" width="22" alt=""> | Update needed | Accepts the compromised certificates until updated |
-| <img src="docs/images/status-problem.png" width="22" alt=""> | Problem | Windows itself still trusts the compromised certificates |
+| <img src="docs/images/status-problem.png" width="22" alt=""> | Critical | Windows itself still trusts the compromised certificates |
 
 The details window explains why, what to update, and gives the commands to copy. eMudScan never runs them: you decide.
 
