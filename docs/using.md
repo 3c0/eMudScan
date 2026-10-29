@@ -60,7 +60,8 @@ it in full. *Hide items with an OK status* filters a list.
 
 The search box above the lists (Ctrl+F) keeps the rows that contain every word
 typed, in any order: software, component, version, status, summary, package, file
-or folder (`lm studio node`, `scoop`, `update needed`). Esc clears it.
+or folder (`lm studio node`, `scoop`, `update needed`). Esc clears it, and so does
+*Scan* or *Scan again*.
 
 Right-click one or more rows for: Details, Open file location, Open software
 folder, Open homepage, Search on Google, Scan again, Copy, Copy paths, Select all.

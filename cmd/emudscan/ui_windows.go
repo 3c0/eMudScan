@@ -1458,6 +1458,9 @@ func (a *ui) start() {
 		return
 	}
 	drives := a.selectedDrives()
+	if a.hSearch != 0 && len(a.query) > 0 {
+		setText(a.hSearch, "") // a new scan shows everything
+	}
 	a.beginRun()
 	send(a.hListWin, lvmDeleteAllItems, 0, 0)
 	for _, l := range a.lists() {
