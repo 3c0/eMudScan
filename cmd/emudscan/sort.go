@@ -43,6 +43,9 @@ func appCell(it Item, col int) string {
 		if it.Status == StOK {
 			return "" // nothing outdated (the details name the file that was checked)
 		}
+		if len(it.Copies) > 0 && it.File != "" {
+			return it.File + " " + Tf("copies.more", len(it.Copies))
+		}
 		return it.File
 	case colFolder:
 		return it.Folder

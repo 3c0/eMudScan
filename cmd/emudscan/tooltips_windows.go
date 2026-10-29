@@ -106,7 +106,7 @@ func (a *ui) updateCellTip(list uintptr, pt point) {
 func (a *ui) cellTipText(list uintptr, row, col int32) (string, rect) {
 	li := lvItem{Mask: lvifParam, Item: row}
 	send(list, lvmGetItemW, 0, uintptr(unsafe.Pointer(&li)))
-	it, ok := a.items[int(li.LParam)]
+	it, ok := a.itemFor(int(li.LParam))
 	if !ok {
 		return "", rect{}
 	}

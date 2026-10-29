@@ -93,6 +93,7 @@ type Item struct {
 	Search      string   // web search query
 	Recheck     bool     // can be checked again on its own
 	Updated     lastUpdate
+	Copies      []Item // the same finding in other places, shown with this element (repeated.go)
 }
 
 // lastUpdate is when the publisher last updated the software: the date of its main
@@ -466,7 +467,7 @@ type statusCounts struct{ ok, info, caution, warn, errs int }
 
 func (c *checker) counts() statusCounts {
 	var n statusCounts
-	for _, it := range c.snapshot() {
+	for _, it := range mergeRepeated(c.snapshot()) { // a repeated finding counts once
 		switch it.Status {
 		case StOK:
 			n.ok++

@@ -91,7 +91,7 @@ func buildReport(c *checker, logText string) string {
 	line := strings.Repeat("=", 78)
 	fmt.Fprintf(&b, "%s\n%s %s — %s — %s\n%s\n%s\n\n", line, T("report.title"), appVersionDate(), windowsVersionString(), time.Now().Format("2006-01-02 15:04"),
 		Tf("report.by", appAuthor, appURL), line)
-	items := c.snapshot()
+	items := mergeRepeated(c.snapshot())
 	for _, g := range []Group{GroupWindows, GroupNet, GroupApps} {
 		title := groupTitle(g)
 		fmt.Fprintf(&b, "%s\n%s\n", title, strings.Repeat("-", len([]rune(title))))
@@ -105,7 +105,11 @@ func buildReport(c *checker, logText string) string {
 					}
 					fmt.Fprintf(&b, "      %s%s%s%s\n", T("dlg.updated"), labelSep(), u.text(u.File), stale)
 				}
-				for _, f := range []struct{ k, v string }{{it.fileLabel(), it.File}, {T("col.folder"), it.Folder}, {T("dlg.homepage"), it.Homepage()}} {
+				file, folder := it.File, it.Folder
+				if len(it.Copies) > 0 { // the copies are listed below
+					file, folder = "", ""
+				}
+				for _, f := range []struct{ k, v string }{{it.fileLabel(), file}, {T("col.folder"), folder}, {T("dlg.homepage"), it.Homepage()}} {
 					if f.v != "" {
 						fmt.Fprintf(&b, "      %s%s%s\n", f.k, labelSep(), f.v)
 					}
@@ -115,7 +119,7 @@ func buildReport(c *checker, logText string) string {
 					fmt.Fprintf(&b, "      %s%s%s [%s] — %s\n", T("dlg.package"), labelSep(), p.ID, p.Manager, p.Page)
 				}
 			}
-			if details := joinParas(staleAdvice(it), it.Details); details != "" { // the same explanation as in the details window
+			if details := joinParas(staleAdvice(it), it.shownDetails()); details != "" { // the same explanation as in the details window
 				b.WriteString("\n")
 				for _, l := range strings.Split(plainText(details), "\n") {
 					fmt.Fprintf(&b, "      %s\n", l)

@@ -280,8 +280,10 @@ func detailBlocks(it Item) []docBlock {
 			}
 			rows = append(rows, docRow{T("dlg.updated"), runs})
 		}
-		add(T("dlg.folder"), it.Folder, true)
-		add(it.fileLabel(), it.File, true)
+		if len(it.Copies) == 0 { // else the copies are listed below
+			add(T("dlg.folder"), it.Folder, true)
+			add(it.fileLabel(), it.File, true)
+		}
 		add(T("dlg.homepage"), it.Homepage(), true)
 		if q := it.SearchText(); q != "" {
 			rows = append(rows, docRow{T("dlg.search"), []mrun{{kind: runLink, text: Tf("dlg.searchGoogle", q), target: googleURL(q)}}})
@@ -293,7 +295,7 @@ func detailBlocks(it Item) []docBlock {
 	if len(rows) > 0 {
 		bs = append(bs, docBlock{kind: dkFields, rows: rows})
 	}
-	text := it.Details
+	text := it.shownDetails()
 	if adv := staleAdvice(it); adv != "" { // first: it concerns everything below
 		text = joinParas(adv, text)
 	}

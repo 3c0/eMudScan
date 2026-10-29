@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -79,7 +80,8 @@ type ui struct {
 	dragY, dragH int32
 
 	items  map[int]Item
-	winIdx map[int]int // Windows list: item ID -> row
+	shown  map[int]Item // program lists: the merged elements, by the ID of their first copy (repeated.go)
+	winIdx map[int]int  // Windows list: item ID -> row
 
 	running   bool
 	stopping  bool
@@ -104,7 +106,7 @@ type ui struct {
 	navigating  bool
 }
 
-var g = &ui{items: map[int]Item{}, winIdx: map[int]int{}, dragging: -1}
+var g = &ui{items: map[int]Item{}, shown: map[int]Item{}, winIdx: map[int]int{}, dragging: -1}
 
 var (
 	evMu    sync.Mutex
@@ -1012,6 +1014,19 @@ func (a *ui) rebuild(l *listCtl) {
 			items = append(items, it)
 		}
 	}
+	// a repeated finding is one row, shown by its first copy
+	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
+	items = mergeRepeated(items)
+	for id, it := range a.shown {
+		if it.Group == l.group {
+			delete(a.shown, id)
+		}
+	}
+	for _, it := range items {
+		if len(it.Copies) > 0 {
+			a.shown[it.ID] = it
+		}
+	}
 	sortItems(items, l.sortKeys)
 	selected := map[int]bool{}
 	for _, id := range a.selectedIDs(l.h) {
@@ -1043,7 +1058,7 @@ func (a *ui) rebuild(l *listCtl) {
 func (a *ui) refreshPathCells(l *listCtl) {
 	a.withListDC(l.h, func(dc uintptr) {
 		for row, id := range l.rows {
-			t := a.appTexts(l, a.items[id], dc)
+			t := a.appTexts(l, a.rowItem(id), dc)
 			for _, c := range []int{colFile, colFolder} {
 				sub := lvItem{SubItem: int32(c), Text: u16(t[c])}
 				send(l.h, lvmSetItemTextW, uintptr(row), uintptr(unsafe.Pointer(&sub)))
@@ -1078,7 +1093,7 @@ func (a *ui) linkAt(l *listCtl, pt point) (string, bool) {
 	if ht.SubItem != colFile && ht.SubItem != colFolder || int(ht.Item) >= len(l.rows) {
 		return "", false
 	}
-	it := a.items[l.rows[ht.Item]]
+	it := a.rowItem(l.rows[ht.Item])
 	target := it.File
 	if ht.SubItem == colFolder {
 		target = it.Folder
@@ -1156,10 +1171,25 @@ func listSubclass(hwnd uintptr, msg uint32, wParam, lParam, id, ref uintptr) uin
 	return r
 }
 
+// itemFor is the element shown for an item ID: merged with its copies when it stands
+// for a repeated finding.
+func (a *ui) itemFor(id int) (Item, bool) {
+	if it, ok := a.shown[id]; ok {
+		return it, true
+	}
+	it, ok := a.items[id]
+	return it, ok
+}
+
+func (a *ui) rowItem(id int) Item {
+	it, _ := a.itemFor(id)
+	return it
+}
+
 func (a *ui) itemsOf(h uintptr) []Item {
 	var out []Item
 	for _, id := range a.selectedIDs(h) {
-		if it, ok := a.items[id]; ok {
+		if it, ok := a.itemFor(id); ok {
 			out = append(out, it)
 		}
 	}
@@ -1193,6 +1223,15 @@ func (a *ui) copyRows(h uintptr) {
 		}
 	}
 	setClipboard(a.hwnd, b.String())
+}
+
+// copiesOf: the other copies of merged elements.
+func copiesOf(items []Item) []Item {
+	var out []Item
+	for _, it := range items {
+		out = append(out, it.Copies...)
+	}
+	return out
 }
 
 func (a *ui) selectAll(h uintptr) {
@@ -1318,7 +1357,7 @@ func (a *ui) runMenu(id int, h uintptr, items []Item) {
 		var ids []int
 		for _, it := range items {
 			if it.Recheck {
-				ids = append(ids, it.ID)
+				ids = append(ids, it.memberIDs()...)
 			}
 		}
 		if len(ids) > 0 && a.confirmMany(len(ids)) {
@@ -1329,7 +1368,7 @@ func (a *ui) runMenu(id int, h uintptr, items []Item) {
 	case menuCopyPaths:
 		var b strings.Builder
 		seen := map[string]bool{}
-		for _, it := range items {
+		for _, it := range append(items, copiesOf(items)...) {
 			for _, p := range []string{it.File, it.Folder} {
 				if p != "" && !seen[p] {
 					seen[p] = true
@@ -1403,7 +1442,7 @@ func (a *ui) start() {
 		send(l.h, lvmDeleteAllItems, 0, 0)
 		l.rows = nil
 	}
-	a.items, a.winIdx = map[int]Item{}, map[int]int{}
+	a.items, a.shown, a.winIdx = map[int]Item{}, map[int]Item{}, map[int]int{}
 	a.logText.Reset()
 	a.log.clear()
 	a.logPending = false
@@ -1637,7 +1676,7 @@ func (a *ui) reset() {
 	a.frames = [4]frameBox{}
 	a.net, a.app, a.hSummary = nil, nil, 0
 	a.heights = [3]int32{}
-	a.items, a.winIdx = map[int]Item{}, map[int]int{}
+	a.items, a.shown, a.winIdx = map[int]Item{}, map[int]Item{}, map[int]int{}
 	a.current, a.running, a.stopping = nil, false, false
 	a.activity, a.spinText = "", ""
 	a.logText.Reset()
@@ -1684,7 +1723,7 @@ func (a *ui) nextDetails() {
 	}
 	it := a.detailQueue[0]
 	a.detailQueue = a.detailQueue[1:]
-	if cur, ok := a.items[it.ID]; ok {
+	if cur, ok := a.itemFor(it.ID); ok {
 		it = cur
 	}
 	a.openDetails(it)
@@ -1791,7 +1830,7 @@ func (a *ui) closeDetails() {
 		b := a.detailBack[n-1]
 		a.detailBack = a.detailBack[:n-1]
 		it := b.item
-		if cur, ok := a.items[it.ID]; ok {
+		if cur, ok := a.itemFor(it.ID); ok {
 			it = cur
 		}
 		a.openDetails(it)
@@ -2019,11 +2058,11 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 				row := int(cd.ItemSpec)
 				isLink := false
 				if row < len(l.rows) && (cd.SubItem == colFile || cd.SubItem == colFolder) {
-					it := a.items[l.rows[row]]
+					it := a.rowItem(l.rows[row])
 					isLink = appCell(it, int(cd.SubItem)) != ""
 				}
 				selected := send(l.h, lvmGetItemState, uintptr(row), 2) != 0
-				stale := row < len(l.rows) && cd.SubItem == colUpdated && a.items[l.rows[row]].stale() > 0
+				stale := row < len(l.rows) && cd.SubItem == colUpdated && a.rowItem(l.rows[row]).stale() > 0
 				if isLink {
 					if !selected {
 						cd.ClrText = rgb(0, 102, 204)

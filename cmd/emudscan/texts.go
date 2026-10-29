@@ -103,6 +103,9 @@ var tr = map[string][2]string{
 	"log.bundleBad":       {"Outdated: %s", "Obsolète : %s"},
 	"act.scan":            {"Scanning %s", "Scan de %s"},
 	"act.read":            {"Reading %s", "Lecture de %s"},
+	"copies.found":        {"Found in %d places:", "Trouvé à %d endroits :"},
+	"copies.in":           {"In %s:", "Dans %s :"},
+	"copies.more":         {"(+%d)", "(+%d)"},
 	"log.readerFailed":    {"Internal error while reading %s, file skipped: %v", "Erreur interne en lisant %s, fichier ignoré : %v"},
 	"act.connect":         {"Connecting to %s", "Connexion à %s"},
 

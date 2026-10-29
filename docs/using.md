@@ -51,6 +51,10 @@ In the lists, each status has a shield; the log and the report use a mark.
 
 - **Status**, **Outdated file**, **Software folder** and **Details**.
 
+The same finding in several places (two copies of Node.js inside LM Studio) is one
+row: its *Outdated file* ends with *(+1)*, and its details list every copy. *Scan
+again* checks each copy; copies that no longer agree get their own rows again.
+
 Click a header to sort, click a path to open it in Explorer, hover a cell to see
 it in full. *Hide items with an OK status* filters a list.
 
