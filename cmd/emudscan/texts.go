@@ -445,7 +445,7 @@ var tr = map[string][2]string{
 	"fix.storeLocked":   {"Its files cannot be fixed by hand: Windows protects the folders of Store apps.", "Ses fichiers ne peuvent pas être corrigés à la main : Windows protège les dossiers des applications du Store."},
 	"fix.pkgAll":        {"Alternatively, update all the software installed with %s:", "Vous pouvez aussi mettre à jour tous les logiciels installés avec %s :"},
 	"fix.pkgAllAdmin":   {"Alternatively, update all the software installed with %s (in PowerShell run as administrator):", "Vous pouvez aussi mettre à jour tous les logiciels installés avec %s (dans PowerShell lancé en tant qu'administrateur) :"},
-	"dlg.package":       {"Package", "Paquet"},
+	"dlg.package":       {"Package webpage", "Page du paquet"},
 	"node.bundledNeeds": {"The software has to ship a Node.js release with the fix: %s or later.", "Le logiciel doit embarquer une version de Node.js corrigée : %s ou plus."},
 
 	"browser.official": {"Receives the block automatically", "Reçoit le blocage automatiquement"},

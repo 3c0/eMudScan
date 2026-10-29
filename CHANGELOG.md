@@ -16,6 +16,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 - Software installed with Scoop is shown once, under the folder of its version: Scoop's `current` folder is a link to it, and Node.js from Scoop was listed twice, once through each.
 - Software installed by a recent version of Scoop got no homepage from Scoop. eMudScan now also reads Scoop's new file names, scoop-manifest.json and scoop-install.json.
 - LM Studio showed version 0.4.26 on its Electron row and 0.4.26+4 on its other rows. All the parts of a program now show the version listed in Apps & features or by its package manager.
+- The “Package” row of the details and of the report is renamed “Package webpage”: it links to the software's page at its package manager.
 
 ## 1.3 (20261028)
 
