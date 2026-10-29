@@ -43,7 +43,8 @@ type listCtl struct {
 	sortKeys  []sortKey
 	hideOK    bool
 	userSized [numAppCols]bool
-	lastW     int32
+	lastW     int32 // width the columns were fitted to (the vertical scroll bar's room taken off)
+	lastFull  int32 // client width, for the last column
 	dirty     bool
 }
 
@@ -594,6 +595,19 @@ func (a *ui) listClientWidth(l uintptr) int32 {
 	return rc.Right
 }
 
+// vScrollRoom is the room the vertical scroll bar of a list takes, or would take
+// when it is hidden: 0 while it is shown (the client width already excludes it).
+// The columns are fitted as if it were always there, so that they do not move when
+// it comes or goes as the list is made taller or shorter; only the last column
+// takes that room when the bar is hidden.
+func (a *ui) vScrollRoom(l uintptr) int32 {
+	if style, _, _ := pGetWindowLongPtrW.Call(l, ^uintptr(15) /* GWL_STYLE */); style&wsVScroll != 0 {
+		return 0
+	}
+	w, _, _ := pGetSystemMetricsForDpi.Call(2 /* SM_CXVSCROLL */, uintptr(a.dpi))
+	return int32(w)
+}
+
 const autosizeUseHeader = ^uintptr(1) // LVSCW_AUTOSIZE_USEHEADER (-2)
 
 // autosize fits a column to its longest text and to its header (with room for
@@ -636,11 +650,20 @@ func (a *ui) fitWinColumns() {
 // Columns resized by the user keep their width. Without force, nothing is done
 // when the width of the list has not changed.
 func (a *ui) fitColumns(l *listCtl, force bool) {
-	w := a.listClientWidth(l.h)
-	if w <= 0 || (!force && w == l.lastW) {
+	full := a.listClientWidth(l.h)
+	w := full - a.vScrollRoom(l.h)
+	if w <= 0 {
 		return
 	}
-	l.lastW = w
+	if !force && w == l.lastW { // only the vertical scroll bar came or went
+		if full != l.lastFull && !l.userSized[colDetails] {
+			cw := int32(send(l.h, lvmGetColumnWidth, colDetails, 0))
+			send(l.h, lvmSetColumnWidth, colDetails, uintptr(max(cw+full-l.lastFull, a.scale(90))))
+			l.lastFull = full
+		}
+		return
+	}
+	l.lastW, l.lastFull = w, full
 	used := int32(0)
 	limits := map[int]int32{colProgram: 28, colComponent: 22, colUpdated: 16, colStatus: 15}
 	for _, c := range []int{colProgram, colComponent, colUpdated, colStatus} {
@@ -661,7 +684,11 @@ func (a *ui) fitColumns(l *listCtl, force bool) {
 	rest := w - used
 	for _, c := range []int{colFile, colFolder, colDetails} {
 		if !l.userSized[c] && total > 0 {
-			send(l.h, lvmSetColumnWidth, uintptr(c), uintptr(max(rest*share[c]/total, a.scale(90))))
+			cw := max(rest*share[c]/total, a.scale(90))
+			if c == colDetails {
+				cw += full - w // the room of the hidden vertical scroll bar
+			}
+			send(l.h, lvmSetColumnWidth, uintptr(c), uintptr(cw))
 		}
 	}
 	a.refreshPathCells(l)
