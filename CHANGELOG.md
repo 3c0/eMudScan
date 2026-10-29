@@ -5,6 +5,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 ## Unreleased
 
 - The file properties of eMudScan.exe (Details tab) describe eMudScan as its project page does.
+- Tests refuse any Windows DLL loaded by name, so that the DLL preloading fixed in 1.1 cannot come back.
 
 ## 1.3 (20261028)
 
