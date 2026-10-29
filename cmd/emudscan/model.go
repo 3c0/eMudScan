@@ -268,11 +268,13 @@ func (it *Item) fillDisplay(component string) {
 	if strings.EqualFold(strings.TrimSpace(it.Component), strings.TrimSpace(it.Program)) {
 		it.Component = ""
 	}
-	// the version of the software, from one place for all its rows: the one Windows or
-	// its package manager records (Apps & features, Scoop, the Store), else its own
+	// the version of the software: when it is checked itself, the version found in it
+	// (Apps & features may record something else: "3.14-64" for Python 3.14.10);
+	// for a part of it, the one Windows or its package manager records (Apps &
+	// features, Scoop, the Store), else its own, so that all its parts show the same
 	switch {
 	case it.Component == "":
-		it.ProgVersion = firstNonEmpty(it.OwnerVer, it.ProgVersion, it.Version)
+		it.ProgVersion = firstNonEmpty(it.ProgVersion, it.Version, it.OwnerVer)
 	default:
 		it.ProgVersion = firstNonEmpty(it.OwnerVer, it.ProgVersion, guessedVer)
 	}

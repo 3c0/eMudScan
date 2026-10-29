@@ -15,7 +15,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 - The details of a Python inside another program (ESPHome Device Builder, LM Studio) give that program's update once, then what to do if you manage this Python yourself, without repeating it.
 - Software installed with Scoop is shown once, under the folder of its version: Scoop's `current` folder is a link to it, and Node.js from Scoop was listed twice, once through each.
 - Software installed by a recent version of Scoop got no homepage from Scoop. eMudScan now also reads Scoop's new file names, scoop-manifest.json and scoop-install.json.
-- All the rows of a program show the same version: the one listed in Apps & features or by its package manager, else the program's own (LM Studio showed 0.4.26 on one row and 0.4.26+4 on the others).
+- LM Studio showed version 0.4.26 on its Electron row and 0.4.26+4 on its other rows. All the parts of a program now show the version listed in Apps & features or by its package manager.
 
 ## 1.3 (20261028)
 
