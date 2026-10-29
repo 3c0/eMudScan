@@ -61,8 +61,9 @@ type ui struct {
 	net, app                                                *listCtl
 	log                                                     *logView
 	hSummary                                                uintptr
-	hOnline, hOnlineLbl, onlineTip                          uintptr // the box that allows the online test, its label, their tooltip
-	onlineOff                                               bool    // the user turned the online test off (not saved)
+	hOnline, hOnlineLbl, onlineTip                          uintptr   // the box that allows the online test, its label, their tooltip
+	keyTips                                                 []uintptr // tooltips giving the buttons' keyboard shortcuts
+	onlineOff                                               bool      // the user turned the online test off (not saved)
 
 	dpi                                   int
 	fontUI, fontTitle, fontMono, fontLink uintptr
@@ -274,6 +275,12 @@ func (a *ui) createControls() {
 	a.hCheck = a.iconButton(a.hwnd, T("btn.check"), idCheck, true, glyphPlay)
 	a.hCopy = a.iconButton(a.hwnd, T("btn.copy"), idCopy, false, glyphCopy)
 	a.hSave = a.iconButton(a.hwnd, T("btn.save"), idSave, false, glyphSave)
+	for _, k := range []struct {
+		h   uintptr
+		key string
+	}{{a.hCheck, "F5"}, {a.hCopy, "Ctrl+Shift+C"}, {a.hSave, "Ctrl+S"}} {
+		a.keyTips = append(a.keyTips, a.addTip([]uintptr{k.h}, Tf("tip.key", k.key)))
+	}
 	a.hSpin = a.child(0, "eMudScanSpinner", "", 0, 0)
 	a.log = a.newLogView(a.hwnd, idLog)
 	a.hLog = a.log.hwnd
@@ -1547,6 +1554,31 @@ func (a *ui) drainEvents() {
 	a.tickSpinner()
 }
 
+// shortcut runs the main window's keyboard shortcuts, wherever the focus is in it:
+// F5 Scan / Scan again, Ctrl+S Save report, Ctrl+Shift+C Copy report. It reports
+// whether the key was one of them. A button that is disabled does nothing.
+func (a *ui) shortcut(key uintptr) bool {
+	enabled := func(h uintptr) bool { r, _, _ := pIsWindowEnabled.Call(h); return h != 0 && r != 0 }
+	ctrl, shift := ctrlDown(), shiftDown()
+	switch {
+	case key == 0x74 && !ctrl && !shift: // F5
+		if !a.running && enabled(a.hCheck) {
+			a.start()
+		}
+	case key == 'S' && ctrl && !shift:
+		if enabled(a.hSave) {
+			a.saveReport()
+		}
+	case key == 'C' && ctrl && shift:
+		if enabled(a.hCopy) {
+			a.copyReport()
+		}
+	default:
+		return false
+	}
+	return true
+}
+
 func (a *ui) copyReport() {
 	if a.current == nil {
 		return
@@ -1664,6 +1696,10 @@ func (a *ui) reset() {
 		pDestroyWindow.Call(a.onlineTip) // a tooltip is not a child window
 		a.onlineTip = 0
 	}
+	for _, t := range a.keyTips {
+		pDestroyWindow.Call(t)
+	}
+	a.keyTips = nil
 	childList = nil
 	pEnumChildWindows.Call(a.hwnd, collectChilds, 0)
 	for _, h := range childList {
@@ -2237,6 +2273,9 @@ func main() {
 		r, _, _ := pGetMessageW.Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0)
 		if int32(r) <= 0 {
 			break
+		}
+		if m.Message == wmKeyDown && a.dlg == nil && a.shortcut(m.WParam) {
+			continue
 		}
 		target := hwnd
 		if a.dlg != nil {

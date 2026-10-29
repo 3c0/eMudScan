@@ -105,6 +105,7 @@ var tr = map[string][2]string{
 	"act.scan":            {"Scanning %s", "Scan de %s"},
 	"act.read":            {"Reading %s", "Lecture de %s"},
 	"copies.found":        {"Found in %d places:", "Trouvé à %d endroits :"},
+	"tip.key":             {"Shortcut: %s", "Raccourci : %s"},
 	"set.env":             {"Environment variables", "Variables d'environnement"},
 	"set.users.openssl":   {"the software that uses OpenSSL (Python's ssl module, curl and Git when they use OpenSSL, Ruby, PHP…)", "les logiciels qui utilisent OpenSSL (le module ssl de Python, curl et Git quand ils utilisent OpenSSL, Ruby, PHP…)"},
 	"set.users.curl":      {"curl (except the curl.exe supplied with Windows) and Python's requests library", "curl (sauf le curl.exe fourni avec Windows) et la bibliothèque requests de Python"},

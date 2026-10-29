@@ -87,6 +87,19 @@ browser, so you can see for yourself.
 explanations as the details windows. Saving a report is the only time eMudScan
 writes a file.
 
+## Keyboard shortcuts
+
+| Keys | Action |
+|---|---|
+| F5 | Scan, or Scan again |
+| Ctrl+S | Save report |
+| Ctrl+Shift+C | Copy report |
+| Enter | Details of the selected rows |
+| Esc | Close the details window |
+| Ctrl+C, Ctrl+A | In a list: copy the selected rows, select all |
+
+Hover the *Scan*, *Copy report* and *Save report* buttons to see their shortcut.
+
 ## The About box
 
 The ⓘ icon next to the version opens it: what eMudScan does, who made it, its

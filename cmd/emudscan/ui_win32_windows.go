@@ -531,6 +531,11 @@ func ctrlDown() bool {
 	return r&0x8000 != 0
 }
 
+func shiftDown() bool {
+	r, _, _ := pGetKeyState.Call(0x10)
+	return r&0x8000 != 0
+}
+
 func setClipboard(owner uintptr, text string) bool {
 	u := utf16z(strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\n", "\r\n"))
 	if r, _, _ := pOpenClipboard.Call(owner); r == 0 {
