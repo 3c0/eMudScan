@@ -379,3 +379,24 @@ func TestStale(t *testing.T) {
 		t.Errorf("ageText: %q, %q", ageText(15), ageText(30))
 	}
 }
+
+// Every row of a program shows the same version: the one Windows or its package
+// manager records, else its own.
+func TestProgramVersionFromOnePlace(t *testing.T) {
+	electron := Item{Kind: "electron", Name: "LM Studio", Owner: "LM Studio", OwnerVer: "0.4.26+4", ProgVersion: "0.4.26", Version: "38.6.0"}
+	electron.fillDisplay("Electron")
+	node := Item{Kind: "node", Name: "Node.js", Owner: "LM Studio", OwnerVer: "0.4.26+4", Version: "25.5.0"}
+	node.fillDisplay("")
+	self := Item{Kind: "tool", Name: "ucheck", Owner: "ucheck", OwnerVer: "6.7.8", Version: "6.7.8.0"}
+	self.fillDisplay("")
+	alone := Item{Kind: "tool", Name: "aichat", Version: "0.30.0"}
+	alone.fillDisplay("")
+	for _, c := range []struct {
+		it   Item
+		want string
+	}{{electron, "0.4.26+4"}, {node, "0.4.26+4"}, {self, "6.7.8"}, {alone, "0.30.0"}} {
+		if c.it.ProgVersion != c.want {
+			t.Errorf("%s › %s: version %q, want %q", c.it.Program, c.it.Component, c.it.ProgVersion, c.want)
+		}
+	}
+}

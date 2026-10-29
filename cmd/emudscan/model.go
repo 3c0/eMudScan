@@ -268,13 +268,13 @@ func (it *Item) fillDisplay(component string) {
 	if strings.EqualFold(strings.TrimSpace(it.Component), strings.TrimSpace(it.Program)) {
 		it.Component = ""
 	}
-	// the version of the software: its own version when it is checked itself,
-	// else the version of the program the component belongs to
+	// the version of the software, from one place for all its rows: the one Windows or
+	// its package manager records (Apps & features, Scoop, the Store), else its own
 	switch {
 	case it.Component == "":
-		it.ProgVersion = firstNonEmpty(it.ProgVersion, it.Version, it.OwnerVer)
-	case it.ProgVersion == "":
-		it.ProgVersion = firstNonEmpty(it.OwnerVer, guessedVer)
+		it.ProgVersion = firstNonEmpty(it.OwnerVer, it.ProgVersion, it.Version)
+	default:
+		it.ProgVersion = firstNonEmpty(it.OwnerVer, it.ProgVersion, guessedVer)
 	}
 }
 

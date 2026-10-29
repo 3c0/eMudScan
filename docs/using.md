@@ -40,6 +40,8 @@ In the lists, each status has a shield; the log and the report use a mark.
 
 - **Software**: the software you know, with its version and how it was installed,
   when that is a package manager or the Microsoft Store (`tesseract 5.5.1 [Scoop]`).
+  The version is the one Windows lists in Apps & features, or the package manager's,
+  else the program's own: all the rows of a program show the same one.
 - **Component**: the part that is checked (certifi, Electron, Java…); empty when
   the software itself is checked.
 - **Software date**: when the publisher last updated the software
