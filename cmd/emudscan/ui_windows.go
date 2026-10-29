@@ -522,10 +522,25 @@ func (a *ui) layout() {
 		h[2] = max(avail*20/100, s(22)+a.listHeight(a.net.h, 3)+s(10))
 	}
 	if over := h[0] + h[1] + h[2] + 3*gap + mins[3] - avail; over > 0 {
-		for _, i := range []int{0, 2, 1} {
+		// too little room: the log gives way first; while a border is dragged, the frame
+		// above it gives way first, so that it stops when the program list below reaches
+		// its least height, instead of pushing the frames above it up
+		order := []int{0, 2, 1}
+		if d := a.dragging; d >= 0 && d < 3 {
+			order = []int{d}
+			for _, i := range []int{0, 2, 1} {
+				if i != d {
+					order = append(order, i)
+				}
+			}
+		}
+		for _, i := range order {
 			cut := min(over, max(h[i]-mins[i], 0))
 			h[i] -= cut
 			over -= cut
+		}
+		if d := a.dragging; d >= 0 && d < 3 {
+			a.heights[d] = h[d]
 		}
 	}
 	for i := 0; i < 3; i++ {
@@ -2024,6 +2039,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		if a.dragging >= 0 {
 			a.dragging = -1
 			pReleaseCapture.Call()
+			a.relayout() // the frames show whole lines again
 			return 0
 		}
 	case wmCaptureChanged:
