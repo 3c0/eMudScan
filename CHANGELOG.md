@@ -12,6 +12,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 - Microsoft Store apps are searched like other software (Python from the Store, Electron applications…), from the folders Windows records for them; what is found there is shown under the app's name, tagged [Microsoft Store], with the Store's way to update it (Windows protects their folders, so no fix by hand is proposed).
 - Keyboard shortcuts: F5 to scan (or scan again), Ctrl+S to save the report, Ctrl+Shift+C to copy it; the buttons' tooltips show them.
 - A search box above the lists (Ctrl+F) keeps the rows that contain every word typed: software, component, version, status, package, file or folder. Esc clears it, and so do Scan and Scan again.
+- The details of a Python inside another program (ESPHome Device Builder, LM Studio) give that program's update once, then what to do if you manage this Python yourself, without repeating it.
 
 ## 1.3 (20261028)
 

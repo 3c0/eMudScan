@@ -217,3 +217,59 @@ func TestVenvBundleWithFixedPython(t *testing.T) {
 		}
 	}
 }
+
+// A Python inside another program: that program's update is given once, then what
+// those who manage this Python themselves can do, each sentence introducing its own
+// commands.
+func TestBundledPythonAdvice(t *testing.T) {
+	Lang = 0
+	badBundle := outdatedBundle(t)
+	root := t.TempDir()
+	for i, c := range []struct {
+		name, version string
+		blocklist     bool
+		owned         bool
+		want          []string // in this order
+	}{
+		{"bundled, old", "3.13.17", false, true, []string{"**This copy belongs to Device Builder.**", "If you manage this Python yourself, update it to 3.13.18.", "Until then, update the outdated lists. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"bundled, version unknown", "", false, true, []string{"**This copy belongs to Device Builder.**", "If you manage this Python yourself, update the outdated lists. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"bundled, fixed", "3.13.18", true, true, []string{"An update remains good practice. **This copy belongs to Device Builder.**", "If you manage this Python yourself, update the outdated lists. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"own, old", "3.13.17", false, false, []string{"What to do: update Python to 3.13.18.", "Until then, update the outdated lists. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"own, fixed", "3.13.18", true, false, []string{"An update remains good practice. In PowerShell:\n", "pip install --upgrade certifi"}},
+	} {
+		app := filepath.Join(root, "app"+itoa(i))
+		home := filepath.Join(app, "python")
+		if !c.owned {
+			home = filepath.Join(root, "Python313-"+itoa(i))
+		}
+		fakePython(t, home, c.blocklist)
+		sp := filepath.Join(home, "Lib", "site-packages")
+		os.MkdirAll(filepath.Join(sp, "certifi"), 0o755)
+		os.WriteFile(filepath.Join(sp, "certifi", "cacert.pem"), badBundle, 0o644)
+		tp := testApps(t)
+		tp.owners = []ownerDir{{dir: app, name: "Device Builder", version: "1.1.3"}}
+		exe := filepath.Join(home, "python.exe")
+		got := tp.c.begin(GroupApps, "python", "Python", home, func(it *Item) {
+			env := pythonEnvFor(exe)
+			env.version = c.version
+			tp.pythonOneEnv(it, env)
+		})
+		d, at := got.Details, 0
+		for _, w := range c.want {
+			i := strings.Index(d[at:], w)
+			if i < 0 {
+				t.Errorf("%s: %q missing or out of order:\n%s", c.name, w, d)
+				break
+			}
+			at += i + len(w)
+		}
+		if n := strings.Count(d, "This copy belongs to"); n != map[bool]int{true: 1, false: 0}[c.owned] {
+			t.Errorf("%s: the program's advice %d times:\n%s", c.name, n, d)
+		}
+		for _, bad := range []string{"yourself: What to do", "yourself: In PowerShell", ":\nIn PowerShell"} {
+			if strings.Contains(d, bad) {
+				t.Errorf("%s: %q:\n%s", c.name, bad, d)
+			}
+		}
+	}
+}

@@ -1257,15 +1257,12 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 		dl = append(dl, field(T("py.certifiVerLbl"), certifiVer))
 	}
 	details := strings.Join(dl, "\n")
-	// the pip and certifi commands, as the fix or as good practice
-	listsFix := func() string {
+	// the pip and certifi commands, after the sentence that introduces them
+	listsFix := func(lead string) string {
 		if len(cmds) == 0 {
 			return ""
 		}
-		if bundled {
-			return joinParas(bundledAdvice(o), T("py.ifYouManage")+" "+psHeader(exe)+"\n"+strings.Join(cmds, "\n"))
-		}
-		return psHeader(exe) + "\n" + strings.Join(cmds, "\n")
+		return strings.TrimSpace(lead+" "+psHeader(exe)) + "\n" + strings.Join(cmds, "\n")
 	}
 	if fx.protected() {
 		// the ssl module refuses the compromised certificates: the lists no longer decide
@@ -1273,7 +1270,11 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 		r.Status, r.Summary = StOK, T("py.sumSSLBlocks")
 		r.Details = joinParas(pythonBlocksText(fx), details)
 		if len(problems) > 0 {
-			r.Details = joinParas(r.Details, T("py.listsOldSafe")+"\n"+strings.Join(problems, "\n"), T("py.updateAnyway")+"\n"+listsFix())
+			advice := listsFix(T("py.updateAnyway"))
+			if bundled { // its program's update first, then for those who manage this Python
+				advice = joinParas(T("py.updateAnyway")+" "+bundledAdvice(o), listsFix(T("py.ifYouManageLists")))
+			}
+			r.Details = joinParas(r.Details, T("py.listsOldSafe")+"\n"+strings.Join(problems, "\n"), advice)
 		} else if listsChecked {
 			r.Details = joinParas(r.Details, T("py.okDetails"))
 		}
@@ -1293,20 +1294,30 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	if tp.pyStoreRisk > 0 {
 		exposed = joinParas(exposed, Tf("py.sslStore", tp.pyStoreRisk, tlsChainsTotal, refWinCopy()))
 	}
+	// what to do: for a copy inside another program, that program's update first (once),
+	// then what those who manage this Python themselves can do
+	updateKey, unsupportedKey, listsLead := "py.updateFix", "py.unsupportedFix", ""
+	if bundled {
+		updateKey, unsupportedKey, listsLead = "py.ifYouManageUpdate", "py.ifYouManageUnsupported", T("py.ifYouManageLists")
+	}
 	update := ""
 	switch fx.state {
 	case FixOutdated:
-		update = Tf("py.updateFix", fx.fixed)
+		update = Tf(updateKey, fx.fixed)
 	case FixUnsupported:
-		update = Tf("py.unsupportedFix", fx.version, fixedVersionsList("python"))
+		update = Tf(unsupportedKey, fx.version, fixedVersionsList("python"))
 	}
-	if update != "" && bundled {
-		update = joinParas(bundledAdvice(o), T("py.ifYouManage")+" "+update)
+	if update != "" {
+		listsLead = T("py.untilThenLists")
+	}
+	lists := listsFix(listsLead)
+	if bundled && (update != "" || lists != "") {
+		update = joinParas(bundledAdvice(o), update)
 	}
 	switch {
 	case len(problems) > 0:
 		r.Status, r.Summary = StWarn, T("py.sumBad")
-		r.Details = joinParas(details, strings.Join(problems, "\n"), exposed, update, listsFix(), ensureText)
+		r.Details = joinParas(details, strings.Join(problems, "\n"), exposed, update, lists, ensureText)
 	case fx.state == FixOutdated:
 		r.Status, r.Summary = StCaution, Tf("py.sumUpdate", fx.fixed)
 		r.Details = joinParas(details, exposed, update, ensureText)
@@ -2133,7 +2144,7 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 	r.Search = searchFor(o.Name, filepath.Base(filepath.Dir(p))+" "+filepath.Base(p), bundled)
 	if pyList && fx.protected() {
 		r.Status, r.Summary = StInfo, T("bundle.sumPySafe")
-		r.Details = joinParas(strings.TrimSpace(details), pythonBlocksText(fx), T("py.updateAnyway")+"\n"+fix)
+		r.Details = joinParas(strings.TrimSpace(details), pythonBlocksText(fx), T("py.updateAnyway")+" "+fix)
 		tp.c.finish(it, r)
 		return
 	}
