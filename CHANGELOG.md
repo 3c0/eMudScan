@@ -6,6 +6,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 
 - The file properties of eMudScan.exe (Details tab) describe eMudScan as its project page does.
 - Tests refuse any Windows DLL loaded by name, so that the DLL preloading fixed in 1.1 cannot come back.
+- Data folders named after an application identifier (`io.esphome.builder`) are attributed to their program (ESPHome Device Builder) when its executable contains the identifier or its name has all of its words, and only when exactly one program matches.
 
 ## 1.3 (20261028)
 

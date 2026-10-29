@@ -59,6 +59,12 @@ compromised certificate.
 When a component is a copy inside other software (Python inside ESPHome, Java
 inside Stirling PDF…), eMudScan says to update that software, not the copy.
 
+Some programs keep their data in a folder named after their identifier rather than
+their name (`%LOCALAPPDATA%\io.esphome.builder` belongs to ESPHome Device Builder).
+Such a folder is given to an installed program only when exactly one program
+contains the identifier in its executable or, failing that, has every word of it in
+its name; otherwise it keeps the identifier as its name.
+
 Programs are searched for built-in certificate lists without being read
 entirely. *Scan again* reads a file again only if it has changed.
 

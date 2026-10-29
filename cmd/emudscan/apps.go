@@ -38,6 +38,8 @@ type appsContext struct {
 	entries      []uninstallEntry // Apps & features
 	scanMu       sync.Mutex
 	scanned      map[scanKey]scanEntry // files already scanned (for "Scan again" and files checked twice)
+	idMu         sync.Mutex
+	idOwners     map[string]ownerDir // owners of identifier-named folders (identifier.go)
 }
 
 type scanKey struct {
@@ -149,6 +151,9 @@ func (tp *appsContext) refresh() {
 	tp.entries = uninstallEntries()
 	tp.owners, tp.netPrograms = nil, nil
 	tp.loadOwners(tp.entries)
+	tp.idMu.Lock()
+	tp.idOwners = nil
+	tp.idMu.Unlock()
 	tp.loadInternetPrograms(tp.entries)
 	tp.scoopApps = map[string]scoopManifest{}
 	tp.choco = nil
@@ -478,6 +483,11 @@ func (tp *appsContext) ownerOf(p string) ownerInfo {
 		first := strings.FieldsFunc(rel, func(c rune) bool { return c == '\\' || c == '/' })[0]
 		if genericFolderNames[lower(first)] {
 			continue
+		}
+		if pathKey(r) == pathKey(lad) || pathKey(r) == pathKey(getenv("APPDATA")) {
+			if o, ok := tp.identifierOwnerOf(r, first); ok { // %LOCALAPPDATA%\io.esphome.builder
+				return o
+			}
 		}
 		return ownerInfo{Name: first, Loc: filepath.Join(r, first)}
 	}
