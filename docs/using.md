@@ -58,6 +58,10 @@ again* checks each copy; copies that no longer agree get their own rows again.
 Click a header to sort, click a path to open it in Explorer, hover a cell to see
 it in full. *Hide items with an OK status* filters a list.
 
+The search box above the lists (Ctrl+F) keeps the rows that contain every word
+typed, in any order: software, component, version, status, summary, package, file
+or folder (`lm studio node`, `scoop`, `update needed`). Esc clears it.
+
 Right-click one or more rows for: Details, Open file location, Open software
 folder, Open homepage, Search on Google, Scan again, Copy, Copy paths, Select all.
 *Scan again* reads the installed software again first, so a program you have just
@@ -94,6 +98,7 @@ writes a file.
 | F5 | Scan, or Scan again |
 | Ctrl+S | Save report |
 | Ctrl+Shift+C | Copy report |
+| Ctrl+F | Search the lists |
 | Enter | Details of the selected rows |
 | Esc | Close the details window |
 | Ctrl+C, Ctrl+A | In a list: copy the selected rows, select all |

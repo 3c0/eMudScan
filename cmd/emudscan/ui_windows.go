@@ -56,7 +56,8 @@ type driveCtl struct {
 type ui struct {
 	hwnd, hLogo, hTitle, hInfo, hLangLbl, hLang, hDrivesLbl uintptr
 	drives                                                  []driveCtl
-	hCheck, hCopy, hSave                                    uintptr
+	hCheck, hCopy, hSave, hSearch                           uintptr
+	query                                                   []string // the words of the search box (search.go)
 	hLog, hSpin, hListWin                                   uintptr
 	net, app                                                *listCtl
 	log                                                     *logView
@@ -205,7 +206,7 @@ func (a *ui) createResources() {
 }
 
 func (a *ui) applyFonts() {
-	hs := []uintptr{a.hLangLbl, a.hLang, a.hDrivesLbl, a.hCheck, a.hCopy, a.hSave, a.hListWin, a.hSummary}
+	hs := []uintptr{a.hLangLbl, a.hLang, a.hDrivesLbl, a.hCheck, a.hSearch, a.hCopy, a.hSave, a.hListWin, a.hSummary}
 	for _, l := range a.lists() {
 		hs = append(hs, l.h, l.hide)
 	}
@@ -273,6 +274,10 @@ func (a *ui) createControls() {
 	a.hOnlineLbl = a.child(0, "eMudScanOptIn", T("chk.online"), 0, 0)
 	a.onlineTip = a.addTip([]uintptr{a.hOnline, a.hOnlineLbl}, Tf("tip.online", userAgent()))
 	a.hCheck = a.iconButton(a.hwnd, T("btn.check"), idCheck, true, glyphPlay)
+	// the search box (ES_AUTOHSCROLL, with a border), shown with a hint while empty
+	a.hSearch = a.child(0x200 /* WS_EX_CLIENTEDGE */, "EDIT", "", wsTabStop|0x80, idSearch)
+	send(a.hSearch, 0x1501 /* EM_SETCUEBANNER */, 1, up(T("search.cue")))
+	a.query = nil
 	a.hCopy = a.iconButton(a.hwnd, T("btn.copy"), idCopy, false, glyphCopy)
 	a.hSave = a.iconButton(a.hwnd, T("btn.save"), idSave, false, glyphSave)
 	for _, k := range []struct {
@@ -469,10 +474,15 @@ func (a *ui) layout() {
 		}
 		return max(s(least), w+s(16)+s(44)) // icon and margins
 	}
-	a.move(a.hCheck, m, y, btnW(150, "btn.check", "btn.again", "btn.stop"), bh)
+	chw := btnW(150, "btn.check", "btn.again", "btn.stop")
+	a.move(a.hCheck, m, y, chw, bh)
 	sw, cw := btnW(150, "btn.save"), btnW(140, "btn.copy")
 	a.move(a.hSave, W-m-sw, y, sw, bh)
 	a.move(a.hCopy, W-m-sw-s(8)-cw, y, cw, bh)
+	// the search box, before Copy report, as wide as there is room for (up to 360)
+	eh := a.fontMetrics(a.fontUI).Height + s(10)
+	ew := min(s(360), W-m-sw-s(8)-cw-s(24)-(m+chw+s(24)))
+	a.move(a.hSearch, W-m-sw-s(8)-cw-s(24)-ew, y+(bh-eh)/2, max(ew, 0), eh)
 	y += bh + s(12)
 
 	// four frames
@@ -1029,11 +1039,16 @@ func (a *ui) rebuild(l *listCtl) {
 			delete(a.shown, id)
 		}
 	}
+	shown := items[:0]
 	for _, it := range items {
 		if len(it.Copies) > 0 {
 			a.shown[it.ID] = it
 		}
+		if matchesQuery(it, a.query) { // the search box
+			shown = append(shown, it)
+		}
 	}
+	items = shown
 	sortItems(items, l.sortKeys)
 	selected := map[int]bool{}
 	for _, id := range a.selectedIDs(l.h) {
@@ -1555,7 +1570,8 @@ func (a *ui) drainEvents() {
 }
 
 // shortcut runs the main window's keyboard shortcuts, wherever the focus is in it:
-// F5 Scan / Scan again, Ctrl+S Save report, Ctrl+Shift+C Copy report. It reports
+// F5 Scan / Scan again, Ctrl+S Save report, Ctrl+Shift+C Copy report, Ctrl+F the
+// search box. It reports
 // whether the key was one of them. A button that is disabled does nothing.
 func (a *ui) shortcut(key uintptr) bool {
 	enabled := func(h uintptr) bool { r, _, _ := pIsWindowEnabled.Call(h); return h != 0 && r != 0 }
@@ -1573,6 +1589,9 @@ func (a *ui) shortcut(key uintptr) bool {
 		if enabled(a.hCopy) {
 			a.copyReport()
 		}
+	case key == 'F' && ctrl && !shift:
+		pSetFocus.Call(a.hSearch)
+		send(a.hSearch, 0xB1 /* EM_SETSEL */, 0, ^uintptr(0))
 	default:
 		return false
 	}
@@ -1707,7 +1726,7 @@ func (a *ui) reset() {
 	}
 	a.hLogo, a.hTitle, a.hInfo, a.hLangLbl, a.hLang, a.hDrivesLbl, a.hOnline, a.hOnlineLbl = 0, 0, 0, 0, 0, 0, 0, 0
 	a.drives = nil
-	a.hCheck, a.hCopy, a.hSave = 0, 0, 0
+	a.hCheck, a.hCopy, a.hSave, a.hSearch = 0, 0, 0, 0
 	a.hLog, a.hSpin, a.hListWin = 0, 0, 0
 	a.frames = [4]frameBox{}
 	a.net, a.app, a.hSummary = nil, nil, 0
@@ -2037,6 +2056,15 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			}
 		case id == idOnline:
 			a.onlineOff = send(a.hOnline, bmGetCheck, 0, 0) != 1
+		case id == idSearch && hiword(wParam) == 0x300: // EN_CHANGE
+			a.query = queryWords(getText(a.hSearch))
+			for _, l := range a.lists() {
+				a.rebuild(l)
+			}
+		case id == 2: // IDCANCEL: Escape, routed by IsDialogMessage
+			if f, _, _ := pGetFocus.Call(); f == a.hSearch && len(a.query) > 0 {
+				setText(a.hSearch, "") // clears the search
+			}
 		case id == idHideNet || id == idHideApp:
 			l := a.net
 			if id == idHideApp {

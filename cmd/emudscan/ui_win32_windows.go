@@ -44,6 +44,7 @@ var (
 	pMessageBoxW               = moduser32.NewProc("MessageBoxW")
 	pSetWindowTextW            = moduser32.NewProc("SetWindowTextW")
 	pGetWindowTextW            = moduser32.NewProc("GetWindowTextW")
+	pGetWindowTextLengthW      = moduser32.NewProc("GetWindowTextLengthW")
 	pEnableWindow              = moduser32.NewProc("EnableWindow")
 	pIsWindowEnabled           = moduser32.NewProc("IsWindowEnabled")
 	pSetForegroundWindow       = moduser32.NewProc("SetForegroundWindow")
@@ -247,6 +248,7 @@ const (
 	idListApp = 109
 	idLog     = 110
 	idOnline  = 111
+	idSearch  = 112
 	idDrive0  = 150 // + drive index
 
 	idDlgRich   = 301
@@ -520,6 +522,13 @@ func sysColor(i int) uint32 {
 func rgb(r, g, b byte) uint32 { return uint32(r) | uint32(g)<<8 | uint32(b)<<16 }
 
 func setText(h uintptr, s string) { pSetWindowTextW.Call(h, up(s)) }
+
+func getText(h uintptr) string {
+	n, _, _ := pGetWindowTextLengthW.Call(h)
+	buf := make([]uint16, n+1)
+	pGetWindowTextW.Call(h, uintptr(unsafe.Pointer(&buf[0])), n+1)
+	return syscall.UTF16ToString(buf)
+}
 
 func msgBox(owner uintptr, text string, flags uintptr) uintptr {
 	r, _, _ := pMessageBoxW.Call(owner, up(text), up(appName), flags)
