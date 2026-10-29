@@ -48,6 +48,8 @@ var (
 	pEnableWindow              = moduser32.NewProc("EnableWindow")
 	pIsWindowEnabled           = moduser32.NewProc("IsWindowEnabled")
 	pSetForegroundWindow       = moduser32.NewProc("SetForegroundWindow")
+	pGetForegroundWindow       = moduser32.NewProc("GetForegroundWindow")
+	pIsWindow                  = moduser32.NewProc("IsWindow")
 	pGetDpiForWindow           = moduser32.NewProc("GetDpiForWindow")
 	pGetDpiForSystem           = moduser32.NewProc("GetDpiForSystem")
 	pSetProcessDpiAwarenessCtx = moduser32.NewProc("SetProcessDpiAwarenessContext")

@@ -20,6 +20,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 - The links of the details window and of the About box, and the (i) button, had no tooltip. Each one now says what clicking it does.
 - Dragging the border between two panes far down shrank the Log and moved the panes above it. The border now stops when the lowest list reaches its least height, and the lists show whole rows again once it is released.
 - In the details, the software's age was in black. It is now in amber, as in the lists, after a warning sign and with a capital letter (“⚠ This version is 15 months old”).
+- Closing the details window could leave another program in front, when one had been used meanwhile (a screenshot editor). The eMudScan window now comes back to the front, with the focus where it was.
 
 ## 1.3 (20261028)
 

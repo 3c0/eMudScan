@@ -104,6 +104,7 @@ type ui struct {
 
 	detailQueue []Item
 	dlg         *detailsDlg
+	dlgFocus    uintptr       // the control that had the focus before the details: it gets it back
 	detailBack  []detailsBack // details left through a link, shown again when closed
 	navigating  bool
 }
@@ -1817,6 +1818,9 @@ func (a *ui) workArea() rect {
 }
 
 func (a *ui) openDetails(it Item) {
+	if a.dlg == nil && a.dlgFocus == 0 {
+		a.dlgFocus, _, _ = pGetFocus.Call()
+	}
 	d := &detailsDlg{item: it, blocks: detailBlocks(it)}
 	for _, b := range d.blocks {
 		d.cmds = append(d.cmds, b.cmds...)
@@ -1896,6 +1900,24 @@ func (a *ui) closeDetails() {
 		return
 	}
 	pEnableWindow.Call(a.hwnd, 1)
+	// the main window comes back to the front, not the window that was active before
+	// it (another program, used while the details were open), and its control gets the
+	// focus back once no other details open
+	if fg, _, _ := pGetForegroundWindow.Call(); fg == d.hwnd {
+		pSetForegroundWindow.Call(a.hwnd)
+	}
+	defer func() {
+		if a.dlg != nil {
+			return
+		}
+		if f := a.dlgFocus; f != 0 {
+			fg, _, _ := pGetForegroundWindow.Call()
+			if ok, _, _ := pIsWindow.Call(f); ok != 0 && fg == a.hwnd {
+				pSetFocus.Call(f)
+			}
+		}
+		a.dlgFocus = 0
+	}()
 	d.view.destroy()
 	pDestroyWindow.Call(d.hwnd)
 	a.dlg = nil
