@@ -118,6 +118,7 @@ func (a *ui) newDocView(parent uintptr, blocks []docBlock) *docView {
 	mk("status", 11, 700, false, "Segoe UI")
 	mk("summary", 11, 400, false, "Segoe UI")
 	mk("mono", 10, 400, false, "Consolas")
+	mk("symbol", 10, 400, false, "Segoe UI Symbol") // ⚠, as in the log
 	v.icons = map[Status]uintptr{}
 	isz := int(a.scale(20))
 	for _, st := range []Status{StOK, StInfo, StCaution, StWarn, StError} {
@@ -280,6 +281,13 @@ func (v *docView) runsStyled(runs []mrun, base *docFont, color uint32) []styled 
 			out = append(out, styled{r.text, v.fonts["bold"], color, ""})
 		case runLink:
 			out = append(out, styled{r.text, v.fonts["link"], rgb(0, 102, 204), r.target})
+		case runWarn: // amber, as in the lists, with its ⚠ from the symbol font
+			text := r.text
+			if rest, ok := strings.CutPrefix(text, "⚠"); ok {
+				out = append(out, styled{"⚠", v.fonts["symbol"], optinColor, ""})
+				text = rest
+			}
+			out = append(out, styled{text, base, optinColor, ""})
 		default:
 			out = append(out, styled{r.text, base, color, ""})
 		}

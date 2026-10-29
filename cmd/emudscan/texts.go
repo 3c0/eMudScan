@@ -25,7 +25,7 @@ var tr = map[string][2]string{
 	"dlg.updated":   {"Software date", "Date du logiciel"},
 	"stale.months":  {"%d months", "%d mois"},
 	"stale.years":   {"%d years", "%d ans"},
-	"stale.short":   {"this version is %s old", "cette version a %s"},
+	"stale.short":   {"This version is %s old", "Cette version a %s"},
 	"stale.tip":     {"This version is %s old: a newer one may exist, or this software may no longer be maintained.", "Cette version a %s : il en existe peut-être une plus récente, ou ce logiciel n'est plus maintenu."},
 	"stale.advice": {"This version is %s old: a newer one may exist (see the software's homepage or its package manager). If there is none, the software may no longer be maintained, and a fix may never come: consider replacing it with software that is maintained.",
 		"Cette version a %s : il en existe peut-être une plus récente (voir la page d'accueil du logiciel ou son gestionnaire de paquets). S'il n'y en a pas, le logiciel n'est peut-être plus maintenu et un correctif pourrait ne jamais arriver : envisagez de le remplacer par un logiciel maintenu."},

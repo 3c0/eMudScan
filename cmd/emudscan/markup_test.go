@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestMarkup(t *testing.T) {
@@ -118,5 +119,28 @@ func TestLineLinks(t *testing.T) {
 	}
 	if got := lineLinks("no link here", measure); len(got) != 0 {
 		t.Errorf("no link: %+v", got)
+	}
+}
+
+// The software's age is in amber in the details, as in the lists, after a warning sign.
+func TestDetailsStaleAge(t *testing.T) {
+	Lang = 0
+	it := Item{Group: GroupApps, Kind: "tool", Name: "aichat", Status: StWarn, File: `C:\scoop\apps\aichat\0.30.0\aichat.exe`,
+		Updated: lastUpdate{Time: time.Now().AddDate(0, -15, -3), Src: dateModified, File: `C:\scoop\apps\aichat\0.30.0\aichat.exe`}}
+	it.fillDisplay("")
+	var warn []mrun
+	for _, b := range detailBlocks(it) {
+		for _, r := range b.rows {
+			if r.label == T("dlg.updated") {
+				for _, run := range r.value {
+					if run.kind == runWarn {
+						warn = append(warn, run)
+					}
+				}
+			}
+		}
+	}
+	if len(warn) != 1 || warn[0].text != "⚠ This version is 15 months old" {
+		t.Errorf("software date: %+v", warn)
 	}
 }

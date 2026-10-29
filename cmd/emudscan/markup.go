@@ -24,6 +24,7 @@ const (
 	runBold
 	runLink
 	runCommand
+	runWarn // in amber, as in the lists: the software's age
 )
 
 type mrun struct {
@@ -294,7 +295,7 @@ func detailBlocks(it Item) []docBlock {
 				runs = append(runs, mrun{kind: runLink, text: pathBase(u.File), target: u.File}, mrun{kind: runText, text: parts[1]})
 			}
 			if m := it.stale(); m > 0 {
-				runs = append(runs, mrun{kind: runText, text: " — " + Tf("stale.short", ageText(m))})
+				runs = append(runs, mrun{kind: runText, text: " — "}, mrun{kind: runWarn, text: "⚠ " + Tf("stale.short", ageText(m))})
 			}
 			rows = append(rows, docRow{T("dlg.updated"), runs})
 		}
