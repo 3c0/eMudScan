@@ -56,6 +56,13 @@ Certificate bundles are not judged by their version: each one is tested against
 the 12 test chains, so the result says whether that file would really accept a
 compromised certificate.
 
+**Settings that point software to a certificate file** are checked the same way,
+because such a file replaces the software's own list, even an up-to-date one: the
+environment variables `SSL_CERT_FILE`, `SSL_CERT_DIR`, `CURL_CA_BUNDLE`,
+`REQUESTS_CA_BUNDLE`, `PIP_CERT`, `GIT_SSL_CAINFO`, `NODE_EXTRA_CA_CERTS` (which
+adds to Node.js' list) and `NPM_CONFIG_CAFILE`; `cert` in pip.ini; `http.sslCAInfo`
+in Git's global configuration; `cafile` in npm's. eMudScan only reads them.
+
 When a component is a copy inside other software (Python inside ESPHome, Java
 inside Stirling PDF…), eMudScan says to update that software, not the copy.
 

@@ -136,7 +136,7 @@ func runThirdPartyChecks(c *checker, drives []string, windowsBlock bool, pyStore
 	c.stepEnd(StOK, Tf("log.ownersDone", len(tp.owners)))
 	tp.discover()
 	for _, f := range []func(){tp.checkBrowsers, tp.checkGit, tp.checkCurl, tp.checkPython, tp.checkNode, tp.checkJava,
-		tp.checkElectron, tp.checkGo, tp.checkUninstallApps, tp.checkEmbeddedTools, tp.checkBundles,
+		tp.checkElectron, tp.checkGo, tp.checkCertSettings, tp.checkUninstallApps, tp.checkEmbeddedTools, tp.checkBundles,
 		tp.checkInternetFolders, tp.checkOthers} {
 		if c.cancel() {
 			return
