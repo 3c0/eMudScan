@@ -9,7 +9,27 @@ import (
 	"strings"
 )
 
-var linkTagRe = regexp.MustCompile(`<a href="[^"]*">|</a>`)
+var (
+	linkTagRe = regexp.MustCompile(`<a href="[^"]*">|</a>`)
+	linkRe    = regexp.MustCompile(`<a href="([^"]*)">(.*?)</a>`)
+)
+
+// lineLink is a link of a line of the About box: its address, and where its text is
+// drawn (from the left of the line).
+type lineLink struct {
+	url    string
+	x0, x1 int32
+}
+
+// lineLinks finds the links of a line of markup, for their tooltips.
+func lineLinks(line string, measure func(string) int32) []lineLink {
+	var out []lineLink
+	for _, m := range linkRe.FindAllStringSubmatchIndex(line, -1) {
+		x0 := measure(linkTagRe.ReplaceAllString(line[:m[0]], ""))
+		out = append(out, lineLink{url: line[m[2]:m[3]], x0: x0, x1: x0 + measure(line[m[4]:m[5]])})
+	}
+	return out
+}
 
 // markupTok is a word, or a whole link, of a paragraph.
 type markupTok struct {

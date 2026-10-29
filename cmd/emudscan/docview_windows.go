@@ -70,10 +70,14 @@ type docView struct {
 	downBtn   int
 	hoverBtn  int
 	tip       uintptr
-	tips      int
+	tips      int // tools of the copy buttons, 1 to tips
+	tipFrag   int // the fragment of the link whose tooltip is placed (-1: none)
 	onStatus  func(string)
 	onCopyAll func()
 }
+
+// linkToolID is the tool of the link under the mouse (the copy buttons' are 1, 2…).
+const linkToolID = 0x10000
 
 const (
 	docCmdBg   = 0x0C0C0C // rgb(12,12,12)
@@ -94,7 +98,7 @@ func (a *ui) newDocView(parent uintptr, blocks []docBlock) *docView {
 		pRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 		docClassOK = true
 	}
-	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1}
+	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1}
 	v.fonts = map[string]*docFont{}
 	mk := func(name string, pt, weight int, underline bool, face string) {
 		f := &docFont{h: createFont(pt, a.dpi, weight, underline, face)}
@@ -123,8 +127,12 @@ func (a *ui) newDocView(parent uintptr, blocks []docBlock) *docView {
 		0, 0, 10, 10, parent, uintptr(idDlgRich), 0, 0)
 	v.hwnd = h
 	docViews[h] = v
-	v.tip, _, _ = pCreateWindowExW.Call(0x8 /* WS_EX_TOPMOST */, up("tooltips_class32"), 0, 0x80000000|0x1|0x2, /* WS_POPUP|TTS_ALWAYSTIP|TTS_NOPREFIX */
-		0x80000000, 0x80000000, 0x80000000, 0x80000000, h, 0, 0, 0)
+	v.tip = a.newTooltip(h)
+	if v.tip != 0 { // the link under the mouse: placed by linkTipAt
+		ti := toolInfo{Flags: 0x10 /* TTF_SUBCLASS */, Hwnd: h, ID: linkToolID, Text: u16(" ")}
+		ti.Size = uint32(unsafe.Sizeof(ti))
+		send(v.tip, ttmAddToolW, 0, uintptr(unsafe.Pointer(&ti)))
+	}
 	return v
 }
 
@@ -371,6 +379,26 @@ func (v *docView) setScroll(pos int32) {
 	pSetScrollInfo.Call(v.hwnd, 1 /* SB_VERT */, uintptr(unsafe.Pointer(&si)), 1)
 	pInvalidateRect.Call(v.hwnd, 0, 0)
 	v.updateTips()
+	v.linkTipAt(-1) // placed again at the next mouse move
+}
+
+// linkTipAt places the tooltip of the links on fragment i, the one under the mouse
+// (-1: no link there). A link cut over two lines has a tool on each line in turn.
+func (v *docView) linkTipAt(i int) {
+	if v.tip == 0 || i == v.tipFrag {
+		return
+	}
+	send(v.tip, ttmPop, 0, 0)
+	v.tipFrag = i
+	ti := toolInfo{Hwnd: v.hwnd, ID: linkToolID, Text: u16(" ")}
+	if i >= 0 {
+		f := v.frags[i]
+		ti.Rect = rect{f.x, f.y - v.scroll, f.x + f.w, f.y + f.h - v.scroll}
+		ti.Text = u16(strings.ReplaceAll(linkTip(f.link), "\n", "\r\n"))
+	}
+	ti.Size = uint32(unsafe.Sizeof(ti))
+	send(v.tip, ttmNewToolRectW, 0, uintptr(unsafe.Pointer(&ti)))
+	send(v.tip, ttmUpdateTipTextW, 0, uintptr(unsafe.Pointer(&ti)))
 }
 
 // updateTips gives each visible copy button its tooltip.
@@ -415,6 +443,17 @@ func (v *docView) fragAt(p point) *docFrag {
 		}
 	}
 	return nil
+}
+
+// linkFragAt is the fragment of a link at a document point (-1: none).
+func (v *docView) linkFragAt(p point) int {
+	for i := range v.frags {
+		f := &v.frags[i]
+		if f.link != "" && p.X >= f.x && p.X < f.x+f.w && p.Y >= f.y && p.Y < f.y+f.h {
+			return i
+		}
+	}
+	return -1
 }
 
 func (v *docView) linkAt(p point) string {
@@ -782,6 +821,7 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 				}
 				return 0
 			}
+			v.linkTipAt(v.linkFragAt(v.docPoint(pt)))
 			if hb := v.btnAt(v.docPoint(pt)); hb != v.hoverBtn {
 				v.hoverBtn = hb
 				pInvalidateRect.Call(hwnd, 0, 0)

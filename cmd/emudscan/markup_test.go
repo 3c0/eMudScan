@@ -92,3 +92,31 @@ func TestSearchRowAndTestLinks(t *testing.T) {
 		t.Errorf("reference: %s", s)
 	}
 }
+
+// Each link says what clicking it does.
+func TestLinkTip(t *testing.T) {
+	Lang = 0
+	for target, want := range map[string]string{
+		"https://lmstudio.ai":      "Open in your browser:\nhttps://lmstudio.ai",
+		`C:\Program Files\Git`:     "Show in Explorer:\nC:\\Program Files\\Git",
+		itemLinkPrefix + "wincopy": "Show the details of this element",
+		openInPrefix + `C:\Users\me\scoop\apps\ungoogled-chromium\156.0.8078.47-1.1\chrome.exe>https://emudhra.we-have-a-problem.com/`: "Open with chrome.exe:\nhttps://emudhra.we-have-a-problem.com/",
+	} {
+		if got := linkTip(target); got != want {
+			t.Errorf("linkTip(%q) = %q, want %q", target, got, want)
+		}
+	}
+}
+
+// The tooltips of the About box's links cover the link's text only.
+func TestLineLinks(t *testing.T) {
+	measure := func(s string) int32 { return int32(len(s)) * 7 }
+	line := `Source code: <a href="https://github.com/3c0/eMudScan">https://github.com/3c0/eMudScan</a>.`
+	got := lineLinks(line, measure)
+	if len(got) != 1 || got[0].url != "https://github.com/3c0/eMudScan" || got[0].x0 != 13*7 || got[0].x1 != (13+31)*7 {
+		t.Errorf("lineLinks: %+v", got)
+	}
+	if got := lineLinks("no link here", measure); len(got) != 0 {
+		t.Errorf("no link: %+v", got)
+	}
+}

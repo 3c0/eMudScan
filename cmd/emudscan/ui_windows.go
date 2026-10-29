@@ -63,7 +63,7 @@ type ui struct {
 	log                                                     *logView
 	hSummary                                                uintptr
 	hOnline, hOnlineLbl, onlineTip                          uintptr   // the box that allows the online test, its label, their tooltip
-	keyTips                                                 []uintptr // tooltips giving the buttons' keyboard shortcuts
+	fixedTips                                               []uintptr // tooltips with a fixed text: the (i) button, the buttons' keyboard shortcuts
 	onlineOff                                               bool      // the user turned the online test off (not saved)
 
 	dpi                                   int
@@ -284,8 +284,9 @@ func (a *ui) createControls() {
 		h   uintptr
 		key string
 	}{{a.hCheck, "F5"}, {a.hCopy, "Ctrl+Shift+C"}, {a.hSave, "Ctrl+S"}} {
-		a.keyTips = append(a.keyTips, a.addTip([]uintptr{k.h}, Tf("tip.key", k.key)))
+		a.fixedTips = append(a.fixedTips, a.addTip([]uintptr{k.h}, Tf("tip.key", k.key)))
 	}
+	a.fixedTips = append(a.fixedTips, a.addTip([]uintptr{a.hInfo}, T("tip.about")))
 	a.hSpin = a.child(0, "eMudScanSpinner", "", 0, 0)
 	a.log = a.newLogView(a.hwnd, idLog)
 	a.hLog = a.log.hwnd
@@ -1718,10 +1719,10 @@ func (a *ui) reset() {
 		pDestroyWindow.Call(a.onlineTip) // a tooltip is not a child window
 		a.onlineTip = 0
 	}
-	for _, t := range a.keyTips {
+	for _, t := range a.fixedTips {
 		pDestroyWindow.Call(t)
 	}
-	a.keyTips = nil
+	a.fixedTips = nil
 	childList = nil
 	pEnumChildWindows.Call(a.hwnd, collectChilds, 0)
 	for _, h := range childList {

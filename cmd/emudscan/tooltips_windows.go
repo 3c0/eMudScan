@@ -49,6 +49,28 @@ func (a *ui) addTip(ctls []uintptr, text string) uintptr {
 	return tip
 }
 
+// newTooltip creates a tooltip window for the tools of a window (a dialog).
+func (a *ui) newTooltip(owner uintptr) uintptr {
+	tip, _, _ := pCreateWindowExW.Call(0x8 /* WS_EX_TOPMOST */, up("tooltips_class32"), 0, 0x80000000|0x1|0x2, /* WS_POPUP|TTS_ALWAYSTIP|TTS_NOPREFIX */
+		0x80000000, 0x80000000, 0x80000000, 0x80000000, owner, 0, 0, 0)
+	if tip != 0 {
+		send(tip, ttmSetMaxTipWidth, 0, uintptr(a.scale(560)))
+		send(tip, ttmSetDelayTime, 2 /* TTDT_AUTOPOP */, 30000)
+	}
+	return tip
+}
+
+// addTool adds to a tooltip a control of a window (id: the control), or (rc not nil)
+// a rectangle of a window's client area (id: its number in that window).
+func addTool(tip, hwnd, id uintptr, rc *rect, text string) {
+	ti := toolInfo{Flags: 0x1 | 0x10 /* TTF_IDISHWND|TTF_SUBCLASS */, Hwnd: hwnd, ID: id, Text: u16(strings.ReplaceAll(text, "\n", "\r\n"))}
+	if rc != nil {
+		ti.Flags, ti.Rect = 0x10 /* TTF_SUBCLASS */, *rc
+	}
+	ti.Size = uint32(unsafe.Sizeof(ti))
+	send(tip, ttmAddToolW, 0, uintptr(unsafe.Pointer(&ti)))
+}
+
 // addCellTips creates the tooltip of a list.
 func (a *ui) addCellTips(list uintptr) {
 	tip, _, _ := pCreateWindowExW.Call(0x8 /* WS_EX_TOPMOST */, up("tooltips_class32"), 0, 0x80000000|0x1|0x2, /* WS_POPUP|TTS_ALWAYSTIP|TTS_NOPREFIX */

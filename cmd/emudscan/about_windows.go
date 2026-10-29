@@ -229,10 +229,15 @@ func (b *aboutBox) build(hwnd uintptr) {
 	}
 	w := b.textX + used + right
 	// one control per line (up to the right side, so that it never cuts the line
-	// again), an empty line after each paragraph, the last one included
+	// again), an empty line after each paragraph, the last one included; each link
+	// has a tooltip saying where it leads
+	tip := a.newTooltip(hwnd)
 	for _, lines := range paras {
 		for _, line := range lines {
-			link(line, b.textX, y, w-b.textX)
+			h := link(line, b.textX, y, w-b.textX)
+			for i, l := range lineLinks(line, measure) {
+				addTool(tip, h, uintptr(i+1), &rect{l.x0, 0, l.x1, lineH}, linkTip(l.url))
+			}
 			y += lineH
 		}
 		y += lineH
@@ -243,6 +248,7 @@ func (b *aboutBox) build(hwnd uintptr) {
 	b.barTop = y
 	lic := T("about.licenses")
 	b.footLink = link(`<a href="`+licensesHref+`">`+lic+`</a>`, left+inset, y+pad+(btnH-lineH)/2, measure(lic)+s(8))
+	addTool(tip, hwnd, b.footLink, nil, T("tip.licenses"))
 	pSelectObject.Call(dc, old)
 	pReleaseDC.Call(hwnd, dc)
 	ok, _, _ := pCreateWindowExW.Call(0, up("BUTTON"), up("OK"), uintptr(wsChild|wsVisible|wsTabStop|0x1 /* BS_DEFPUSHBUTTON */),

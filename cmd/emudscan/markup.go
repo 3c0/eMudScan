@@ -50,6 +50,24 @@ const itemLinkPrefix = "item:"
 // openInPrefix starts a link that opens a page in a given browser: "open:exe>url".
 const openInPrefix = "open:"
 
+// linkTip says what clicking a link does, for its tooltip: the address of a page, the
+// browser it opens in, the file or folder shown in Explorer, another element.
+func linkTip(target string) string {
+	switch {
+	case strings.HasPrefix(target, itemLinkPrefix):
+		return T("tip.linkItem")
+	case strings.HasPrefix(target, openInPrefix):
+		exe, u, _ := strings.Cut(strings.TrimPrefix(target, openInPrefix), ">")
+		if i := strings.LastIndexAny(exe, `\/`); i >= 0 {
+			exe = exe[i+1:]
+		}
+		return Tf("tip.linkWith", exe, u)
+	case strings.HasPrefix(lower(target), "http://") || strings.HasPrefix(lower(target), "https://"):
+		return Tf("tip.linkWeb", target)
+	}
+	return Tf("tip.linkPath", target)
+}
+
 // itemRefs maps the key of an item link to the name of the element.
 var itemRefs = map[string]func() string{"wincopy": func() string { return T("win.copyName") }}
 
