@@ -107,7 +107,8 @@ writes a file.
 | Esc | Close the details window |
 | Ctrl+C, Ctrl+A | In a list: copy the selected rows, select all |
 
-Hover the *Scan*, *Copy report* and *Save report* buttons to see their shortcut.
+Hover the *Scan*, *Copy report* and *Save report* buttons to see their keyboard
+shortcut.
 
 ## The About box
 

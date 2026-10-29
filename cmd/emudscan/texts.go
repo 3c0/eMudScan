@@ -105,7 +105,7 @@ var tr = map[string][2]string{
 	"act.scan":            {"Scanning %s", "Scan de %s"},
 	"act.read":            {"Reading %s", "Lecture de %s"},
 	"copies.found":        {"Found in %d places:", "Trouvé à %d endroits :"},
-	"tip.key":             {"Shortcut: %s", "Raccourci : %s"},
+	"tip.key":             {"Keyboard shortcut: %s", "Raccourci clavier : %s"},
 	"tip.linkWeb":         {"Open in your browser:\n%s", "Ouvrir dans votre navigateur :\n%s"},
 	"tip.linkWith":        {"Open with %s:\n%s", "Ouvrir avec %s :\n%s"},
 	"tip.linkPath":        {"Show in Explorer:\n%s", "Afficher dans l'Explorateur :\n%s"},
