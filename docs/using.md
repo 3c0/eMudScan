@@ -103,6 +103,7 @@ writes a file.
 | Ctrl+S | Save report |
 | Ctrl+Shift+C | Copy report |
 | Ctrl+F | Search the lists |
+| Ctrl+Q | Quit eMudScan |
 | Enter | Details of the selected rows |
 | Esc | Close the details window |
 | Ctrl+C, Ctrl+A | In a list: copy the selected rows, select all |

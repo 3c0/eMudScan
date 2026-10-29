@@ -10,7 +10,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 - The same finding in several places (two copies of Node.js inside LM Studio) is one element, whose details list every copy, and counts once in the summary.
 - Settings that point software to a certificate file are checked: the environment variables SSL_CERT_FILE, SSL_CERT_DIR, CURL_CA_BUNDLE, REQUESTS_CA_BUNDLE, PIP_CERT, GIT_SSL_CAINFO, NODE_EXTRA_CA_CERTS and NPM_CONFIG_CAFILE, pip's cert, Git's http.sslCAInfo and npm's cafile. The file they point to is tested like any certificate bundle.
 - Microsoft Store apps are searched like other software (Python from the Store, Electron applications…), from the folders Windows records for them; what is found there is shown under the app's name, tagged [Microsoft Store], with the Store's way to update it (Windows protects their folders, so no fix by hand is proposed).
-- Keyboard shortcuts: F5 to scan (or scan again), Ctrl+S to save the report, Ctrl+Shift+C to copy it; the buttons' tooltips show them.
+- Keyboard shortcuts: F5 to scan (or scan again), Ctrl+S to save the report, Ctrl+Shift+C to copy it, Ctrl+Q to quit; the buttons' tooltips show them.
 - A search box above the lists (Ctrl+F) keeps the rows whose Software or Component column contains every word typed. Esc clears it, and so do Scan and Scan again.
 - The details of a Python inside another program (ESPHome Device Builder, LM Studio) give that program's update once, then what to do if you manage this Python yourself, without repeating it.
 - Software installed with Scoop is shown once, under the folder of its version: Scoop's `current` folder is a link to it, and Node.js from Scoop was listed twice, once through each.

@@ -1575,7 +1575,7 @@ func (a *ui) drainEvents() {
 
 // shortcut runs the main window's keyboard shortcuts, wherever the focus is in it:
 // F5 Scan / Scan again, Ctrl+S Save report, Ctrl+Shift+C Copy report, Ctrl+F the
-// search box. It reports
+// search box (Ctrl+Q, which quits, is handled by the message loop). It reports
 // whether the key was one of them. A button that is disabled does nothing.
 func (a *ui) shortcut(key uintptr) bool {
 	enabled := func(h uintptr) bool { r, _, _ := pIsWindowEnabled.Call(h); return h != 0 && r != 0 }
@@ -2305,6 +2305,10 @@ func main() {
 		r, _, _ := pGetMessageW.Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0)
 		if int32(r) <= 0 {
 			break
+		}
+		if m.Message == wmKeyDown && m.WParam == 'Q' && ctrlDown() && !shiftDown() { // Ctrl+Q quits, from the details window too
+			send(hwnd, wmClose, 0, 0)
+			continue
 		}
 		if m.Message == wmKeyDown && a.dlg == nil && a.shortcut(m.WParam) {
 			continue
