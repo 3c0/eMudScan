@@ -72,6 +72,11 @@ Such a folder is given to an installed program only when exactly one program
 contains the identifier in its executable or, failing that, has every word of it in
 its name; otherwise it keeps the identifier as its name.
 
+**Microsoft Store apps** are searched too: their folders cannot be listed, but
+Windows records the folder of each app installed for you, and eMudScan reads them
+like any other (Python from the Store, Electron applications…). Libraries shared by
+apps and Windows' own apps are skipped.
+
 Programs are searched for built-in certificate lists without being read
 entirely. *Scan again* reads a file again only if it has changed.
 

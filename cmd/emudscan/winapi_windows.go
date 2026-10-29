@@ -239,6 +239,22 @@ func getFileVersion(path string) (fileVersion, bool) {
 	return fv, true
 }
 
+var procSHLoadIndirectString = sysDLL("shlwapi.dll").NewProc("SHLoadIndirectString")
+
+// loadIndirectString resolves a name kept in a package's resources
+// ("@{Package?ms-resource://…}"), "" if it cannot.
+func loadIndirectString(s string) string {
+	src, err := syscall.UTF16PtrFromString(s)
+	if err != nil {
+		return ""
+	}
+	buf := make([]uint16, 512)
+	if hr, _, _ := procSHLoadIndirectString.Call(uintptr(unsafe.Pointer(src)), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)), 0); hr != 0 {
+		return ""
+	}
+	return syscall.UTF16ToString(buf)
+}
+
 func hex4(v uint16) string {
 	const digits = "0123456789abcdef"
 	return string([]byte{digits[v>>12&15], digits[v>>8&15], digits[v>>4&15], digits[v&15]})

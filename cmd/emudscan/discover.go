@@ -82,6 +82,7 @@ type walkSpec struct {
 	maxDepth int
 	skip     []string // absolute folders to skip (case-insensitive)
 	explicit bool     // scan even if inside an already scanned tree (which skips it)
+	quiet    bool     // no step of its own in the log (the caller logs one for several folders)
 }
 
 // Folder names that never contain anything relevant, or are huge.
@@ -100,9 +101,11 @@ func (d *discovery) walk(c *checker, spec walkSpec, deep bool) {
 		return
 	}
 	d.seenRoots[pathKey(spec.root)] = true
-	dirs0, files0 := d.dirs, d.files
-	c.stepStart(Tf("log.walk", spec.root))
-	defer func() { c.stepEnd(StOK, Tf("log.walkDone", d.dirs-dirs0, d.files-files0)) }()
+	if !spec.quiet {
+		dirs0, files0 := d.dirs, d.files
+		c.stepStart(Tf("log.walk", spec.root))
+		defer func() { c.stepEnd(StOK, Tf("log.walkDone", d.dirs-dirs0, d.files-files0)) }()
+	}
 	d.lastLog = time.Now()
 	base := strings.Count(filepath.Clean(spec.root), string(filepath.Separator))
 	filepath.WalkDir(spec.root, func(p string, e fs.DirEntry, err error) error {

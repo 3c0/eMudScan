@@ -36,6 +36,7 @@ type appsContext struct {
 	chocoRoot    string
 	netPrograms  []netProgram     // installed programs that work over the internet
 	entries      []uninstallEntry // Apps & features
+	store        []storePackage   // Microsoft Store apps (store.go)
 	scanMu       sync.Mutex
 	scanned      map[scanKey]scanEntry // files already scanned (for "Scan again" and files checked twice)
 	idMu         sync.Mutex
@@ -132,6 +133,7 @@ func runThirdPartyChecks(c *checker, drives []string, windowsBlock bool, pyStore
 	c.stepStart(T("log.owners"))
 	tp.entries = uninstallEntries()
 	tp.loadOwners(tp.entries)
+	tp.loadStoreApps()
 	tp.loadInternetPrograms(tp.entries)
 	c.stepEnd(StOK, Tf("log.ownersDone", len(tp.owners)))
 	tp.discover()
@@ -151,6 +153,7 @@ func (tp *appsContext) refresh() {
 	tp.entries = uninstallEntries()
 	tp.owners, tp.netPrograms = nil, nil
 	tp.loadOwners(tp.entries)
+	tp.loadStoreApps()
 	tp.idMu.Lock()
 	tp.idOwners = nil
 	tp.idMu.Unlock()
@@ -245,6 +248,7 @@ func (tp *appsContext) discover() {
 		}
 		tp.d.walk(tp.c, s, false)
 	}
+	tp.walkStoreApps()
 	tp.c.activity("")
 	tp.c.stepStart(T("log.pathRegistry"))
 	tp.d.addFromPath()

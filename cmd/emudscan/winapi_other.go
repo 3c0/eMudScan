@@ -36,6 +36,7 @@ func listDrives() []driveInfo { return []driveInfo{{"/", "/", true}} }
 
 func regString(regRoot, string, string, uint32) (string, bool) { return "", false }
 func regSubkeys(regRoot, string, uint32) []string              { return nil }
+func loadIndirectString(string) string                         { return "" }
 func getFileVersion(string) (fileVersion, bool)                { return fileVersion{}, false }
 func isCloudPlaceholder(fs.FileInfo) bool                      { return false }
 func creationTime(fs.FileInfo) (time.Time, bool)               { return time.Time{}, false }

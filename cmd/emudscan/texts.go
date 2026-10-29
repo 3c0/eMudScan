@@ -96,6 +96,7 @@ var tr = map[string][2]string{
 	"log.ownersDone":      {"%d software folders", "%d dossiers de logiciels"},
 	"log.walk":            {"Scanning %s", "Scan de %s"},
 	"log.walkDone":        {"%d folders, %d files", "%d dossiers, %d fichiers"},
+	"log.store":           {"Scanning %d Microsoft Store apps", "Scan de %d applications du Microsoft Store"},
 	"log.pathRegistry":    {"Reading PATH and the registry", "Lecture du PATH et du registre"},
 	"log.toolScan":        {"Looking for built-in certificate lists in %d command-line programs", "Recherche de listes de certificats intégrées dans %d programmes en ligne de commande"},
 	"log.toolScanDone":    {"%d carry their own list", "%d ont leur propre liste"},
