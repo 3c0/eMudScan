@@ -270,7 +270,7 @@ func (tp *appsContext) settingOne(it *Item, s certSetting) {
 	}
 	certs, err := certsOf(s.target, s.dir)
 	if !s.dir {
-		tp.handled[pathKey(s.target)] = true // reported here, not again as a certificate bundle
+		tp.markHandled(s.target) // reported here, not again as a certificate bundle
 	}
 	removal := T("set.removeLine")
 	if s.remove != "" {

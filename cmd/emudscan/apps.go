@@ -32,6 +32,7 @@ type appsContext struct {
 	winDir       string
 	owners       []ownerDir
 	scoopApps    map[string]scoopManifest // installed Scoop apps
+	scoopCurrent map[string]string        // Scoop app folder → the version folder "current" links to
 	choco        []chocoPkg               // packages installed with Chocolatey
 	chocoRoot    string
 	netPrograms  []netProgram     // installed programs that work over the internet
@@ -159,6 +160,7 @@ func (tp *appsContext) refresh() {
 	tp.idMu.Unlock()
 	tp.loadInternetPrograms(tp.entries)
 	tp.scoopApps = map[string]scoopManifest{}
+	tp.scoopCurrent = nil // an update changes the version "current" links to
 	tp.choco = nil
 	tp.loadChocolatey()
 }
@@ -253,6 +255,7 @@ func (tp *appsContext) discover() {
 	tp.c.stepStart(T("log.pathRegistry"))
 	tp.d.addFromPath()
 	tp.addFromRegistry()
+	tp.d.rewrite(tp.scoopReal) // PATH leads to Scoop's "current", the drive scan to the version
 	tp.d.prune()
 	tp.c.stepEnd(StOK, T("log.done.short"))
 }
@@ -449,14 +452,17 @@ func (tp *appsContext) ownerOf(p string) ownerInfo {
 	}
 	if m := scoopRe.FindStringSubmatch(p); m != nil {
 		sm := tp.scoopApp(m[1], m[2])
+		loc := tp.scoopReal(filepath.Join(m[1], "apps", m[2], "current")) // the installed version's folder
 		ver := sm.Version
 		if ver == "" { // apps\<app>\<version>\...: the folder of a version
 			rest := strings.FieldsFunc(p[len(m[0]):], func(c rune) bool { return c == '\\' || c == '/' })
 			if len(rest) > 0 && rest[0][0] >= '0' && rest[0][0] <= '9' {
 				ver = rest[0]
+			} else if b := filepath.Base(loc); !strings.EqualFold(b, "current") {
+				ver = b
 			}
 		}
-		return ownerInfo{Name: m[2], URL: sm.Homepage, Loc: filepath.Join(m[1], "apps", m[2], "current"), Version: ver}
+		return ownerInfo{Name: m[2], URL: sm.Homepage, Loc: loc, Version: ver}
 	}
 	if m := wingetRe.FindStringSubmatchIndex(p); m != nil {
 		id := p[m[2]:m[3]]
@@ -805,7 +811,7 @@ func bundleProblem(r bundleResult) string {
 }
 
 func (tp *appsContext) checkBundleFile(p string) (bundleResult, bool) {
-	tp.handled[pathKey(p)] = true
+	tp.markHandled(p)
 	if !exists(p) {
 		return bundleResult{}, false
 	}
@@ -1839,6 +1845,7 @@ func (tp *appsContext) checkEmbeddedTools() {
 			if rp, err := filepath.EvalSymlinks(p); err == nil {
 				p = rp
 			}
+			p = tp.scoopReal(p)
 			if seen[pathKey(p)] {
 				continue
 			}
@@ -1997,7 +2004,7 @@ func (tp *appsContext) checkBundles() {
 		if r.Bad() {
 			bad++
 			badAll = append(badAll, p)
-			if !tp.handled[pathKey(p)] {
+			if !tp.isHandled(p) {
 				badPaths = append(badPaths, p)
 			}
 		} else {

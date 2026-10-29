@@ -99,6 +99,8 @@ builds, are never shown.
 ## Package managers
 
 Software installed with Scoop, WinGet or Chocolatey is recognised from its files.
+Scoop's `current` folder is a link to the folder of the installed version: what is
+found through it is shown once, under the version's folder.
 When it needs an update, the details give the command (`scoop update …`,
 `winget upgrade --id …`, `choco upgrade …`). The Microsoft Store updates its apps
 by itself; the details say how to get the update sooner. Windows protects the

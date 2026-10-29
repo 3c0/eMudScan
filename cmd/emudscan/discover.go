@@ -31,15 +31,33 @@ type discovery struct {
 	scope       func(string) bool // paths that may be read (selected drives)
 }
 
+// found is everything found, by kind.
+func (d *discovery) found() []map[string]bool {
+	return []map[string]bool{d.bundles, d.javaHomes, d.nodeExes, d.pythonExes, d.gitRoots, d.curlExes, d.electronDirs, d.goRoots, d.browsers}
+}
+
 // prune forgets what was found outside the selected drives.
 func (d *discovery) prune() {
 	if d.scope == nil {
 		return
 	}
-	for _, m := range []map[string]bool{d.bundles, d.javaHomes, d.nodeExes, d.pythonExes, d.gitRoots, d.curlExes, d.electronDirs, d.goRoots, d.browsers} {
+	for _, m := range d.found() {
 		for p := range m {
 			if !d.scope(p) {
 				delete(m, p)
+			}
+		}
+	}
+}
+
+// rewrite gives each path found its own spelling f(path): the same file found by two
+// paths is then checked once.
+func (d *discovery) rewrite(f func(string) string) {
+	for _, m := range d.found() {
+		for p := range m {
+			if q := f(p); q != p {
+				delete(m, p)
+				m[q] = true
 			}
 		}
 	}

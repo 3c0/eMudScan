@@ -13,6 +13,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 - Keyboard shortcuts: F5 to scan (or scan again), Ctrl+S to save the report, Ctrl+Shift+C to copy it; the buttons' tooltips show them.
 - A search box above the lists (Ctrl+F) keeps the rows that contain every word typed: software, component, version, status, package, file or folder. Esc clears it, and so do Scan and Scan again.
 - The details of a Python inside another program (ESPHome Device Builder, LM Studio) give that program's update once, then what to do if you manage this Python yourself, without repeating it.
+- Software installed with Scoop is shown once, under the folder of its version: Scoop's `current` folder is a link to it, and Node.js from Scoop was listed twice, once through each.
 
 ## 1.3 (20261028)
 

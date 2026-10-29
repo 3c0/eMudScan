@@ -4,10 +4,12 @@ package main
 // Only local files are read (the installed packages): nothing is sent anywhere.
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -44,7 +46,7 @@ func (tp *appsContext) scoopApp(scoopRoot, app string) scoopManifest {
 	var m scoopManifest
 	cur := filepath.Join(scoopRoot, "apps", app, "current")
 	if data, err := os.ReadFile(filepath.Join(cur, "manifest.json")); err == nil {
-		json.Unmarshal(data, &m)
+		json.Unmarshal(bytes.TrimPrefix(data, []byte("\xef\xbb\xbf")), &m) // a UTF-8 mark would stop it
 	}
 	var inst struct {
 		Bucket string `json:"bucket"`
@@ -56,6 +58,57 @@ func (tp *appsContext) scoopApp(scoopRoot, app string) scoopManifest {
 	tp.scoopApps[key] = m
 	return m
 }
+
+// scoopCurrentRe: a path through Scoop's "current" folder, a link to the folder of the
+// installed version (apps\<app>\current is apps\<app>\<version>).
+var scoopCurrentRe = regexp.MustCompile(`(?i)^(.*?[\\/]scoop[\\/]apps[\\/][^\\/]+)[\\/]current([\\/].*)?$`)
+
+// scoopReal is p through the version folder that Scoop's "current" links to, so that
+// a program reached both ways (PATH leads to "current", the drive scan to the version)
+// is checked once, under its version. p is unchanged when that folder is not found.
+func (tp *appsContext) scoopReal(p string) string {
+	m := scoopCurrentRe.FindStringSubmatch(p)
+	if m == nil {
+		return p
+	}
+	app := m[1]
+	if tp.scoopCurrent == nil {
+		tp.scoopCurrent = map[string]string{}
+	}
+	ver, ok := tp.scoopCurrent[pathKey(app)]
+	if !ok {
+		ver = linkedVersionDir(app)
+		tp.scoopCurrent[pathKey(app)] = ver
+	}
+	if ver == "" {
+		return p
+	}
+	return filepath.Join(app, ver) + m[2]
+}
+
+// linkedVersionDir is the folder of app that its "current" link leads to: the one that
+// is the same folder (Windows compares their file identifiers).
+func linkedVersionDir(app string) string {
+	cur, err := os.Stat(filepath.Join(app, "current")) // follows the link
+	if err != nil || !cur.IsDir() {
+		return ""
+	}
+	ents, _ := os.ReadDir(app)
+	for _, e := range ents {
+		if !e.IsDir() || strings.EqualFold(e.Name(), "current") { // the link itself is not a plain folder
+			continue
+		}
+		if fi, err := os.Stat(filepath.Join(app, e.Name())); err == nil && os.SameFile(cur, fi) {
+			return e.Name()
+		}
+	}
+	return ""
+}
+
+// markHandled: a certificate bundle reported by a specific check, not again as a bundle.
+func (tp *appsContext) markHandled(p string) { tp.handled[pathKey(tp.scoopReal(p))] = true }
+
+func (tp *appsContext) isHandled(p string) bool { return tp.handled[pathKey(tp.scoopReal(p))] }
 
 type chocoPkg struct {
 	ID, Title, Version, URL string
