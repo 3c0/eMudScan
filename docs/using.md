@@ -60,10 +60,10 @@ again* checks each copy; copies that no longer agree get their own rows again.
 Click a header to sort, click a path to open it in Explorer, hover a cell to see
 it in full. *Hide items with an OK status* filters a list.
 
-The search box above the lists (Ctrl+F) keeps the rows that contain every word
-typed, in any order: software, component, version, status, summary, package, file
-or folder (`lm studio node`, `scoop`, `update needed`). Esc clears it, and so does
-*Scan* or *Scan again*.
+The search box above the lists (Ctrl+F) keeps the rows whose *Software* or
+*Component* column contains every word typed, in any order and case, versions
+and package managers included (`lm studio node`, `check`, `scoop`). Esc clears
+it, and so does *Scan* or *Scan again*.
 
 Right-click one or more rows for: Details, Open file location, Open software
 folder, Open homepage, Search on Google, Scan again, Copy, Copy paths, Select all.
