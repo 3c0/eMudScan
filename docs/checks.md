@@ -76,7 +76,8 @@ its name; otherwise it keeps the identifier as its name.
 Windows records the folder of each app installed for you, and eMudScan reads them
 like any other (Python from the Store, Electron applications…). What is found there
 is shown under the app's name, tagged *[Microsoft Store]*. Libraries shared by apps
-and Windows' own apps are skipped.
+and Windows' own apps are skipped, and so are programs installed in their own
+folder that Windows gives an app identity (Microsoft Edge): they are not Store apps.
 
 Programs are searched for built-in certificate lists without being read
 entirely. *Scan again* reads a file again only if it has changed.

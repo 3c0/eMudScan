@@ -80,6 +80,19 @@ func (tp *appsContext) storePackageOf(p string) (storePackage, bool) {
 	return storePackage{}, false
 }
 
+// storeAppRoot: the folder of an app installed as a package, in a WindowsApps folder
+// (C:\Program Files\WindowsApps, or WindowsApps on another drive). Windows also gives
+// an app identity to some ordinary programs, in their own folder (Microsoft Edge, the
+// context-menu extensions of some programs): they are not Store apps.
+func storeAppRoot(root string) bool {
+	for _, part := range strings.FieldsFunc(root, func(c rune) bool { return c == '\\' || c == '/' }) {
+		if strings.EqualFold(part, "WindowsApps") {
+			return true
+		}
+	}
+	return false
+}
+
 // plainName: a display name that is text, not a reference to the package's resources.
 func plainName(s string) bool {
 	s = strings.TrimSpace(s)
@@ -87,13 +100,14 @@ func plainName(s string) bool {
 }
 
 // storePackages lists the Store apps installed for the user, frameworks and
-// resource packages (libraries shared by apps) and Windows' own apps excluded.
+// resource packages (libraries shared by apps), Windows' own apps and the programs
+// that only have an app identity excluded.
 func (tp *appsContext) storePackages() []storePackage {
 	var out []storePackage
 	seen := map[string]bool{}
 	for _, full := range regSubkeys(hkcu, storePackagesKey, view64) {
 		root, _ := regString(hkcu, storePackagesKey+`\`+full, "PackageRootFolder", view64)
-		if root == "" || seen[pathKey(root)] || tp.inWindowsDir(root) || !isDir(root) {
+		if root == "" || seen[pathKey(root)] || !storeAppRoot(root) || tp.inWindowsDir(root) || !isDir(root) {
 			continue
 		}
 		seen[pathKey(root)] = true

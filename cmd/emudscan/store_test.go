@@ -116,3 +116,19 @@ func TestStorePackageTag(t *testing.T) {
 		t.Errorf("another app's folder tagged: %+v", tp.packagesOf(&other))
 	}
 }
+
+// Only an app in a WindowsApps folder is a Store app: Microsoft Edge has an app
+// identity, but in its own folder.
+func TestStoreAppRoot(t *testing.T) {
+	for root, want := range map[string]bool{
+		`C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0`: true,
+		`D:\WindowsApps\Example.Notes_2.4.0.0_x64__abc`:                                                    true,
+		`C:\Program Files (x86)\Microsoft\Edge\Application`:                                                false,
+		`C:\Program Files\Notepad++\contextMenu`:                                                           false,
+		`C:\Users\me\WindowsAppsBackup\x`:                                                                  false,
+	} {
+		if got := storeAppRoot(root); got != want {
+			t.Errorf("storeAppRoot(%s) = %v", root, got)
+		}
+	}
+}
