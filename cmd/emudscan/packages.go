@@ -4,7 +4,6 @@ package main
 // Only local files are read (the installed packages): nothing is sent anywhere.
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/url"
 	"os"
@@ -45,18 +44,30 @@ func (tp *appsContext) scoopApp(scoopRoot, app string) scoopManifest {
 	}
 	var m scoopManifest
 	cur := filepath.Join(scoopRoot, "apps", app, "current")
-	if data, err := os.ReadFile(filepath.Join(cur, "manifest.json")); err == nil {
-		json.Unmarshal(bytes.TrimPrefix(data, []byte("\xef\xbb\xbf")), &m) // a UTF-8 mark would stop it
+	if data, ok := readScoopFile(cur, "manifest.json"); ok {
+		json.Unmarshal(data, &m)
 	}
 	var inst struct {
 		Bucket string `json:"bucket"`
 	}
-	if data, err := os.ReadFile(filepath.Join(cur, "install.json")); err == nil {
+	if data, ok := readScoopFile(cur, "install.json"); ok {
 		json.Unmarshal(data, &inst)
 	}
 	m.bucket = inst.Bucket
 	tp.scoopApps[key] = m
 	return m
+}
+
+// readScoopFile reads one of the files Scoop keeps with an app: recent versions of
+// Scoop name them scoop-manifest.json and scoop-install.json, older ones manifest.json
+// and install.json.
+func readScoopFile(dir, name string) ([]byte, bool) {
+	for _, n := range []string{"scoop-" + name, name} {
+		if data, err := os.ReadFile(filepath.Join(dir, n)); err == nil {
+			return data, true
+		}
+	}
+	return nil, false
 }
 
 // scoopCurrentRe: a path through Scoop's "current" folder, a link to the folder of the
@@ -78,6 +89,11 @@ func (tp *appsContext) scoopReal(p string) string {
 	ver, ok := tp.scoopCurrent[pathKey(app)]
 	if !ok {
 		ver = linkedVersionDir(app)
+		if ver == "" { // else the folder named after the version that "current" holds
+			if v := tp.scoopApp(filepath.Dir(filepath.Dir(app)), filepath.Base(app)).Version; v != "" && isDir(filepath.Join(app, v)) {
+				ver = v
+			}
+		}
 		tp.scoopCurrent[pathKey(app)] = ver
 	}
 	if ver == "" {

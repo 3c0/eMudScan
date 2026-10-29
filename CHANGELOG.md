@@ -14,6 +14,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 - A search box above the lists (Ctrl+F) keeps the rows whose Software or Component column contains every word typed. Esc clears it, and so do Scan and Scan again.
 - The details of a Python inside another program (ESPHome Device Builder, LM Studio) give that program's update once, then what to do if you manage this Python yourself, without repeating it.
 - Software installed with Scoop is shown once, under the folder of its version: Scoop's `current` folder is a link to it, and Node.js from Scoop was listed twice, once through each.
+- Software installed by a recent version of Scoop got no homepage from Scoop. eMudScan now also reads Scoop's new file names, scoop-manifest.json and scoop-install.json.
 - All the rows of a program show the same version: the one listed in Apps & features or by its package manager, else the program's own (LM Studio showed 0.4.26 on one row and 0.4.26+4 on the others).
 
 ## 1.3 (20261028)

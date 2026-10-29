@@ -15,8 +15,8 @@ func TestScoopCurrentIsTheVersion(t *testing.T) {
 	ver := filepath.Join(app, "24.22.1")
 	os.MkdirAll(ver, 0o755)
 	os.WriteFile(filepath.Join(ver, "node.exe"), []byte("MZ"), 0o644)
-	// written with a UTF-8 mark, as some PowerShell versions do
-	os.WriteFile(filepath.Join(ver, "manifest.json"), []byte("\xef\xbb\xbf"+`{"version":"24.22.1","homepage":"https://nodejs.org"}`), 0o644)
+	// the name recent versions of Scoop give it (older ones: manifest.json)
+	os.WriteFile(filepath.Join(ver, "scoop-manifest.json"), []byte(`{"version":"24.22.1","homepage":"https://nodejs.org"}`), 0o644)
 	if err := os.Symlink(ver, filepath.Join(app, "current")); err != nil {
 		t.Skip("no links here:", err)
 	}
@@ -67,6 +67,23 @@ func TestScoopVersionFromLink(t *testing.T) {
 	tp := &appsContext{scoopApps: map[string]scoopManifest{}}
 	o := tp.ownerOf(filepath.Join(scoop, "persist", "uv", "python", "cpython-3.12.16", "python.exe"))
 	if o.Name != "uv" || o.Version != "0.11.3" || o.Loc != ver {
+		t.Errorf("owner %+v", o)
+	}
+}
+
+// When the link cannot be followed, "current" is the folder named after the version
+// its manifest gives (Scoop installs each version in a folder of that name).
+func TestScoopCurrentFromManifest(t *testing.T) {
+	app := filepath.Join(t.TempDir(), "scoop", "apps", "uv")
+	for _, d := range []string{"current", "0.13.5", "0.13.6"} {
+		os.MkdirAll(filepath.Join(app, d), 0o755)
+	}
+	os.WriteFile(filepath.Join(app, "current", "scoop-manifest.json"), []byte(`{"version":"0.13.6","homepage":"https://docs.astral.sh/uv/"}`), 0o644)
+	tp := &appsContext{scoopApps: map[string]scoopManifest{}}
+	if got, want := tp.scoopReal(filepath.Join(app, "current", "uv.exe")), filepath.Join(app, "0.13.6", "uv.exe"); got != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+	if o := tp.ownerOf(filepath.Join(app, "current", "uv.exe")); o.Version != "0.13.6" || o.URL != "https://docs.astral.sh/uv/" {
 		t.Errorf("owner %+v", o)
 	}
 }
