@@ -38,8 +38,8 @@ In the lists, each status has a shield; the log and the report use a mark.
 
 ## The software lists
 
-- **Software**: the software you know, with its version and package manager
-  (`tesseract 5.5.1 [Scoop]`).
+- **Software**: the software you know, with its version and how it was installed,
+  when that is a package manager or the Microsoft Store (`tesseract 5.5.1 [Scoop]`).
 - **Component**: the part that is checked (certifi, Electron, Java…); empty when
   the software itself is checked.
 - **Software date**: when the publisher last updated the software

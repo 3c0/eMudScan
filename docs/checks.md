@@ -74,8 +74,9 @@ its name; otherwise it keeps the identifier as its name.
 
 **Microsoft Store apps** are searched too: their folders cannot be listed, but
 Windows records the folder of each app installed for you, and eMudScan reads them
-like any other (Python from the Store, Electron applications…). Libraries shared by
-apps and Windows' own apps are skipped.
+like any other (Python from the Store, Electron applications…). What is found there
+is shown under the app's name, tagged *[Microsoft Store]*. Libraries shared by apps
+and Windows' own apps are skipped.
 
 Programs are searched for built-in certificate lists without being read
 entirely. *Scan again* reads a file again only if it has changed.
@@ -99,7 +100,9 @@ builds, are never shown.
 
 Software installed with Scoop, WinGet or Chocolatey is recognised from its files.
 When it needs an update, the details give the command (`scoop update …`,
-`winget upgrade --id …`, `choco upgrade …`).
+`winget upgrade --id …`, `choco upgrade …`). The Microsoft Store updates its apps
+by itself; the details say how to get the update sooner. Windows protects the
+folders of Store apps, so no fix by hand is proposed for them.
 
 ## Not covered
 

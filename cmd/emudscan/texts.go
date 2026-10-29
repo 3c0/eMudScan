@@ -435,6 +435,8 @@ var tr = map[string][2]string{
 	"fix.orDirectly":    {"**Or fix the file directly:**", "**Ou corrigez directement le fichier :**"},
 	"fix.pkg":           {"It was installed with %s; once a fixed version is published, update it with:", "Il a été installé avec %s ; dès qu'une version corrigée est publiée, mettez-le à jour avec :"},
 	"fix.pkgAdmin":      {"It was installed with %s; once a fixed version is published, update it in PowerShell run as administrator with:", "Il a été installé avec %s ; dès qu'une version corrigée est publiée, mettez-le à jour dans PowerShell lancé en tant qu'administrateur avec :"},
+	"fix.store":         {"It was installed from the Microsoft Store, which updates it by itself once a fixed version is published. To update it sooner: open the Microsoft Store, then Library, then Get updates.", "Il a été installé depuis le Microsoft Store, qui le met à jour de lui-même dès qu'une version corrigée est publiée. Pour le mettre à jour plus tôt : ouvrez le Microsoft Store, puis Bibliothèque, puis Obtenir les mises à jour."},
+	"fix.storeLocked":   {"Its files cannot be fixed by hand: Windows protects the folders of Store apps.", "Ses fichiers ne peuvent pas être corrigés à la main : Windows protège les dossiers des applications du Store."},
 	"fix.pkgAll":        {"Alternatively, update all the software installed with %s:", "Vous pouvez aussi mettre à jour tous les logiciels installés avec %s :"},
 	"fix.pkgAllAdmin":   {"Alternatively, update all the software installed with %s (in PowerShell run as administrator):", "Vous pouvez aussi mettre à jour tous les logiciels installés avec %s (dans PowerShell lancé en tant qu'administrateur) :"},
 	"dlg.package":       {"Package", "Paquet"},

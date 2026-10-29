@@ -8,7 +8,7 @@ package main
 // searched like any other, and what is found there belongs to the package.
 
 import (
-	"encoding/xml"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -35,13 +35,13 @@ func splitPackageFullName(full string) (name, version string) {
 	return parts[0], parts[1]
 }
 
-// appxManifest is the part of AppxManifest.xml that eMudScan reads.
+// appxManifest is the part of AppxManifest.xml that eMudScan reads (with the small
+// reader of packages.go: encoding/xml would make eMudScan larger).
 type appxManifest struct {
 	Properties struct {
-		DisplayName     string `xml:"DisplayName"`
-		Framework       bool   `xml:"Framework"`
-		ResourcePackage bool   `xml:"ResourcePackage"`
-	} `xml:"Properties"`
+		DisplayName                string
+		Framework, ResourcePackage bool
+	}
 }
 
 func readAppxManifest(root string) (appxManifest, bool) {
@@ -50,7 +50,34 @@ func readAppxManifest(root string) (appxManifest, bool) {
 	if err != nil || len(data) > 4<<20 {
 		return m, false
 	}
-	return m, xml.Unmarshal(data, &m) == nil
+	props, ok := xmlText(string(data), "Properties")
+	if !ok {
+		return m, false
+	}
+	value := func(name string) string { t, _ := xmlText(props, name); return strings.TrimSpace(xmlUnescape(t)) }
+	m.Properties.DisplayName = value("DisplayName")
+	m.Properties.Framework = lower(value("Framework")) == "true"
+	m.Properties.ResourcePackage = lower(value("ResourcePackage")) == "true"
+	return m, true
+}
+
+// storeManager tags the software found in a Store app's folder, like a package manager.
+const storeManager = "Microsoft Store"
+
+// storePage: the app on Microsoft's site (the Store's own links need an identifier
+// that only the Store knows).
+func storePage(name string) string {
+	return "https://apps.microsoft.com/search?query=" + url.QueryEscape(name)
+}
+
+// storePackageOf is the Store app a path belongs to.
+func (tp *appsContext) storePackageOf(p string) (storePackage, bool) {
+	for _, s := range tp.store {
+		if p != "" && hasPathPrefix(p, s.root) {
+			return s, true
+		}
+	}
+	return storePackage{}, false
 }
 
 // plainName: a display name that is text, not a reference to the package's resources.

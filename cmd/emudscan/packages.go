@@ -1,7 +1,7 @@
 package main
 
-// Package managers: Scoop, WinGet and Chocolatey. Only local files are read
-// (the installed packages): nothing is sent anywhere.
+// Package managers: Scoop, WinGet and Chocolatey, and the Microsoft Store (store.go).
+// Only local files are read (the installed packages): nothing is sent anywhere.
 
 import (
 	"encoding/json"
@@ -111,13 +111,17 @@ func (tp *appsContext) chocoOwner(p string) (ownerInfo, bool) {
 	return ownerInfo{}, false
 }
 
-// packagesOf finds the package manager a software was installed with (Scoop, WinGet
-// portable packages, Chocolatey).
+// packagesOf finds the package manager a software was installed with (the Microsoft
+// Store, Scoop, WinGet portable packages, Chocolatey).
 func (tp *appsContext) packagesOf(it *Item) []pkgRef {
 	if it.Group == GroupWindows {
 		return nil
 	}
 	path := firstNonEmpty(it.File, it.Folder)
+	if s, ok := tp.storePackageOf(path); ok { // the Store updates its apps: no command
+		name, _ := splitPackageFullName(s.fullName)
+		return []pkgRef{{Manager: storeManager, ID: name, Page: storePage(s.name), Installed: true}}
+	}
 	if m := scoopRe.FindStringSubmatch(path); m != nil {
 		return []pkgRef{{"Scoop", m[2], scoopPage(m[2]), true, "scoop update " + m[2], "scoop update -a"}}
 	}
@@ -140,21 +144,25 @@ func (tp *appsContext) packagesOf(it *Item) []pkgRef {
 
 // packageAdvice is run on each finished element: it records the package manager the
 // software was installed with and, when an update is needed, adds its update commands
-// (before the instructions to fix a file by hand, which are the last resort).
+// (before the instructions to fix a file by hand, which are the last resort, and which
+// Store apps do not allow).
 func (tp *appsContext) packageAdvice(it *Item) {
 	it.Packages = tp.packagesOf(it)
 	if it.Status != StWarn && it.Status != StCaution && it.Status != StError {
 		return
 	}
 	for _, p := range it.Packages {
-		if strings.Contains(it.Details, cmd(p.Update)) {
+		advice, given := T("fix.store"), T("fix.store") // the Store: no command
+		if p.Update != "" {
+			one, all := Tf("fix.pkg", p.Manager), Tf("fix.pkgAll", p.Manager)
+			if p.Manager == "Chocolatey" {
+				one, all = Tf("fix.pkgAdmin", p.Manager), Tf("fix.pkgAllAdmin", p.Manager)
+			}
+			advice, given = one+"\n"+cmd(p.Update)+"\n\n"+all+"\n"+cmd(p.UpdateAll), cmd(p.Update)
+		}
+		if strings.Contains(it.Details, given) {
 			continue
 		}
-		one, all := Tf("fix.pkg", p.Manager), Tf("fix.pkgAll", p.Manager)
-		if p.Manager == "Chocolatey" {
-			one, all = Tf("fix.pkgAdmin", p.Manager), Tf("fix.pkgAllAdmin", p.Manager)
-		}
-		advice := one + "\n" + cmd(p.Update) + "\n\n" + all + "\n" + cmd(p.UpdateAll)
 		details := strings.Trim(it.Details, "\n")
 		cut := len(details)
 		for _, k := range []string{"fix.directly", "fix.orDirectly"} {
@@ -163,6 +171,9 @@ func (tp *appsContext) packageAdvice(it *Item) {
 			}
 		}
 		head, tail := strings.TrimRight(details[:cut], "\n"), details[cut:]
+		if p.Update == "" && tail != "" { // a Store app's folder cannot be changed by hand
+			tail = T("fix.storeLocked")
+		}
 		it.Details = joinParas(head, advice, tail)
 	}
 }
