@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/pem"
 	"os"
 	"sort"
@@ -118,6 +119,8 @@ func checkCertList(certs []*x509.Certificate) bundleResult {
 }
 
 // parsePEMBundle extracts every certificate from PEM data, skipping invalid blocks.
+// From OpenSSL's "trusted certificate" format (ca-bundle.trust.crt), it keeps only
+// those OpenSSL would accept as roots for websites (see trustedCert).
 func parsePEMBundle(data []byte) []*x509.Certificate {
 	var certs []*x509.Certificate
 	for rest := data; ; {
@@ -126,19 +129,86 @@ func parsePEMBundle(data []byte) []*x509.Certificate {
 		if b == nil {
 			break
 		}
-		if b.Type != "CERTIFICATE" && b.Type != "TRUSTED CERTIFICATE" {
-			continue
+		switch b.Type {
+		case "CERTIFICATE":
+			if c, err := x509.ParseCertificate(b.Bytes); err == nil {
+				certs = append(certs, c)
+			}
+		case "TRUSTED CERTIFICATE":
+			if c, ok := trustedCert(b.Bytes); ok {
+				certs = append(certs, c)
+			}
 		}
-		c, err := x509.ParseCertificate(b.Bytes)
-		if err != nil {
-			continue
-		}
-		certs = append(certs, c)
 	}
 	return certs
 }
 
-var pemCertMarker = []byte("-----BEGIN CERTIFICATE-----")
+var (
+	oidTLSServer = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 1}
+	oidAnyUse    = asn1.ObjectIdentifier{2, 5, 29, 37, 0}
+)
+
+// trustedCert reads a certificate in OpenSSL's "trusted certificate" format: the
+// certificate, followed by its trust settings (X509_CERT_AUX: a SEQUENCE holding the
+// uses it is trusted for, a SEQUENCE OF OBJECT IDENTIFIER, then the uses it is
+// rejected for, [0], then a name and a key identifier). As OpenSSL does, it accepts
+// the certificate as a root for websites unless it is rejected for server
+// authentication (or any use), and, when trust settings are present, only if they
+// trust it for server authentication (or any use): a root trusted only for e-mail
+// does not count. Settings that cannot be read make OpenSSL skip the certificate.
+func trustedCert(der []byte) (*x509.Certificate, bool) {
+	var raw asn1.RawValue
+	rest, err := asn1.Unmarshal(der, &raw)
+	if err != nil {
+		return nil, false
+	}
+	c, err := x509.ParseCertificate(raw.FullBytes)
+	if err != nil {
+		return nil, false
+	}
+	if len(rest) == 0 {
+		return c, true // no trust settings
+	}
+	var aux asn1.RawValue
+	if _, err := asn1.Unmarshal(rest, &aux); err != nil || aux.Class != asn1.ClassUniversal || aux.Tag != asn1.TagSequence {
+		return nil, false
+	}
+	settings, trusted, rejected := false, false, false
+	for in := aux.Bytes; len(in) > 0; {
+		var el asn1.RawValue
+		if in, err = asn1.Unmarshal(in, &el); err != nil {
+			return nil, false
+		}
+		var uses *bool
+		switch {
+		case el.Class == asn1.ClassUniversal && el.Tag == asn1.TagSequence:
+			uses = &trusted
+		case el.Class == asn1.ClassContextSpecific && el.Tag == 0:
+			uses = &rejected
+		default:
+			continue // name, key identifier, other settings
+		}
+		settings = true
+		for oids := el.Bytes; len(oids) > 0; {
+			var oid asn1.ObjectIdentifier
+			if oids, err = asn1.Unmarshal(oids, &oid); err != nil {
+				return nil, false
+			}
+			if oid.Equal(oidTLSServer) || oid.Equal(oidAnyUse) {
+				*uses = true
+			}
+		}
+	}
+	if rejected || settings && !trusted {
+		return c, false
+	}
+	return c, true
+}
+
+var (
+	pemCertMarker        = []byte("-----BEGIN CERTIFICATE-----")
+	pemTrustedCertMarker = []byte("-----BEGIN TRUSTED CERTIFICATE-----")
+)
 
 // minBundleCerts: smaller files are a single certificate or a client chain, not a trust store.
 const minBundleCerts = 10
@@ -162,7 +232,7 @@ func (bc *bundleCache) checkFile(path string) (bundleResult, bool) {
 }
 
 func (bc *bundleCache) checkData(data []byte) (bundleResult, bool) {
-	if bytes.Count(data, pemCertMarker) < minBundleCerts {
+	if bytes.Count(data, pemCertMarker)+bytes.Count(data, pemTrustedCertMarker) < minBundleCerts {
 		return bundleResult{}, false
 	}
 	key := sha256.Sum256(data)

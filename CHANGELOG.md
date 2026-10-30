@@ -5,6 +5,7 @@ Versions: 1.0 is the first public version; the 1.x versions bring fixes and impr
 ## Unreleased
 
 - The commands that replace an outdated certificate list downloaded it to a temporary file with a fixed name, which another program could replace before it was copied. They now keep the download in memory and write it directly over the file.
+- Certificate lists in OpenSSL's trusted-certificate format (ca-bundle.trust.crt, next to Git's ca-bundle.crt) were not tested. They now are, with the uses each root is trusted for.
 
 ## 1.6 (20261030)
 

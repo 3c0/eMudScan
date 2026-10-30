@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"crypto/x509"
+	"encoding/asn1"
+	"encoding/pem"
 	"os"
 	"strings"
 	"testing"
@@ -122,5 +125,69 @@ func TestReplaceBundleFix(t *testing.T) {
 		if backup < 0 || write < backup {
 			t.Errorf("%s: backup at %d, write at %d", f, backup, write)
 		}
+	}
+}
+
+// trustedPEM writes c in OpenSSL's "trusted certificate" format, with the uses it is
+// trusted for and those it is rejected for (no settings at all when both are nil).
+func trustedPEM(c *x509.Certificate, trust, reject []asn1.ObjectIdentifier) []byte {
+	der := append([]byte{}, c.Raw...)
+	if trust != nil || reject != nil {
+		list := func(class, tag int, oids []asn1.ObjectIdentifier) []byte {
+			var b []byte
+			for _, o := range oids {
+				m, _ := asn1.Marshal(o)
+				b = append(b, m...)
+			}
+			m, _ := asn1.Marshal(asn1.RawValue{Class: class, Tag: tag, IsCompound: true, Bytes: b})
+			return m
+		}
+		var aux []byte
+		if trust != nil {
+			aux = append(aux, list(asn1.ClassUniversal, asn1.TagSequence, trust)...)
+		}
+		if reject != nil {
+			aux = append(aux, list(asn1.ClassContextSpecific, 0, reject)...)
+		}
+		alias, _ := asn1.MarshalWithParams("a root", "utf8")
+		m, _ := asn1.Marshal(asn1.RawValue{Class: asn1.ClassUniversal, Tag: asn1.TagSequence, IsCompound: true, Bytes: append(aux, alias...)})
+		der = append(der, m...)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "TRUSTED CERTIFICATE", Bytes: der})
+}
+
+// A list in OpenSSL's "trusted certificate" format (ca-bundle.trust.crt) is tested
+// like any other, with each root's trust settings: a root counts only when OpenSSL
+// would accept it for websites.
+func TestTrustedCertificateFormat(t *testing.T) {
+	email := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 4}
+	tls := []asn1.ObjectIdentifier{oidTLSServer}
+	for _, tc := range []struct {
+		name          string
+		trust, reject []asn1.ObjectIdentifier
+		want          int // test chains accepted
+	}{
+		{"trusted for websites", []asn1.ObjectIdentifier{email, oidTLSServer}, nil, 12},
+		{"trusted for any use", []asn1.ObjectIdentifier{oidAnyUse}, nil, 12},
+		{"no trust settings", nil, nil, 12},
+		{"trusted for e-mail only", []asn1.ObjectIdentifier{email}, nil, 0},
+		{"rejected for websites", tls, tls, 0},
+		{"rejected for any use", nil, []asn1.ObjectIdentifier{oidAnyUse}, 0},
+	} {
+		var b bytes.Buffer
+		for _, r := range rootCerts {
+			b.Write(trustedPEM(r.Cert, tc.trust, tc.reject))
+		}
+		for _, c := range testChains { // padding to the size of a trust store, trusted for websites
+			b.Write(trustedPEM(c.Leaf, tls, nil))
+		}
+		br, ok := newBundleCache().checkData(b.Bytes())
+		if !ok || br.Trusted != tc.want {
+			t.Errorf("%s: list %v, %d test chains accepted, want %d", tc.name, ok, br.Trusted, tc.want)
+		}
+	}
+	// settings that cannot be read: OpenSSL skips the certificate
+	if _, ok := trustedCert(append(append([]byte{}, rootCerts[0].Cert.Raw...), 0x30, 0x05, 0x06, 0x01)); ok {
+		t.Error("a certificate with unreadable trust settings is accepted")
 	}
 }
