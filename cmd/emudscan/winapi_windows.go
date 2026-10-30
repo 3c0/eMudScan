@@ -415,23 +415,13 @@ var windowsEditions = map[string]string{
 // version ("Windows 11 Pro 25H2"), and its build ("26200.9711", with the major
 // and minor version: "10.0.26200.9711").
 func windowsVersion() (name, build, full string) {
-	var vi osVersionInfoEx
-	vi.Size = uint32(unsafe.Sizeof(vi))
-	procRtlGetVersion.Call(uintptr(unsafe.Pointer(&vi)))
+	vi := rtlVersion()
 	const cv = `SOFTWARE\Microsoft\Windows NT\CurrentVersion`
-	switch {
-	case vi.Major == 10 && vi.Build >= 22000:
+	name = "Windows"
+	if vi.Major == 10 && vi.Build >= 22000 {
 		name = "Windows 11"
-	case vi.Major == 10:
+	} else if vi.Major == 10 {
 		name = "Windows 10"
-	case vi.Major == 6 && vi.Minor == 3: // older Windows, named in the message that refuses them
-		name = "Windows 8.1"
-	case vi.Major == 6 && vi.Minor == 2:
-		name = "Windows 8"
-	case vi.Major == 6 && vi.Minor == 1:
-		name = "Windows 7"
-	default:
-		name = "Windows"
 	}
 	if vi.ProductType != 1 { // a server: its product name is right
 		if pn, _ := regString(hklm, cv, "ProductName", view64); pn != "" {
@@ -451,12 +441,41 @@ func windowsVersion() (name, build, full string) {
 	return name, build, itoa(int(vi.Major)) + "." + itoa(int(vi.Minor)) + "." + build
 }
 
-// windowsBuild returns the major version and the build of this Windows (10, 26200).
-func windowsBuild() (major, build uint32) {
+// rtlVersion is the version of Windows, as Windows gives it to eMudScan.
+func rtlVersion() osVersionInfoEx {
 	var vi osVersionInfoEx
 	vi.Size = uint32(unsafe.Sizeof(vi))
 	procRtlGetVersion.Call(uintptr(unsafe.Pointer(&vi)))
+	return vi
+}
+
+// windowsBuild returns the major version and the build of this Windows (10, 26200).
+func windowsBuild() (major, build uint32) {
+	vi := rtlVersion()
 	return vi.Major, vi.Build
+}
+
+// olderWindows names a Windows that eMudScan refuses, from its version alone, as
+// Windows gives it: "Windows 8.1 (6.3.9600)".
+func olderWindows() string {
+	vi := rtlVersion()
+	server := vi.ProductType != 1
+	names := map[[2]uint32][2]string{ // workstation, server
+		{10, 0}: {"Windows 10", "Windows Server"}, {6, 3}: {"Windows 8.1", "Windows Server 2012 R2"},
+		{6, 2}: {"Windows 8", "Windows Server 2012"}, {6, 1}: {"Windows 7", "Windows Server 2008 R2"},
+		{6, 0}: {"Windows Vista", "Windows Server 2008"},
+	}
+	name := "Windows"
+	if n, ok := names[[2]uint32{vi.Major, vi.Minor}]; ok {
+		name = n[0]
+		if server {
+			name = n[1]
+		}
+	}
+	if server && vi.Major == 10 && vi.Build == 14393 {
+		name = "Windows Server 2016"
+	}
+	return name + " (" + itoa(int(vi.Major)) + "." + itoa(int(vi.Minor)) + "." + itoa(int(vi.Build)) + ")"
 }
 
 func windowsVersionString() string {
