@@ -482,12 +482,12 @@ func (a *ui) layout() {
 	sw, cw := btnW(150, "btn.save"), btnW(140, "btn.copy")
 	a.move(a.hSave, W-m-sw, y, sw, bh)
 	a.move(a.hCopy, W-m-sw-s(8)-cw, y, cw, bh)
-	// the search box, centred between Scan and Copy report, as wide as there is room
-	// for (up to 360)
+	// the search box, centred in the window, as wide as there is room for on both
+	// sides of the centre between Scan and Copy report (up to 360)
 	eh := a.fontMetrics(a.fontUI).Height + s(10)
 	left, right := m+chw+s(24), W-m-sw-s(8)-cw-s(24)
-	ew := min(s(360), right-left)
-	a.move(a.hSearch, left+(right-left-ew)/2, y+(bh-eh)/2, max(ew, 0), eh)
+	ew := min(s(360), 2*min(W/2-left, right-W/2))
+	a.move(a.hSearch, (W-ew)/2, y+(bh-eh)/2, max(ew, 0), eh)
 	y += bh + s(12)
 
 	// four frames
