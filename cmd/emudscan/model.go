@@ -10,7 +10,7 @@ import (
 
 const appName = "eMudScan"
 
-const appVersion = "1.5"
+const appVersion = "1.6"
 
 // appDate is the date of this version (YYYYMMDD), written with appVersion.
 const appDate = "20261030"

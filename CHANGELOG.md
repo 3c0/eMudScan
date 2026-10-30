@@ -2,7 +2,7 @@
 
 Versions: 1.0 is the first public version; the 1.x versions bring fixes and improvements; 2.0 will add the Fix function. Each version has a date (YYYYMMDD), shown next to its number.
 
-## 1.5 (20261030)
+## 1.6 (20261030)
 
 - Speed up the scanning of the drives by reading 8 folders at a time.
 - Speed up finding the owner of folders named after an application identifier (io.esphome.builder) by skipping Electron programs and reading the others several at once.

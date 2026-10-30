@@ -27,7 +27,7 @@ recognise the site's own page. These requests disclose to that third-party site:
 - your IP address;
 - the request's address, which names eMudScan (`client=emudscan`);
 - a User-Agent that describes eMudScan and your Windows, for example:
-  `eMudScan/1.5 (20261030; Windows 11 Pro 25H2 26200.9711; +https://github.com/3c0/eMudScan)`
+  `eMudScan/1.6 (20261030; Windows 11 Pro 25H2 26200.9711; +https://github.com/3c0/eMudScan)`
 
 The site's author sees all three, and the User-Agent may appear in the site's
 public statistics.
