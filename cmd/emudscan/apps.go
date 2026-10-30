@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -1448,50 +1449,82 @@ func javaURL(vendor string) string {
 	return "https://jdk.java.net/"
 }
 
-// javaBlockedCount returns how many compromised TLS certificates are in the JDK block list.
-func javaBlockedCount(home string) (direct, cross int, file string) {
+// javaRoot is a root certificate, by the SHA-256 fingerprint of the certificate.
+type javaRoot struct{ name, sha256 string }
+
+// javaRoots are the four roots that OpenJDK's advisory removes from Java's list of
+// trusted certificates (https://openjdk.org/emudhra, JDK-8395690), as the files of
+// OpenJDK name them (src/java.base/share/data/cacerts: emsignrootcag1, emsignrootcag2,
+// emsigneccrootcag3, comodoaaaca).
+var javaRoots = []javaRoot{
+	{"emSign Root CA - G1", "40F6AF0346A99AA1CD1D555A4E9CCE62C7F9634603EE406615833DC8C8D00367"},
+	{"emSign Root CA - G2", "1AA0C2709E831BD6E3B5129A00BA41F7EEEF020872F1E6504BF0F6C3F24F3AF3"},
+	{rootNameECCG3, "86A1ECBA089C4A8D3BBE2734C612BA341D813E043CF9E8A862CD5C57A36BBE6B"},
+	{rootNameAAA, "D7A7A0FB5D7E2731D771E9484EBCDEF71D5F0C3E0A2948782BC83EE0EA699EF4"},
+}
+
+// javaBlockList is Java's block list (blocked.certs; blacklisted.certs in Java 8):
+// certificates listed there by their SHA-256 fingerprint are refused, roots included
+// (OpenJDK checks the root of each chain against it as well), whatever the list of
+// trusted certificates says. Java reads it at start-up.
+type javaBlockList struct {
+	file          string
+	direct, cross int    // compromised TLS certificates listed (out of 6 each)
+	up            []byte // its content, upper case and without colons
+}
+
+func readJavaBlockList(home string) javaBlockList {
+	var bl javaBlockList
 	for _, n := range []string{"blocked.certs", "blacklisted.certs"} {
 		p := filepath.Join(home, "lib", "security", n)
 		data, err := os.ReadFile(p)
 		if err != nil {
 			continue
 		}
-		file = p
-		up := bytes.ReplaceAll(bytes.ToUpper(data), []byte(":"), nil)
+		bl.file = p
+		bl.up = bytes.ReplaceAll(bytes.ToUpper(data), []byte(":"), nil)
 		for _, c := range badCerts {
-			if c.Usage == "tls" && bytes.Contains(up, []byte(c.SHA256)) {
+			if c.Usage == "tls" && bl.lists(c.SHA256) {
 				if c.CrossSigned() {
-					cross++
+					bl.cross++
 				} else {
-					direct++
+					bl.direct++
 				}
 			}
 		}
-		return
+		break
 	}
-	return
+	return bl
 }
 
-// javaBlockCmd builds the PowerShell commands that add the missing fingerprints to the JDK block list.
-func javaBlockCmd(home, blFile string) string {
-	if blFile == "" {
+// lists reports whether the block list lists the certificate of this fingerprint.
+func (bl javaBlockList) lists(sha256 string) bool {
+	return bl.file != "" && sha256 != "" && bytes.Contains(bl.up, []byte(strings.ToUpper(sha256)))
+}
+
+// javaBlockCmd builds the PowerShell commands that add to Java's block list the
+// compromised certificates and the roots that it does not list yet.
+func javaBlockCmd(bl javaBlockList, roots []javaRoot) string {
+	if bl.file == "" {
 		return ""
 	}
-	data, _ := os.ReadFile(blFile)
-	up := bytes.ReplaceAll(bytes.ToUpper(data), []byte(":"), nil)
 	var missing []string
 	for _, c := range badCerts {
-		if !bytes.Contains(up, []byte(c.SHA256)) {
+		if !bl.lists(c.SHA256) {
 			missing = append(missing, "'"+c.SHA256+"'")
+		}
+	}
+	for _, r := range roots {
+		if !bl.lists(r.sha256) {
+			missing = append(missing, "'"+strings.ToUpper(r.sha256)+"'")
 		}
 	}
 	if len(missing) == 0 {
 		return ""
 	}
-	q := strings.ReplaceAll(blFile, "'", "''")
-	return psHeader(blFile) + "\n" +
-		cmd(fmt.Sprintf(`Copy-Item -LiteralPath '%s' -Destination '%s.bak'`, q, q)) + "\n" +
-		cmd(fmt.Sprintf(`Add-Content -LiteralPath '%s' -Value '',%s`, q, strings.Join(missing, ",")))
+	return psHeader(bl.file) + "\n" +
+		cmd(fmt.Sprintf(`Copy-Item -LiteralPath %s -Destination %s`, psQuote(bl.file), psQuote(bl.file+".bak"))) + "\n" +
+		cmd(fmt.Sprintf(`Add-Content -LiteralPath %s -Value '',%s`, psQuote(bl.file), strings.Join(missing, ",")))
 }
 
 func (tp *appsContext) checkJava() {
@@ -1524,29 +1557,71 @@ func (tp *appsContext) javaOne(it *Item, home string) {
 		tp.c.finish(it, r)
 		return
 	}
-	hasEm, hasAAA := f.HasEmsignRoot(), false
+	bl := readJavaBlockList(home)
+	// the roots found, and those still trusted: not in the block list; the roots to
+	// block: the four that OpenJDK removes, and the others found, which OpenJDK does
+	// not ship
+	open := map[string]bool{}
+	toBlock, others := slices.Clone(javaRoots), []string(nil)
 	for _, rt := range f.Roots {
-		hasAAA = hasAAA || rt == rootNameAAA
+		sha := ""
+		for _, rc := range rootCerts {
+			if rc.Name == rt {
+				sha = rc.SHA256
+			}
+		}
+		open[rt] = !bl.lists(sha)
+		if !slices.ContainsFunc(javaRoots, func(j javaRoot) bool { return j.name == rt }) {
+			toBlock = append(toBlock, javaRoot{rt, sha})
+			others = append(others, rt)
+		}
 	}
-	direct, cross, blFile := javaBlockedCount(home)
 	roots := strings.Join(f.Roots, ", ")
 	if roots == "" {
 		roots = "—"
 	}
 	details += "\n" + field(T("lbl.affectedRoots"), roots)
-	if blFile != "" {
-		details += "\n" + field(T("java.blockedLbl"), Tf("java.blockedVal", direct+cross, lk(blFile)))
+	if bl.file != "" {
+		nRoots := 0
+		for _, r := range javaRoots {
+			if bl.lists(r.sha256) {
+				nRoots++
+			}
+		}
+		details += "\n" + field(T("java.blockedLbl"), Tf("java.blockedVal", bl.direct+bl.cross, nRoots, lk(bl.file)))
+	}
+	// what to do: the update (of the program that ships this Java, if it does), then,
+	// for when there is none yet, the block list completed with the compromised
+	// certificates and the roots, which Java then refuses as if they were removed
+	update := T("java.fix")
+	if bundled {
+		update = bundledAdvice(o)
+	}
+	block := ""
+	if c := javaBlockCmd(bl, toBlock); c != "" {
+		block = T("java.blockRoots")
+		if len(others) > 0 {
+			block += " " + Tf("java.blockOthers", strings.Join(others, ", "))
+		}
+		block += "\n" + c
+	}
+	// still trusted: an emSign root, which issued the direct intermediates or
+	// cross-signed their issuer, or any root
+	emOpen, anyOpen := false, false
+	for rt, v := range open {
+		emOpen = emOpen || v && rt != rootNameAAA
+		anyOpen = anyOpen || v
 	}
 	switch {
-	case (hasEm && direct < 6) || (hasAAA && cross < 6):
-		fix := joinParas(T("java.fix"), T("java.manual"), javaBlockCmd(home, blFile))
-		if bundled {
-			// the program ships its own Java: its update brings the fix
-			fix = joinParas(bundledAdvice(o), T("java.manual"), javaBlockCmd(home, blFile))
-		}
-		r.Status, r.Summary, r.Details = StWarn, T("java.sumBad"), details+"\n\n"+fix
-	case hasEm || hasAAA:
-		r.Status, r.Summary, r.Details = StOK, T("java.sumBlocked"), joinParas(details, T("java.okBlocked"))
+	// a chain is refused when its intermediate or its root is in the block list
+	case emOpen && bl.direct < 6 || open[rootNameAAA] && bl.cross < 6:
+		r.Status, r.Summary, r.Details = StWarn, T("java.sumBad"), details+"\n\n"+joinParas(update, block)
+	case anyOpen:
+		// the intermediates are blocked, as by the first fix of 21 October, but not the
+		// roots, which OpenJDK has since removed
+		r.Status, r.Summary, r.Details = StCaution, T("java.sumBlockOnly"), joinParas(details, T("java.blockOnly"), update, block)
+	case len(f.Roots) > 0:
+		r.Status, r.Summary, r.Details = StOK, T("java.sumRootsBlocked"), joinParas(details, T("java.okRootsBlocked"))
 	default:
 		r.Status, r.Summary, r.Details = StOK, T("java.sumNoRoots"), joinParas(details, T("java.okNoRoots"))
 	}
