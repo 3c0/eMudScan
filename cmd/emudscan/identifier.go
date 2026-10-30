@@ -8,7 +8,9 @@ package main
 // is attributed to an installed program only on evidence, and only when exactly one
 // program matches; otherwise it keeps its own name, as before:
 //  1. the identifier is written in the program's main executable (Tauri compiles it
-//     in): this is checked first;
+//     in): this is checked first. The main executable of an Electron application is
+//     Electron itself, which cannot hold it (an Electron application's identifier, if
+//     it has one, is in its app.asar): it is not read;
 //  2. every word of the identifier, apart from a top-level domain at either end, is a
 //     word of the program's name ("io.esphome.builder": ESPHome Device Builder).
 // When several programs contain the identifier, none is chosen, and the name is not
@@ -19,7 +21,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"unicode/utf16"
 )
 
@@ -127,7 +132,7 @@ func identifierFolders() []string {
 }
 
 // maxIdentifierExe: larger programs are not read for identifiers (Tauri programs are
-// small; Electron applications, the largest, name their folders after themselves).
+// small).
 const maxIdentifierExe = 256 << 20
 
 // resolveIdentifiers finds the owner of each identifier (lower case keys).
@@ -147,14 +152,24 @@ func (tp *appsContext) resolveIdentifiers(ids []string) map[string]ownerDir {
 	}
 	found := make([]map[string]ownerDir, len(ids)) // by program name
 	if len(pats) > 0 {
-		w := newWM(pats)
+		electron := map[string]bool{}
+		if tp.d != nil {
+			for dir := range tp.d.electronDirs {
+				electron[pathKey(dir)] = true
+			}
+		}
+		type program struct {
+			o   ownerDir
+			exe string
+		}
+		var programs []program
 		seen := map[string]bool{}
 		for _, o := range tp.owners {
 			exe := o.exe
 			if exe == "" {
 				exe, _ = mainExeIn(o.dir, o.name)
 			}
-			if exe == "" || seen[pathKey(exe)] || !tp.inScope(exe) {
+			if exe == "" || seen[pathKey(exe)] || !tp.inScope(exe) || electron[pathKey(filepath.Dir(exe))] {
 				continue
 			}
 			seen[pathKey(exe)] = true
@@ -162,12 +177,30 @@ func (tp *appsContext) resolveIdentifiers(ids []string) map[string]ownerDir {
 			if err != nil || fi.IsDir() || fi.Size() > maxIdentifierExe || isCloudPlaceholder(fi) {
 				continue
 			}
-			for pid := range fileHits(exe, w) {
+			programs = append(programs, program{o, exe})
+		}
+		// the programs are read several at once; their results are then taken in order
+		w := newWM(pats)
+		hits := make([]map[int32]bool, len(programs))
+		var next atomic.Int64
+		var wg sync.WaitGroup
+		for range min(runtime.NumCPU(), 6, len(programs)) {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for i := int(next.Add(1) - 1); i < len(programs); i = int(next.Add(1) - 1) {
+					hits[i] = fileHits(programs[i].exe, w)
+				}
+			}()
+		}
+		wg.Wait()
+		for k, p := range programs {
+			for pid := range hits[k] {
 				i := patID[pid]
 				if found[i] == nil {
 					found[i] = map[string]ownerDir{}
 				}
-				found[i][lower(o.name)] = o
+				found[i][lower(p.o.name)] = p.o
 			}
 		}
 	}

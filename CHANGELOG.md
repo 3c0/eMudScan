@@ -5,6 +5,7 @@ Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small impr
 ## Unreleased
 
 - Speed up the scanning of the drives by reading 8 folders at a time.
+- Speed up finding the owner of folders named after an application identifier (io.esphome.builder) by skipping Electron programs and reading the others several at once.
 
 ## 1.4 (20261029)
 

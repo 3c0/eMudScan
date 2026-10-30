@@ -57,11 +57,13 @@ func TestOwnerByWords(t *testing.T) {
 
 // The identifier written in a program's executable, as text or UTF-16 text, names
 // its owner; a program whose name has nothing in common is then found too. An
-// identifier found in two programs is attributed to neither.
+// identifier found in two programs is attributed to neither. The main executable of
+// an Electron application, Electron itself, is not read.
 func TestResolveIdentifiersFromExe(t *testing.T) {
 	dir := t.TempDir()
 	exe := func(name string, content ...[]byte) string {
 		p := filepath.Join(dir, name)
+		os.MkdirAll(filepath.Dir(p), 0o755)
 		b := []byte(strings.Repeat("\x00", 5000))
 		for _, c := range content {
 			b = append(append(b, c...), make([]byte, 3000)...)
@@ -79,7 +81,10 @@ func TestResolveIdentifiersFromExe(t *testing.T) {
 		{dir: dir, name: "Shared One", exe: exe("one.exe", []byte("org.shared.lib"))},
 		{dir: dir, name: "Shared Two", exe: exe("two.exe", []byte("org.shared.lib"))},
 		{dir: dir, name: "ESPHome Device Builder", exe: exe("esphome-desktop.exe")},
+		{dir: filepath.Join(dir, "Chat"), name: "Chat", exe: exe(filepath.Join("Chat", "Chat.exe"), []byte("ui.wifiman.desktop"))},
 	}
+	tp.d = newDiscovery()
+	tp.d.electronDirs[filepath.Join(dir, "Chat")] = true
 	got := tp.resolveIdentifiers([]string{"ui.wifiman.desktop", "com.vendor.thing", "org.shared.lib", "io.esphome.builder", "com.unknown.app"})
 	for id, want := range map[string]string{
 		"ui.wifiman.desktop": "WiFiman",
