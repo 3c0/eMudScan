@@ -419,11 +419,19 @@ func windowsVersion() (name, build, full string) {
 	vi.Size = uint32(unsafe.Sizeof(vi))
 	procRtlGetVersion.Call(uintptr(unsafe.Pointer(&vi)))
 	const cv = `SOFTWARE\Microsoft\Windows NT\CurrentVersion`
-	name = "Windows"
-	if vi.Major == 10 && vi.Build >= 22000 {
+	switch {
+	case vi.Major == 10 && vi.Build >= 22000:
 		name = "Windows 11"
-	} else if vi.Major == 10 {
+	case vi.Major == 10:
 		name = "Windows 10"
+	case vi.Major == 6 && vi.Minor == 3: // older Windows, named in the message that refuses them
+		name = "Windows 8.1"
+	case vi.Major == 6 && vi.Minor == 2:
+		name = "Windows 8"
+	case vi.Major == 6 && vi.Minor == 1:
+		name = "Windows 7"
+	default:
+		name = "Windows"
 	}
 	if vi.ProductType != 1 { // a server: its product name is right
 		if pn, _ := regString(hklm, cv, "ProductName", view64); pn != "" {
@@ -441,6 +449,14 @@ func windowsVersion() (name, build, full string) {
 	ubr, _ := regDword(hklm, cv, "UBR", view64)
 	build = itoa(int(vi.Build)) + "." + itoa(int(ubr))
 	return name, build, itoa(int(vi.Major)) + "." + itoa(int(vi.Minor)) + "." + build
+}
+
+// windowsBuild returns the major version and the build of this Windows (10, 26200).
+func windowsBuild() (major, build uint32) {
+	var vi osVersionInfoEx
+	vi.Size = uint32(unsafe.Sizeof(vi))
+	procRtlGetVersion.Call(uintptr(unsafe.Pointer(&vi)))
+	return vi.Major, vi.Build
 }
 
 func windowsVersionString() string {

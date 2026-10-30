@@ -2308,6 +2308,12 @@ func main() {
 			g.onlineOff = true
 		}
 	}
+	// Windows 10 version 1809 or Windows Server 2019 at least, checked before anything
+	// that needs them
+	if major, build := windowsBuild(); !windowsRecentEnough(major, build) {
+		msgBox(0, Tf("err.oldWindows", windowsVersionString()), 0x10 /* MB_ICONERROR */)
+		return
+	}
 	pSetProcessDpiAwarenessCtx.Call(^uintptr(3)) // PER_MONITOR_AWARE_V2; also set by the manifest
 	pCoInitializeEx.Call(0, 2)                   // COINIT_APARTMENTTHREADED, for the shell functions
 	icc := struct{ Size, ICC uint32 }{8, 0x1 | 0x20 | 0x4000 | 0x8000 /* LINK_CLASS: the About box */}

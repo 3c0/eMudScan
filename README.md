@@ -29,7 +29,7 @@ In October 2026, the private keys of eight eMudhra intermediate certificate auth
 
 ## 📥 Download
 
-Download `eMudScan.exe` from the [latest release](https://github.com/3c0/eMudScan/releases/latest) and run it.
+Download `eMudScan.exe` from the [latest release](https://github.com/3c0/eMudScan/releases/latest) and run it. It needs Windows 10 version 1809 or later, Windows 11, or Windows Server 2019 or later.
 
 eMudScan is not code-signed yet, so Windows SmartScreen may say it is unrecognised: choose *More info* → *Run anyway*.
 

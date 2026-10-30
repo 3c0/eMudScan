@@ -9,6 +9,7 @@ Versions: 1.0 is the first public version; the 1.x versions bring fixes and impr
 - Center the search box between the Scan and Copy report buttons.
 - The commands that replace an outdated certificate list used curl.exe, which administrators may remove from Windows. They now use PowerShell's Invoke-WebRequest.
 - The advice for an outdated Git for Windows also proposed workarounds, with commands for Git Bash. It now proposes only its update to version 2.56.0.windows.3 or later.
+- Check at launch that Windows is Windows 10 version 1809, Windows Server 2019 or later.
 
 ## 1.4 (20261029)
 

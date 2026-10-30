@@ -81,6 +81,7 @@ var tr = map[string][2]string{
 	"report.by":         {"eMudScan by %s — %s", "eMudScan par %s — %s"},
 	"report.log":        {"Log", "Journal"},
 	"err.data":          {"eMudScan's reference data is damaged: %v", "Les données de référence d'eMudScan sont endommagées : %v"},
+	"err.oldWindows":    {"eMudScan needs Windows 10 version 1809, Windows Server 2019 or a later Windows. This PC runs %s.", "eMudScan nécessite Windows 10 version 1809, Windows Server 2019 ou un Windows plus récent. Ce PC utilise %s."},
 
 	// --- progress log
 	"log.start":           {"%s %s — %s — %s", "%s %s — %s — %s"},

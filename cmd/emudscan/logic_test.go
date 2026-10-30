@@ -349,6 +349,19 @@ func TestSystemCurlNeedsItsDrive(t *testing.T) {
 	}
 }
 
+// eMudScan runs on Windows 10 version 1809 and Windows Server 2019 (build 17763) and
+// later Windows, not on older ones such as Windows Server 2016 (build 14393).
+func TestWindowsRecentEnough(t *testing.T) {
+	for _, tc := range []struct {
+		major, build uint32
+		want         bool
+	}{{10, 26200, true}, {10, 22000, true}, {10, 17763, true}, {10, 17134, false}, {10, 15063, false}, {10, 14393, false}, {10, 10240, false}, {6, 9600, false}, {6, 7601, false}, {11, 1, true}} {
+		if got := windowsRecentEnough(tc.major, tc.build); got != tc.want {
+			t.Errorf("%d.%d: %v, want %v", tc.major, tc.build, got, tc.want)
+		}
+	}
+}
+
 // TestStale: software that needs an update and has had no new version for 12
 // months or more is flagged, with its age; OK software never is.
 func TestStale(t *testing.T) {

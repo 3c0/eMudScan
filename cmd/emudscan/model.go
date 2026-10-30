@@ -22,6 +22,17 @@ func appVersionDate() string { return appVersion + " (" + appDate + ")" }
 // appTitle is the name shown at the top of the window: "eMudScan 1.0 (20261026)".
 func appTitle() string { return appName + " " + appVersionDate() }
 
+// minWindowsBuild: eMudScan needs Windows 10 version 1809 or Windows Server 2019 (both
+// build 17763), or a later Windows. Go needs Windows 10 or Windows Server 2016, and
+// SetProcessDpiAwarenessContext, which eMudScan calls at launch to draw at any screen
+// resolution, exists from version 1703, after Windows Server 2016.
+const minWindowsBuild = 17763
+
+// windowsRecentEnough reports whether eMudScan runs on this Windows version.
+func windowsRecentEnough(major, build uint32) bool {
+	return major > 10 || major == 10 && build >= minWindowsBuild
+}
+
 // The author, the project page (source code and releases), and where the reference
 // data is published (it outlives the domain).
 const (
