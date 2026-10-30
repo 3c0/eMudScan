@@ -46,7 +46,14 @@ of them is not merged:
 - Logic gets a test (`*_test.go`); the readers of files have test data in
   `cmd/emudscan/testdata/`.
 - A user-visible change gets one line in `CHANGELOG.md` under `## Unreleased`,
-  written on a single line (it becomes the release page).
+  written on a single line (it becomes the release page): one short sentence
+  for a new feature or an improvement, two for a bug fix (the bug, then the fix).
+- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
+  `type(scope): description`, in lower case and without a final period. The type
+  is `feat` for a new feature, `fix` for a bug fix, and `perf`, `refactor`,
+  `test`, `docs`, `build` or `chore` for the rest, such as
+  `perf(scan): read 8 folders at a time when scanning the drives`. The title of a
+  pull request follows the same form.
 - The reference data (`data/`) comes from the advisory and is checked against
   the SHA-256 it publishes: do not edit it by hand.
 

@@ -23,7 +23,8 @@ builds `eMudScan.exe`. The exe can be downloaded from the run's page on the
    as they are made, to `## <version> (<date>)`. It is copied to the release
    page, where GitHub keeps line breaks: write each paragraph and each item on a
    single line.
-3. Push these changes, then push a tag named after the version, such as `1.1`.
+3. Commit these changes as `chore(release): <version>`, push them, then push a
+   tag named after the version, such as `1.1`.
 
 GitHub then builds the exe and checks that the tag matches `appVersion` and that
 `CHANGELOG.md` has a section for this version. It creates a **draft release**
