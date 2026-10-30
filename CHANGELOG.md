@@ -1,6 +1,6 @@
 # Changelog
 
-Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small improvements; 1.9.x are the betas of the "Fix all!" function, from 1.9.1. Each version has a date (YYYYMMDD), shown next to its number.
+Versions: 1.0 is the first public version; the 1.x versions bring fixes and improvements; 2.0 will add the Fix function. Each version has a date (YYYYMMDD), shown next to its number.
 
 ## Unreleased
 

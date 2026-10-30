@@ -33,9 +33,8 @@ changelog section, and the SHA-256 and build log are filled in. It also records 
 build attestation proving that the exe was built by GitHub from this tag. Anyone can
 check a copy with `gh attestation verify eMudScan.exe -R <owner>/<repository>`.
 
-Check the draft, then click *Publish release* (tick *Set as a pre-release* for
-the 1.9.x betas). GitHub adds the source code to the release, as the GPL
-requires.
+Check the draft, then click *Publish release*. GitHub adds the source code to
+the release, as the GPL requires.
 
 Version numbers are explained at the top of [CHANGELOG.md](../CHANGELOG.md).
 
