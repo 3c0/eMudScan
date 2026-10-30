@@ -7,6 +7,7 @@ Versions: 1.0 is the first public version; the 1.x versions bring fixes and impr
 - Speed up the scanning of the drives by reading 8 folders at a time.
 - Speed up finding the owner of folders named after an application identifier (io.esphome.builder) by skipping Electron programs and reading the others several at once.
 - Center the search box between the Scan and Copy report buttons.
+- The commands that replace an outdated certificate list used curl.exe, which administrators may remove from Windows. They now use PowerShell's Invoke-WebRequest.
 
 ## 1.4 (20261029)
 

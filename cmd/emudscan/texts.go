@@ -441,8 +441,8 @@ var tr = map[string][2]string{
 
 	"fix.ps":      {"In PowerShell:", "Dans PowerShell :"},
 	"fix.psAdmin": {"In PowerShell run as administrator:", "Dans PowerShell lancé en tant qu'administrateur :"},
-	"fix.replaceBundle": {"Keep a copy of the file and replace it with Mozilla's current list of trusted certificates, as published by curl (downloaded with Windows' own curl.exe, which is protected).",
-		"Gardez une copie du fichier et remplacez-le par la liste actuelle des certificats de confiance de Mozilla, publiée par curl (téléchargée avec le curl.exe de Windows, qui est protégé)."},
+	"fix.replaceBundle": {"Keep a copy of the file and replace it with Mozilla's current list of trusted certificates, as published by curl. PowerShell downloads it, protected by Windows' block list; the first command makes sure that Windows PowerShell can use TLS 1.2.",
+		"Gardez une copie du fichier et remplacez-le par la liste actuelle des certificats de confiance de Mozilla, publiée par curl. PowerShell la télécharge, protégé par la liste de blocage de Windows ; la première commande garantit que Windows PowerShell peut utiliser TLS 1.2."},
 	"fix.directly":      {"**To fix this copy directly** (if the software has no update yet):", "**Pour corriger directement cette copie** (si le logiciel n'a pas encore de mise à jour) :"},
 	"fix.orDirectly":    {"**Or fix the file directly:**", "**Ou corrigez directement le fichier :**"},
 	"fix.pkg":           {"It was installed with %s; once a fixed version is published, update it with:", "Il a été installé avec %s ; dès qu'une version corrigée est publiée, mettez-le à jour avec :"},

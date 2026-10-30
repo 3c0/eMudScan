@@ -2185,15 +2185,24 @@ func psHeader(files ...string) string {
 }
 
 // replaceBundleFix: keep a copy of an outdated bundle and replace it with Mozilla's
-// current list, as published by curl (downloaded with Windows' own curl.exe).
+// current list, as published by curl. PowerShell itself downloads it (curl.exe can be
+// removed from Windows); the first command makes sure that Windows PowerShell 5.1 can
+// use TLS 1.2, which curl.se requires: depending on the Windows and on the settings of
+// .NET Framework, it may otherwise offer only SSL 3 and TLS 1.0.
 func replaceBundleFix(files ...string) string {
-	lines := []string{T("fix.replaceBundle"), psHeader(files...)}
+	const tmp = `"$env:TEMP\cacert.pem"`
+	lines := []string{T("fix.replaceBundle"), psHeader(files...),
+		cmd(`[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12`),
+		cmd(`Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem -OutFile ` + tmp)}
 	for _, f := range files {
-		lines = append(lines, cmd(fmt.Sprintf(`Copy-Item -LiteralPath "%s" -Destination "%s.bak"`, f, f)),
-			cmd(fmt.Sprintf(`curl.exe -fsSL -o "%s" https://curl.se/ca/cacert.pem`, f)))
+		lines = append(lines, cmd(fmt.Sprintf(`Copy-Item -LiteralPath %s -Destination %s`, psQuote(f), psQuote(f+".bak"))),
+			cmd(fmt.Sprintf(`Copy-Item -LiteralPath %s -Destination %s`, tmp, psQuote(f))))
 	}
 	return strings.Join(lines, "\n")
 }
+
+// psQuote quotes a path for PowerShell, where nothing is replaced inside single quotes.
+func psQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 
 func joinParas(parts ...string) string {
 	var out []string
