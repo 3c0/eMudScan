@@ -2,6 +2,10 @@
 
 Versions: 1.0 is the first public version; 1.1 to 1.8 bring fixes and small improvements; 1.9.x are the betas of the "Fix all!" function, from 1.9.1. Each version has a date (YYYYMMDD), shown next to its number.
 
+## Unreleased
+
+- Speed up the scanning of the drives by reading 8 folders at a time.
+
 ## 1.4 (20261029)
 
 - The file properties of eMudScan.exe (Details tab) describe eMudScan as its project page does.

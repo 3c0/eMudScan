@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -124,47 +125,113 @@ func (d *discovery) walk(c *checker, spec walkSpec, deep bool) {
 		c.stepStart(Tf("log.walk", spec.root))
 		defer func() { c.stepEnd(StOK, Tf("log.walkDone", d.dirs-dirs0, d.files-files0)) }()
 	}
+	// A link to a folder (a junction) is not entered, as inside the tree.
+	if fi, err := os.Lstat(spec.root); err != nil || !fi.IsDir() || c.cancel() {
+		return
+	}
 	d.lastLog = time.Now()
 	base := strings.Count(filepath.Clean(spec.root), string(filepath.Separator))
-	filepath.WalkDir(spec.root, func(p string, e fs.DirEntry, err error) error {
-		if c.cancel() {
-			return filepath.SkipAll
+	skip := map[string]bool{}
+	for _, s := range spec.skip {
+		skip[pathKey(s)] = true
+	}
+	var mu sync.Mutex // what is found, and the log
+	counted := func(p string) {
+		d.dirs++
+		if time.Since(d.lastLog) > 250*time.Millisecond {
+			d.lastLog = time.Now()
+			c.activity(Tf("act.scan", p))
 		}
-		if err != nil {
-			if e != nil && e.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
+	}
+	counted(spec.root)
+	walkTree(spec.root, c.cancel, func(p string, e fs.DirEntry) bool {
 		name := lower(e.Name())
 		if e.IsDir() {
-			if p != spec.root {
-				if skipDirNames[name] || (!deep && name == "node_modules") {
-					return filepath.SkipDir
+			if skipDirNames[name] || (!deep && name == "node_modules") || skip[pathKey(p)] ||
+				spec.maxDepth > 0 && strings.Count(p, string(filepath.Separator))-base > spec.maxDepth {
+				return false
+			}
+			mu.Lock()
+			counted(p)
+			mu.Unlock()
+			return true
+		}
+		if e.Type().IsRegular() {
+			mu.Lock()
+			d.files++
+			d.classify(p, name, e)
+			mu.Unlock()
+		}
+		return false
+	})
+}
+
+// walkWorkers is the number of folders read at once. Reading a folder is mostly
+// waiting, for Windows and, when the folder is not in memory yet, for the disk:
+// reading several at once saves most of that waiting.
+const walkWorkers = 8
+
+// walkTree calls visit for each file and folder inside root, from several goroutines
+// at once and in no particular order; a folder is entered when visit returns true. A
+// folder that cannot be read entirely is skipped. stop ends the walk early.
+func walkTree(root string, stop func() bool, visit func(p string, e fs.DirEntry) bool) {
+	var (
+		mu      sync.Mutex
+		more    = sync.NewCond(&mu)
+		todo    = []string{root} // folders to read
+		pending = 1              // folders to read or being read
+		wg      sync.WaitGroup
+	)
+	for range walkWorkers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				mu.Lock()
+				for len(todo) == 0 && pending > 0 {
+					more.Wait()
 				}
-				for _, s := range spec.skip {
-					if pathKey(p) == pathKey(s) {
-						return filepath.SkipDir
+				if pending == 0 {
+					mu.Unlock()
+					return
+				}
+				dir := todo[len(todo)-1]
+				todo = todo[:len(todo)-1]
+				mu.Unlock()
+				var sub []string
+				if !stop() {
+					for _, e := range readDir(dir) {
+						p := filepath.Join(dir, e.Name())
+						if visit(p, e) && e.IsDir() {
+							sub = append(sub, p)
+						}
 					}
 				}
-				if spec.maxDepth > 0 && strings.Count(p, string(filepath.Separator))-base > spec.maxDepth {
-					return filepath.SkipDir
+				mu.Lock()
+				todo = append(todo, sub...)
+				pending += len(sub) - 1
+				if pending == 0 || len(sub) > 0 {
+					more.Broadcast()
 				}
+				mu.Unlock()
 			}
-			d.dirs++
-			if time.Since(d.lastLog) > 250*time.Millisecond {
-				d.lastLog = time.Now()
-				c.activity(Tf("act.scan", p))
-			}
-			return nil
-		}
-		if !e.Type().IsRegular() {
-			return nil
-		}
-		d.files++
-		d.classify(p, name, e)
+		}()
+	}
+	wg.Wait()
+}
+
+// readDir lists a folder, unsorted; nothing if it cannot be read entirely.
+func readDir(dir string) []fs.DirEntry {
+	f, err := os.Open(dir)
+	if err != nil {
 		return nil
-	})
+	}
+	defer f.Close()
+	entries, err := f.ReadDir(-1)
+	if err != nil {
+		return nil
+	}
+	return entries
 }
 
 // insideSeen reports whether root lies inside a tree already scanned.
