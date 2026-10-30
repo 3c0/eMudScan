@@ -980,12 +980,7 @@ func (tp *appsContext) gitOne(it *Item, root string) {
 			backendText = T("git.backendSchannel")
 		}
 		r.Status, r.Summary = StWarn, T("git.sumBad")
-		if bundled {
-			fix = joinParas(bundledAdvice(o), T("fix.directly")+"\n"+replaceBundleFix(badFiles...))
-		} else {
-			fix = joinParas(fix, T("fix.orDirectly")+"\n"+replaceBundleFix(badFiles...))
-		}
-		r.Details = details + "\n\n" + T("git.badBundle") + "\n" + bullet(bad) + "\n\n" + backendText + "\n\n" + fix
+		r.Details = details + "\n\n" + T("git.badBundle") + "\n" + bullet(bad) + "\n\n" + backendText + "\n\n" + gitBundleAdvice(state, bundled, o, badFiles)
 	case !anyBundle && state != FixOK:
 		r.Status, r.Summary = StWarn, Tf("git.sumVersion", fixedIn)
 		if state == FixUnknown {
@@ -2182,6 +2177,20 @@ func psHeader(files ...string) string {
 		}
 	}
 	return T("fix.ps")
+}
+
+// gitBundleAdvice is what to do about the outdated bundles of a Git. A Git older than
+// the fixed version: its update, and nothing else. A copy inside another program,
+// which may have no update yet: that program's update, or the files themselves. A Git
+// of unknown version: its update, or the files themselves.
+func gitBundleAdvice(state FixState, bundled bool, o ownerInfo, files []string) string {
+	switch {
+	case bundled:
+		return joinParas(bundledAdvice(o), T("fix.directly")+"\n"+replaceBundleFix(files...))
+	case state == FixOutdated:
+		return Tf("git.fix", fixedVersionsList("git"))
+	}
+	return joinParas(Tf("git.fix", fixedVersionsList("git")), T("fix.orDirectly")+"\n"+replaceBundleFix(files...))
 }
 
 // replaceBundleFix: keep a copy of an outdated bundle and replace it with Mozilla's

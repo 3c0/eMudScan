@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/x509"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -85,5 +86,24 @@ func TestVersions(t *testing.T) {
 	}
 	if v := ParseVersion("1.8.0_511-b32"); v.String() != "1.8.0.511" {
 		t.Errorf("jdk8 version parse: %v", v)
+	}
+}
+
+// An outdated Git gets its update and nothing else; a Git of unknown version may also
+// have its file replaced; a copy inside another program gets that program's update,
+// or its file replaced.
+func TestGitBundleAdvice(t *testing.T) {
+	Lang = 0
+	files := []string{`C:\Program Files\Git\mingw64\etc\ssl\certs\ca-bundle.crt`}
+	update := Tf("git.fix", fixedVersionsList("git"))
+	if got := gitBundleAdvice(FixOutdated, false, ownerInfo{Name: "Git"}, files); got != update {
+		t.Errorf("outdated Git: %q", got)
+	}
+	if got := gitBundleAdvice(FixUnknown, false, ownerInfo{Name: "Git"}, files); !strings.HasPrefix(got, update) || !strings.Contains(got, "Copy-Item") {
+		t.Errorf("Git of unknown version: %q", got)
+	}
+	o := ownerInfo{Name: "ESPHome Device Builder", URL: "https://esphome.io"}
+	if got := gitBundleAdvice(FixOutdated, true, o, files); strings.Contains(got, update) || !strings.Contains(got, "ESPHome Device Builder") || !strings.Contains(got, "Copy-Item") {
+		t.Errorf("Git inside another program: %q", got)
 	}
 }

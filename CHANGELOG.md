@@ -8,6 +8,7 @@ Versions: 1.0 is the first public version; the 1.x versions bring fixes and impr
 - Speed up finding the owner of folders named after an application identifier (io.esphome.builder) by skipping Electron programs and reading the others several at once.
 - Center the search box between the Scan and Copy report buttons.
 - The commands that replace an outdated certificate list used curl.exe, which administrators may remove from Windows. They now use PowerShell's Invoke-WebRequest.
+- The advice for an outdated Git for Windows also proposed workarounds, with commands for Git Bash. It now proposes only its update to version 2.56.0.windows.3 or later.
 
 ## 1.4 (20261029)
 
