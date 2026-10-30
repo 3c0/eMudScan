@@ -81,7 +81,7 @@ var tr = map[string][2]string{
 	"report.by":         {"eMudScan by %s — %s", "eMudScan par %s — %s"},
 	"report.log":        {"Log", "Journal"},
 	"err.data":          {"eMudScan's reference data is damaged: %v", "Les données de référence d'eMudScan sont endommagées : %v"},
-	"err.oldWindows":    {"eMudScan needs Windows 10 version 1809, Windows Server 2019 or a later Windows. This PC runs %s.", "eMudScan nécessite Windows 10 version 1809, Windows Server 2019 ou un Windows plus récent. Ce PC utilise %s."},
+	"err.oldWindows":    {"eMudScan %s can only run on:\n • Windows 10 version 1809 or later\n • Windows Server 2019 or later\n\nThis PC runs %s, so it is not compatible.", "eMudScan %s ne peut fonctionner que sur :\n • Windows 10 version 1809 ou plus récent\n • Windows Server 2019 ou plus récent\n\nCe PC utilise %s : il n'est donc pas compatible."},
 
 	// --- progress log
 	"log.start":           {"%s %s — %s — %s", "%s %s — %s — %s"},
