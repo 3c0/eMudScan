@@ -2,6 +2,10 @@
 
 Versions: 1.0 is the first public version; the 1.x versions bring fixes and improvements; 2.0 will add the Fix function. Each version has a date (YYYYMMDD), shown next to its number.
 
+## Unreleased
+
+- The commands that replace an outdated certificate list downloaded it to a temporary file with a fixed name, which another program could replace before it was copied. They now keep the download in memory and write it directly over the file.
+
 ## 1.6 (20261030)
 
 - Speed up the scanning of the drives by reading 8 folders at a time.
