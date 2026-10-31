@@ -16,10 +16,16 @@ import (
 	"time"
 )
 
-// backupCmd keeps a copy of file, named after the time the command runs, so that
-// commands run twice do not replace the first copy.
-func backupCmd(file string) string {
-	return cmd(fmt.Sprintf(`Copy-Item -LiteralPath %s -Destination (%s + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak')`, psQuote(file), psQuote(file+".emudscan-")))
+// backupThen is a command that keeps a copy of file, named after the time the command
+// runs (so that commands run twice do not replace the first copy), then changes the
+// file with change, only once the copy is made and when cond, if any, is true.
+// Copy-Item -PassThru returns the copy, and nothing when it fails.
+func backupThen(file, cond, change string) string {
+	backup := fmt.Sprintf(`(Copy-Item -LiteralPath %s -Destination (%s + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)`, psQuote(file), psQuote(file+".emudscan-"))
+	if cond != "" {
+		backup = cond + " -and " + backup
+	}
+	return cmd(fmt.Sprintf(`if (%s) { %s }`, backup, change))
 }
 
 var backupSuffixRe = regexp.MustCompile(`(?i)^\.emudscan-(\d{8}-\d{6})\.bak$`)

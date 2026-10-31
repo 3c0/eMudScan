@@ -1524,8 +1524,8 @@ func javaBlockCmd(bl javaBlockList, roots []javaRoot) string {
 	if len(missing) == 0 {
 		return ""
 	}
-	return psHeader(bl.file) + "\n" + backupCmd(bl.file) + "\n" +
-		cmd(fmt.Sprintf(`Add-Content -LiteralPath %s -Value '',%s`, psQuote(bl.file), strings.Join(missing, ",")))
+	return psHeader(bl.file) + "\n" +
+		backupThen(bl.file, "", fmt.Sprintf(`Add-Content -LiteralPath %s -Value '',%s`, psQuote(bl.file), strings.Join(missing, ",")))
 }
 
 func (tp *appsContext) checkJava() {
@@ -2288,12 +2288,20 @@ func gitBundleAdvice(state FixState, bundled bool, o ownerInfo, files []string) 
 // a file they could not change themselves). The first command makes sure that Windows
 // PowerShell 5.1 can use TLS 1.2, which curl.se requires: depending on the Windows and
 // on the settings of .NET Framework, it may otherwise offer only SSL 3 and TLS 1.0.
+//
+// The download is used only when it matches the SHA-256 that curl publishes next to
+// it: a failed download (nothing, a value left from an earlier run), an empty answer,
+// a proxy's error page or a cut transfer changes nothing. Each command works on its
+// own, so that it is safe also when the commands are run one by one.
 func replaceBundleFix(files ...string) string {
 	lines := []string{T("fix.replaceBundle"), psHeader(files...),
 		cmd(`[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12`),
-		cmd(`$cacert = (Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem).RawContentStream.ToArray()`)}
+		cmd(`$cacert = $null; $cacert = (Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem).RawContentStream.ToArray()`),
+		cmd(`$sha256 = $null; $sha256 = ([Text.Encoding]::ASCII.GetString((Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem.sha256).RawContentStream.ToArray()) -split '\s')[0]`),
+		cmd(`$ok = $cacert -and $sha256 -and (Get-FileHash -InputStream ([IO.MemoryStream]::new($cacert))).Hash -eq $sha256`),
+		cmd(fmt.Sprintf(`if (-not $ok) { Write-Warning %s }`, psQuote(T("fix.downloadFailed"))))}
 	for _, f := range files {
-		lines = append(lines, backupCmd(f), cmd(fmt.Sprintf(`[IO.File]::WriteAllBytes(%s, $cacert)`, psQuote(f))))
+		lines = append(lines, backupThen(f, "$ok", fmt.Sprintf(`[IO.File]::WriteAllBytes(%s, $cacert)`, psQuote(f))))
 	}
 	return strings.Join(lines, "\n")
 }

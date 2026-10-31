@@ -112,20 +112,32 @@ func TestGitBundleAdvice(t *testing.T) {
 }
 
 // The current list is downloaded once, into memory, and written directly over each
-// file after its backup, named after the time the command runs: no file in between
-// that another program could replace.
+// file: no file in between that another program could replace. It is used only when it
+// matches the SHA-256 that curl publishes, and each file is written only once its
+// backup, named after the time the command runs, is made.
 func TestReplaceBundleFix(t *testing.T) {
 	Lang = 0
 	fix := replaceBundleFix(`C:\Program Files\App\cacert.pem`, `C:\Users\o'neil\$x\cert.pem`)
-	if strings.Contains(fix, "TEMP") || strings.Contains(fix, "-OutFile") || strings.Count(fix, "Invoke-WebRequest") != 1 {
+	if strings.Contains(fix, "TEMP") || strings.Contains(fix, "-OutFile") || strings.Count(fix, "-Uri https://curl.se/ca/cacert.pem)") != 1 {
 		t.Errorf("download: %s", fix)
 	}
-	for _, f := range []string{`'C:\Program Files\App\cacert.pem'`, `'C:\Users\o''neil\$x\cert.pem'`} {
-		backup := strings.Index(fix, "Copy-Item -LiteralPath "+f+" -Destination ("+f[:len(f)-1]+".emudscan-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak')")
-		write := strings.Index(fix, "[IO.File]::WriteAllBytes("+f+", $cacert)")
-		if backup < 0 || write < backup {
-			t.Errorf("%s: backup at %d, write at %d", f, backup, write)
+	at := 0
+	for _, w := range []string{
+		"$ $cacert = $null; $cacert = (Invoke-WebRequest",
+		"$ $sha256 = $null; $sha256 = ([Text.Encoding]::ASCII.GetString((Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem.sha256)",
+		"$ $ok = $cacert -and $sha256 -and (Get-FileHash -InputStream ([IO.MemoryStream]::new($cacert))).Hash -eq $sha256",
+		"$ if (-not $ok) { Write-Warning " + psQuote(T("fix.downloadFailed")) + " }",
+		`$ if ($ok -and (Copy-Item -LiteralPath 'C:\Program Files\App\cacert.pem' -Destination ('C:\Program Files\App\cacert.pem.emudscan-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)) { [IO.File]::WriteAllBytes('C:\Program Files\App\cacert.pem', $cacert) }`,
+		`$ if ($ok -and (Copy-Item -LiteralPath 'C:\Users\o''neil\$x\cert.pem' -Destination ('C:\Users\o''neil\$x\cert.pem.emudscan-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)) { [IO.File]::WriteAllBytes('C:\Users\o''neil\$x\cert.pem', $cacert) }`,
+	} {
+		i := strings.Index(fix[at:], w)
+		if i < 0 {
+			t.Fatalf("%q missing or out of order:\n%s", w, fix)
 		}
+		at += i + len(w)
+	}
+	if strings.Contains(fix, "\n$ [IO.File]") || strings.Contains(fix, "\n$ Copy-Item") {
+		t.Errorf("a file changed outside the checks:\n%s", fix)
 	}
 }
 

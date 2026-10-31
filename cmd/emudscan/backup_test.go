@@ -21,9 +21,12 @@ import (
 // eMudScan reads back.
 func TestBackupNames(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "o'neil.pem")
-	want := cmd("Copy-Item -LiteralPath " + psQuote(f) + " -Destination (" + psQuote(f+".emudscan-") + " + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak')")
-	if got := backupCmd(f); got != want {
-		t.Errorf("backup:\n%s\nwant\n%s", got, want)
+	copyItem := "(Copy-Item -LiteralPath " + psQuote(f) + " -Destination (" + psQuote(f+".emudscan-") + " + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)"
+	// the file is changed only once its copy is made, and when the condition is true
+	for cond, want := range map[string]string{"": "if (" + copyItem + ") { Change }", "$ok": "if ($ok -and " + copyItem + ") { Change }"} {
+		if got := backupThen(f, cond, "Change"); got != cmd(want) {
+			t.Errorf("backup:\n%s\nwant\n%s", got, cmd(want))
+		}
 	}
 	// what PowerShell writes, for 31 October 2026 at 01:15:00 ('yyyyMMdd-HHmmss')
 	os.WriteFile(f, []byte("changed"), 0o644)

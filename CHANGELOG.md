@@ -12,6 +12,7 @@ Versions: 1.0 is the first public version; the 1.x versions bring fixes and impr
 - Offer to restore a file from its eMudScan backup on the details page.
 - Rewrite the texts in clear, concise English with consistent terms (certificate bundle, root store, block list), and align the French texts.
 - Rewrite the documentation in the same style.
+- The commands that replace an outdated certificate bundle did not check the download, so a failed or intercepted download could leave the file empty or overwrite it with something else. They now use the download only if it matches the SHA-256 checksum published by curl, and change a file only once its backup is made.
 
 ## 1.6 (20261030)
 
