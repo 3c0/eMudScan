@@ -12,7 +12,7 @@ From top to bottom:
   test, privacy, credits, licenses and disclaimer. **Language** (top right):
   Automatic (Windows), English or Français. Changing it resets the window; the
   choice is not saved.
-- **I accept the online test**: ticked at start. Hover it to see what is sent;
+- **Allow the online test**: ticked at start. Hover it to see what is sent;
   untick it to scan without any internet connection (see [Privacy](privacy.md)).
 - **Drives to scan**: local drives are ticked at start; DVD, removable and network
   drives are not. Nothing on a drive that is not ticked is read or reported.
@@ -20,8 +20,8 @@ From top to bottom:
   during the scan, then **Scan again**. **Copy report** and **Save report** are on
   the right.
 - **Log**: one line per step. Text can be selected and copied.
-- Three lists: **Windows certificate system**, **Internet software** (browsers,
-  messaging, mail, sync, VPN, remote access…) and **Third-party software**
+- Three lists: **Windows certificate system**, **Browsers and internet apps** (browsers,
+  messaging, mail, sync, VPN, remote access…) and **Other software**
   (everything else). Drag the borders between them to resize them.
 
 ## Statuses
@@ -59,7 +59,7 @@ row: its *Outdated file* ends with *(+1)*, and its details list every copy. *Sca
 again* checks each copy; copies that no longer agree get their own rows again.
 
 Click a header to sort, click a path to open it in Explorer, hover a cell to see
-it in full. *Hide items with an OK status* filters a list.
+it in full. *Hide OK items* filters a list.
 
 The search box above the lists (Ctrl+F) keeps the rows whose *Software* or
 *Component* column contains every word typed, in any order and case, versions
@@ -73,7 +73,7 @@ updated shows its new version.
 
 ## The details window
 
-Double-click a row (or press Enter) to see the element, its software date and
+Double-click a row (or press Enter) to see the item, its software date and
 where that date comes from, its folders, homepage and package, and **what to
 do**. Commands are shown in black blocks, with a copy button. eMudScan never runs
 them: you decide.
@@ -91,7 +91,7 @@ browser, so you can see for yourself.
 
 ## The report
 
-*Copy report* and *Save report* (UTF-8 text) give every element with the same
+*Copy report* and *Save report* (UTF-8 text) give every item with the same
 explanations as the details windows. Saving a report is the only time eMudScan
 writes a file.
 

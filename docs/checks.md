@@ -10,18 +10,18 @@
 - **Offline TLS test**, always: the advisory's 12 test chains go through the
   checks Windows applies to a secure connection, without any network access. Each
   one must be refused.
-- **Live TLS test**, when the online test is accepted: 3 HTTPS requests through
+- **Windows TLS test (online)**, when the online test is allowed: 3 HTTPS requests through
   Windows (WinHTTP) to the advisory's test sites. If the sites cannot be reached,
   the result is *inconclusive*.
 - **HTTPS inspection**: antivirus and company proxies that inspect secure
   connections (Kaspersky, ESET, Zscaler…) are recognised from the root certificate
-  they install. They check certificates instead of Windows: only the live test
+  they install. They check certificates instead of Windows: only the online test
   can tell whether they refuse the compromised ones.
 - The eMudhra and Sectigo roots present (for information), and what software that
-  copies the Windows root list without its block list (Python's `ssl` module
+  copies the Windows root store without its block list (Python's `ssl` module
   before its fixed versions) would accept.
 
-## Internet software
+## Browsers and internet apps
 
 - **Browsers**, wherever they are on the scanned drives (installed, Scoop,
   portable). Official Chrome, Edge, Brave, Vivaldi, Opera, Firefox and Thunderbird
@@ -29,13 +29,13 @@
   browser has downloaded (CRLSet) and says when the browser must be opened to get
   the current one. It reads the list that Firefox-based builds carry (OneCRL),
   such as LibreWolf and Tor Browser. Other Chromium builds (ungoogled-chromium,
-  Thorium…) are checked through their built-in root list.
-- **Other internet software** (Signal, Discord, Slack, Teams, Dropbox…): Electron
+  Thorium…) are checked through their built-in root store.
+- **Other internet apps** (Signal, Discord, Slack, Teams, Dropbox…): Electron
   version, bundled Python, Node.js, Java or curl, certificate bundles, built-in
-  root lists, and OpenSSL-based software that loads the Windows roots
+  root stores, and OpenSSL-based software that loads the Windows roots
   (qBittorrent).
 
-## Third-party software
+## Other software
 
 Git for Windows, curl, Python (pip, certifi, every virtual environment), Node.js,
 Java (including copies bundled with other software), Electron applications, Go,

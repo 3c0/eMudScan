@@ -17,11 +17,11 @@ func TestMergeRepeated(t *testing.T) {
 	}
 	items := []Item{
 		node(1, `C:\Users\me\.lmstudio\.internal\utils\node.exe`, StWarn, "Release line without the fix"),
-		{ID: 2, Group: GroupWindows, Kind: "windows", Name: "Windows TLS test (offline)", Status: StOK, Summary: "12 of 12 test chains refused"},
+		{ID: 2, Group: GroupWindows, Kind: "windows", Name: "Windows TLS test (offline)", Status: StOK, Summary: "12 of 12 test chains rejected"},
 		node(3, `C:\Users\me\AppData\Local\Programs\LM Studio\resources\app\.webpack\bin\node.exe`, StWarn, "Release line without the fix"),
 		node(4, `C:\elsewhere\node.exe`, StOK, "Fixed version"),
 		node(5, `C:\pending\node.exe`, StPending, "Checking…"),
-		{ID: 6, Group: GroupWindows, Kind: "windows", Name: "Windows TLS test (offline)", Status: StOK, Summary: "12 of 12 test chains refused"},
+		{ID: 6, Group: GroupWindows, Kind: "windows", Name: "Windows TLS test (offline)", Status: StOK, Summary: "12 of 12 test chains rejected"},
 	}
 	got := mergeRepeated(items)
 	var ids []int
@@ -56,7 +56,7 @@ func TestMergeRepeatedDifferentDetails(t *testing.T) {
 	Lang = 0
 	py := func(id int, home string) Item {
 		it := Item{ID: id, Group: GroupApps, Kind: "python", Name: "Python", Version: "3.14.7", Owner: "ESPHome Device Builder",
-			Status: StWarn, Summary: "Outdated certificate list (pip/certifi)", File: home + `\python.exe`,
+			Status: StWarn, Summary: "Outdated certificate bundle (pip/certifi)", File: home + `\python.exe`,
 			Details: "In PowerShell:\n$ & \"" + home + `\python.exe" -m pip install --upgrade pip`}
 		it.fillDisplay("Python")
 		return it

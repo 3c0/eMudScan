@@ -1196,9 +1196,9 @@ func (tp *appsContext) pythonFix(env pyEnv) pyFix {
 // or the block list found in its ssl module.
 func pythonBlocksText(f pyFix) string {
 	if f.state != FixOK && f.inSSL {
-		return Tf("py.sslBlocksFile", lk(f.sslLib)) + " " + T("py.sslBlocksNote")
+		return Tf("py.sslBlocksFile", lk(f.sslLib)) + "\n\n" + T("py.sslBlocksNote")
 	}
-	return Tf("py.sslBlocksVersion", f.version, fixedVersionsList("python")) + " " + T("py.sslBlocksNote")
+	return Tf("py.sslBlocksVersion", f.version, fixedVersionsList("python")) + "\n\n" + T("py.sslBlocksNote")
 }
 
 func (tp *appsContext) checkPython() {
@@ -1604,7 +1604,7 @@ func (tp *appsContext) javaOne(it *Item, home string) {
 		if len(others) > 0 {
 			block += " " + Tf("java.blockOthers", strings.Join(others, ", "))
 		}
-		block += "\n" + c
+		block += "\n" + c + "\n\n" + T("java.blockAfter")
 	}
 	// still trusted: an emSign root, which issued the direct intermediates or
 	// cross-signed their issuer, or any root

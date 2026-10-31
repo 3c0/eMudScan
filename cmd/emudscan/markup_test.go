@@ -64,7 +64,7 @@ func TestMarkupBlocks(t *testing.T) {
 }
 
 func TestLabels(t *testing.T) {
-	if r := parseLine("What to do: update it."); len(r) == 0 || r[0].kind != runBold {
+	if r := parseLine("Recommended action: update it."); len(r) == 0 || r[0].kind != runBold {
 		t.Errorf("label: %+v", r)
 	}
 	if r := parseLine(Tf("fix.pkgAll", "Scoop")); len(r) == 0 || r[0].kind == runBold {
@@ -100,7 +100,7 @@ func TestLinkTip(t *testing.T) {
 	for target, want := range map[string]string{
 		"https://lmstudio.ai":      "Open in your browser:\nhttps://lmstudio.ai",
 		`C:\Program Files\Git`:     "Show in Explorer:\nC:\\Program Files\\Git",
-		itemLinkPrefix + "wincopy": "Show the details of this element",
+		itemLinkPrefix + "wincopy": "Show this item’s details",
 		openInPrefix + `C:\Users\me\scoop\apps\ungoogled-chromium\156.0.8078.47-1.1\chrome.exe>https://emudhra.we-have-a-problem.com/`: "Open with chrome.exe:\nhttps://emudhra.we-have-a-problem.com/",
 	} {
 		if got := linkTip(target); got != want {

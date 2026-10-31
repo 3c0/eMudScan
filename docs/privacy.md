@@ -8,7 +8,7 @@ rights.
 
 ## The online test is its only connection
 
-When *I accept the online test* is ticked (it is at start), each scan makes up to
+When *Allow the online test* is ticked (it is at start), each scan makes up to
 3 HTTPS requests through Windows (WinHTTP) to the advisory's test sites at
 [emudhra.we-have-a-problem.com](https://emudhra.we-have-a-problem.com), to check
 that Windows refuses the compromised certificates on a real connection:
@@ -41,8 +41,8 @@ policy sends them to intranet servers only, which eMudScan does not change).
 
 ## Opting out
 
-Untick *I accept the online test*, or start `eMudScan.exe --offline`: eMudScan
-then makes no internet connection at all, not even the proxy detection. The live
+Untick *Allow the online test*, or start `eMudScan.exe --offline`: eMudScan
+then makes no internet connection at all, not even the proxy detection. The online
 test is skipped; every other check works the same. The choice is not saved.
 
 ## Everything else stays on your PC

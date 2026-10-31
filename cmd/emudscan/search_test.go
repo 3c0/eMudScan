@@ -34,7 +34,7 @@ func TestSearchShownColumns(t *testing.T) {
 	Lang = 0
 	rows := []Item{
 		{Name: ".NET SDK code-signing roots", Owner: "dotnet", Status: StInfo, File: `C:\Program Files\dotnet\sdk\10.0.403\trustedroots\codesignctl.pem`},
-		{Kind: "app", Name: "qBittorrent", Version: "5.3.0", Status: StOK, Summary: "Copies the Windows root list: not affected", Folder: `C:\Program Files\qBittorrent`},
+		{Kind: "app", Name: "qBittorrent", Version: "5.3.0", Status: StOK, Summary: "Copies the Windows root store: not affected", Folder: `C:\Program Files\qBittorrent`},
 		{Kind: "git", Name: "Git for Windows", Version: "2.56.0.windows.3", Owner: "Git", OwnerVer: "2.56.0.3", Status: StOK, Folder: `C:\Program Files\Git\cmd`},
 		{Name: "pip", Version: "26.2.1", Owner: "xpu_check", Status: StInfo, File: `U:\Temp\xpu_check\.venv\Lib\site-packages\pip\_vendor\certifi\cacert.pem`},
 		{Name: "Python", Version: "3.12.16", Owner: "uv", OwnerVer: "0.13.6", Status: StOK, Folder: `C:\Users\eco\scoop\persist\uv\python\versions\cpython-3.12.16-windows-x86_64-none`},

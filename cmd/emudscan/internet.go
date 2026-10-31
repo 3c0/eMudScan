@@ -364,7 +364,7 @@ func browserTests(name, exe string) string {
 func (tp *appsContext) copierVerdict(r *result, name, file string, f embedFindings) {
 	why := Tf("net.copiesDetails", name, filepath.Base(file))
 	if f.Markers["libtorrent"] {
-		why += " " + T("net.copiesLibtorrent")
+		why += "\n\n" + T("net.copiesLibtorrent")
 	}
 	if tp.pyStoreRisk > 0 {
 		r.Status, r.Summary = StCaution, T("net.copies")

@@ -87,13 +87,13 @@ func TestSettingVerdicts(t *testing.T) {
 		status  Status
 		summary string
 	}{
-		{certSetting{label: "SSL_CERT_FILE", env: "SSL_CERT_FILE", target: outdated, users: "set.users.openssl", remove: "x"}, StWarn, "Points to an outdated list"},
-		{certSetting{label: "SSL_CERT_FILE", env: "SSL_CERT_FILE", target: fine, users: "set.users.openssl"}, StOK, "Points to an up-to-date list"},
+		{certSetting{label: "SSL_CERT_FILE", env: "SSL_CERT_FILE", target: outdated, users: "set.users.openssl", remove: "x"}, StWarn, "Points to outdated certificates"},
+		{certSetting{label: "SSL_CERT_FILE", env: "SSL_CERT_FILE", target: fine, users: "set.users.openssl"}, StOK, "Points to up-to-date certificates"},
 		{certSetting{label: "CURL_CA_BUNDLE", env: "CURL_CA_BUNDLE", target: filepath.Join(dir, "gone.pem"), users: "set.users.curl"}, StInfo, "Points to a missing file"},
-		{certSetting{label: "NODE_EXTRA_CA_CERTS", env: "NODE_EXTRA_CA_CERTS", target: outdated, users: "set.users.node", adds: true}, StWarn, "Points to an outdated list"},
-		{certSetting{label: "SSL_CERT_DIR", env: "SSL_CERT_DIR", target: dir, users: "set.users.openssl", dir: true}, StWarn, "Points to an outdated list"},
+		{certSetting{label: "NODE_EXTRA_CA_CERTS", env: "NODE_EXTRA_CA_CERTS", target: outdated, users: "set.users.node", adds: true}, StWarn, "Points to outdated certificates"},
+		{certSetting{label: "SSL_CERT_DIR", env: "SSL_CERT_DIR", target: dir, users: "set.users.openssl", dir: true}, StWarn, "Points to outdated certificates"},
 		// no Python found: a Python setting is not known to be harmless
-		{certSetting{label: "REQUESTS_CA_BUNDLE", env: "REQUESTS_CA_BUNDLE", target: outdated, users: "set.users.requests", python: true}, StWarn, "Points to an outdated list"},
+		{certSetting{label: "REQUESTS_CA_BUNDLE", env: "REQUESTS_CA_BUNDLE", target: outdated, users: "set.users.requests", python: true}, StWarn, "Points to outdated certificates"},
 	}
 	for _, c := range cases {
 		it := run(tp, c.s)
@@ -109,7 +109,7 @@ func TestSettingVerdicts(t *testing.T) {
 	fakePython(t, home, true)
 	tp.d.pythonExes[filepath.Join(home, "python.exe")] = true
 	it := run(tp, certSetting{label: "REQUESTS_CA_BUNDLE", env: "REQUESTS_CA_BUNDLE", target: outdated, users: "set.users.requests", python: true})
-	if it.Status != StInfo || it.Summary != "Outdated list, harmless for the Pythons on this PC" {
+	if it.Status != StInfo || it.Summary != "Outdated certificates, harmless to Python on this PC" {
 		t.Errorf("Python setting with a protected Python: %v %q", it.Status, it.Summary)
 	}
 }

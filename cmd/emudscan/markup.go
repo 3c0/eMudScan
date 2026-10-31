@@ -90,7 +90,7 @@ func parseField(line string) (label, value string, ok bool) {
 // labelSep is the separator written after a label in plain text.
 func labelSep() string {
 	if Lang == 1 {
-		return " : "
+		return "\u00a0: " // French: a non-breaking space before the colon
 	}
 	return ": "
 }

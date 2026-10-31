@@ -10,6 +10,7 @@ Versions: 1.0 is the first public version; the 1.x versions bring fixes and impr
 - For a Java with no update yet, the advice was to add the 16 compromised certificates to its block list by hand. It now gives the commands that add them with the roots that OpenJDK removes, which Java then refuses as if they were removed.
 - Backups made by the fix commands always had the same name (cacert.pem.bak), so running the commands twice overwrote the backup of the original file. Each backup is now named with the date and time the command runs (cacert.pem.emudscan-20261031-011500.bak).
 - Offer to restore a file from its eMudScan backup on the details page.
+- Rewrite the texts in clear, concise English with consistent terms (certificate bundle, root store, block list), and align the French texts.
 
 ## 1.6 (20261030)
 

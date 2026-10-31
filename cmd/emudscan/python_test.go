@@ -150,12 +150,12 @@ func TestPythonVerdicts(t *testing.T) {
 		summary   string
 	}
 	cases := []tc{
-		{"fixed", true, "3.13.18", false, StOK, "Refuses the compromised certificates itself"},
-		{"fixed, old lists", true, "3.13.18", true, StOK, "Refuses the compromised certificates itself"},
+		{"fixed", true, "3.13.18", false, StOK, "Rejects the compromised certificates itself"},
+		{"fixed, old lists", true, "3.13.18", true, StOK, "Rejects the compromised certificates itself"},
 		{"old", false, "3.13.17", false, StCaution, "Update Python to 3.13.18"},
-		{"old, old lists", false, "3.13.17", true, StWarn, "Outdated certificate list (pip/certifi)"},
+		{"old, old lists", false, "3.13.17", true, StWarn, "Outdated certificate bundle (pip/certifi)"},
 		{"unsupported", false, "3.10.19", false, StCaution, "Python 3.10.19 is no longer maintained: no fix"},
-		{"blocklist, version unknown", true, "", false, StOK, "Refuses the compromised certificates itself"},
+		{"blocklist, version unknown", true, "", false, StOK, "Rejects the compromised certificates itself"},
 		{"nothing known", false, "", false, StOK, "pip and certifi up to date"},
 	}
 	for i, c := range cases {
@@ -178,7 +178,7 @@ func TestPythonVerdicts(t *testing.T) {
 			t.Errorf("%s: status %v, summary %q; want %v, %q\n%s", c.name, got.Status, got.Summary, c.status, c.summary, got.Details)
 		}
 		switch {
-		case c.name == "fixed, old lists" && !strings.Contains(got.Details, "remains good practice"):
+		case c.name == "fixed, old lists" && !strings.Contains(got.Details, "is still good practice"):
 			t.Errorf("%s: the lists' update should stay as good practice:\n%s", c.name, got.Details)
 		case c.name == "old, old lists" && !strings.Contains(got.Details, "update Python to 3.13.18"):
 			t.Errorf("%s: the Python update should come first:\n%s", c.name, got.Details)
@@ -231,11 +231,11 @@ func TestBundledPythonAdvice(t *testing.T) {
 		owned         bool
 		want          []string // in this order
 	}{
-		{"bundled, old", "3.13.17", false, true, []string{"**This copy belongs to Device Builder.**", "If you manage this Python yourself, update it to 3.13.18.", "Until then, update the outdated lists. In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"bundled, version unknown", "", false, true, []string{"**This copy belongs to Device Builder.**", "If you manage this Python yourself, update the outdated lists. In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"bundled, fixed", "3.13.18", true, true, []string{"An update remains good practice. **This copy belongs to Device Builder.**", "If you manage this Python yourself, update the outdated lists. In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"own, old", "3.13.17", false, false, []string{"What to do: update Python to 3.13.18.", "Until then, update the outdated lists. In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"own, fixed", "3.13.18", true, false, []string{"An update remains good practice. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"bundled, old", "3.13.17", false, true, []string{"**This copy belongs to Device Builder.**", "If you manage this Python yourself, update it to 3.13.18.", "Until then, update the outdated bundles. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"bundled, version unknown", "", false, true, []string{"**This copy belongs to Device Builder.**", "If you manage this Python yourself, update the outdated bundles. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"bundled, fixed", "3.13.18", true, true, []string{"Updating is still good practice. **This copy belongs to Device Builder.**", "If you manage this Python yourself, update the outdated bundles. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"own, old", "3.13.17", false, false, []string{"Recommended action: update Python to 3.13.18.", "Until then, update the outdated bundles. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"own, fixed", "3.13.18", true, false, []string{"Updating is still good practice. In PowerShell:\n", "pip install --upgrade certifi"}},
 	} {
 		app := filepath.Join(root, "app"+itoa(i))
 		home := filepath.Join(app, "python")
@@ -266,7 +266,7 @@ func TestBundledPythonAdvice(t *testing.T) {
 		if n := strings.Count(d, "This copy belongs to"); n != map[bool]int{true: 1, false: 0}[c.owned] {
 			t.Errorf("%s: the program's advice %d times:\n%s", c.name, n, d)
 		}
-		for _, bad := range []string{"yourself: What to do", "yourself: In PowerShell", ":\nIn PowerShell"} {
+		for _, bad := range []string{"yourself: Recommended action", "yourself: In PowerShell", ":\nIn PowerShell"} {
 			if strings.Contains(d, bad) {
 				t.Errorf("%s: %q:\n%s", c.name, bad, d)
 			}

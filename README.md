@@ -36,7 +36,7 @@ eMudScan is not code-signed yet, so Windows SmartScreen may say it is unrecognis
 ## ▶️ Use
 
 1. Tick the drives to scan (local drives are ticked at start).
-2. Leave *I accept the online test* ticked, or untick it to scan without any internet connection.
+2. Leave *Allow the online test* ticked, or untick it to scan without any internet connection.
 3. Click **Scan**.
 4. Double-click a line to see what to do. *Save report* keeps the results in a text file.
 
@@ -58,15 +58,15 @@ The details window explains why, what to update, and gives the commands to copy.
 
 ## 🔍 What it checks
 
-- 🪟 **Windows:** that it blocks the 16 compromised certificates, offline and with a live test, and whether an antivirus or a proxy inspects secure connections.
-- 🌐 **Internet software:** browsers, messaging, mail, sync, VPN and remote-access software.
+- 🪟 **Windows:** that it blocks the 16 compromised certificates, offline and with an online test, and whether an antivirus or a proxy inspects secure connections.
+- 🌐 **Browsers and internet apps:** web browsers, messaging, mail, sync, VPN and remote-access software.
 - 🧰 **Other software:** Python, Java, Node.js, Git, Go, Electron applications, programs with their own certificate list, and every certificate file on the scanned drives.
 
 See [What eMudScan checks](docs/checks.md) for the details.
 
 ## 🔒 Privacy
 
-eMudScan connects to the internet only when *I accept the online test* is ticked: 3 connections per scan to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version. Nothing else is sent. See [Privacy](docs/privacy.md).
+eMudScan connects to the internet only when *Allow the online test* is ticked: 3 connections per scan to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version. Nothing else is sent. See [Privacy](docs/privacy.md).
 
 ## 📖 Documentation
 
