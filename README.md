@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Does your PC still trust the compromised eMudhra certificates?</b><br>
-  eMudScan checks Windows and the software installed on your PC, and tells you what to do for each one.
+  eMudScan checks Windows and the software installed on your PC, and tells you what to do about each one.
 </p>
 
 <p align="center">
@@ -18,39 +18,39 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/main-window.png" width="860" alt="eMudScan's main window after a scan: Windows is protected, and some programs need an update">
+  <img src="docs/images/main-window.png" width="860" alt="eMudScan’s main window after a scan: Windows is protected, and some programs need an update">
 </p>
 
-In October 2026, the private keys of eight eMudhra intermediate certificate authorities were compromised. Windows, browsers and many programs have since been updated to stop trusting them, but not all of them, and not on every PC. eMudScan finds out where yours stand.
+In October 2026, the private keys of eight eMudhra intermediate certificate authorities were compromised. Windows, browsers and many programs have since been updated to stop trusting them, but not all of them, and not on every PC. eMudScan shows where yours stands.
 
-- 📦 **One `.exe`:** nothing to install, no administrator rights.
+- 📦 **A single `.exe`:** nothing to install, no administrator rights needed.
 - 🔒 **Read-only:** it changes nothing on your PC.
 - 🌍 **English and French.**
 
 ## 📥 Download
 
-Download `eMudScan.exe` from the [latest release](https://github.com/3c0/eMudScan/releases/latest) and run it. It needs Windows 10 version 1809 or later, Windows 11, or Windows Server 2019 or later.
+Download `eMudScan.exe` from the [latest release](https://github.com/3c0/eMudScan/releases/latest) and run it. It requires Windows 10 version 1809 or later, Windows 11, or Windows Server 2019 or later.
 
-eMudScan is not code-signed yet, so Windows SmartScreen may say it is unrecognised: choose *More info* → *Run anyway*.
+eMudScan is not code-signed yet, so Windows SmartScreen may show it as an unrecognized app: select **More info**, then **Run anyway**.
 
 ## ▶️ Use
 
-1. Tick the drives to scan (local drives are ticked at start).
-2. Leave *Allow the online test* ticked, or untick it to scan without any internet connection.
+1. Select the drives to scan (local drives are selected by default).
+2. Leave **Allow the online test** checked, or clear it to scan without any internet connection.
 3. Click **Scan**.
-4. Double-click a line to see what to do. *Save report* keeps the results in a text file.
+4. Double-click an item to see the recommended action. **Save report** saves the results to a text file.
 
-Each line gets a coloured shield:
+Each item gets a colored shield:
 
 | | Status | Meaning |
 |:-:|---|---|
-| <img src="docs/images/status-ok.png" width="22" alt=""> | OK | Nothing to do |
-| <img src="docs/images/status-info.png" width="22" alt=""> | Information | Nothing to do, for your information |
+| <img src="docs/images/status-ok.png" width="22" alt=""> | OK | No action needed |
+| <img src="docs/images/status-info.png" width="22" alt=""> | Information | For your information; no action needed |
 | <img src="docs/images/status-warning.png" width="22" alt=""> | Warning | May be affected: worth checking |
 | <img src="docs/images/status-update.png" width="22" alt=""> | Update needed | Accepts the compromised certificates until updated |
 | <img src="docs/images/status-problem.png" width="22" alt=""> | Critical | Windows itself still trusts the compromised certificates |
 
-The details window explains why, what to update, and gives the commands to copy. eMudScan never runs them: you decide.
+The details window explains why, says what to update, and provides the commands to copy. eMudScan never runs them: you decide.
 
 <p align="center">
   <img src="docs/images/details-window.png" width="560" alt="The details window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown">
@@ -58,15 +58,15 @@ The details window explains why, what to update, and gives the commands to copy.
 
 ## 🔍 What it checks
 
-- 🪟 **Windows:** that it blocks the 16 compromised certificates, offline and with an online test, and whether an antivirus or a proxy inspects secure connections.
-- 🌐 **Browsers and internet apps:** web browsers, messaging, mail, sync, VPN and remote-access software.
-- 🧰 **Other software:** Python, Java, Node.js, Git, Go, Electron applications, programs with their own certificate list, and every certificate file on the scanned drives.
+- 🪟 **Windows:** whether it blocks the 16 compromised certificates, offline and with an online test, and whether an antivirus or a proxy inspects secure connections.
+- 🌐 **Browsers and internet apps:** web browsers, messaging, email, sync, VPN and remote-access software.
+- 🧰 **Other software:** Python, Java, Node.js, Git, Go, Electron applications, programs with their own root store, and every certificate bundle on the scanned drives.
 
-See [What eMudScan checks](docs/checks.md) for the details.
+See [What eMudScan checks](docs/checks.md) for details.
 
 ## 🔒 Privacy
 
-eMudScan connects to the internet only when *Allow the online test* is ticked: 3 connections per scan to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version. Nothing else is sent. See [Privacy](docs/privacy.md).
+eMudScan connects to the internet only when **Allow the online test** is checked: 3 connections per scan to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version. Nothing else is sent. See [Privacy](docs/privacy.md).
 
 ## 📖 Documentation
 
@@ -74,16 +74,16 @@ eMudScan connects to the internet only when *Allow the online test* is ticked: 3
 - [What eMudScan checks](docs/checks.md)
 - [Privacy](docs/privacy.md)
 - [Building and releasing](docs/building.md)
-- [Contributing](.github/CONTRIBUTING.md): issues, pull requests, the rules the program keeps
+- [Contributing](.github/CONTRIBUTING.md): issues, pull requests, and the rules eMudScan follows
 - [Changelog](CHANGELOG.md)
 
 ## 🤖 Made with AI
 
-eMudScan was developed by [3c0](https://github.com/3c0) with the help of [Claude Opus](https://www.anthropic.com/claude/opus), Anthropic's AI model.
+eMudScan was developed by [3c0](https://github.com/3c0) with the help of [Claude](https://claude.com/), Anthropic’s AI.
 
 ## ⚖️ License
 
-Copyright © 2026 [3c0](https://github.com/3c0). eMudScan is free software under the [GNU General Public License, version 3 or later](LICENSE).
+Copyright © 2026 [3c0](https://github.com/3c0). eMudScan is free software, licensed under the [GNU General Public License, version 3 or later](LICENSE).
 
 The reference data comes from [emudhra.we-have-a-problem.com](https://emudhra.we-have-a-problem.com) by Dennis Jackson and contributors ([source](https://github.com/galadran/we-have-a-problem.com), Apache License 2.0).
 

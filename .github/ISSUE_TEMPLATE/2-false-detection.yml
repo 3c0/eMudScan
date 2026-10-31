@@ -1,5 +1,5 @@
 name: False detection
-description: A software is judged wrongly - a false alarm, a missed problem, a wrong version or date, or it is not listed.
+description: "Software judged incorrectly: a false alarm, a missed problem, a wrong version or date, or software that is not listed."
 title: "[False detection] "
 labels: ["false detection"]
 assignees: ["3c0"]
@@ -7,13 +7,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks. Open the software's item in eMudScan (double-click), click **Copy all** and paste the text below: it holds everything eMudScan knows about that software.
+        Thank you. Open the software’s item in eMudScan (double-click), click **Copy all** and paste the text below: it contains everything eMudScan knows about that software.
         Before pasting, remove what you want to keep private (your user name in folder names, for example).
   - type: input
     id: version
     attributes:
       label: eMudScan version
-      description: As shown in the window title, for example "1.3 (20261028)".
+      description: As shown in the window title, for example “1.3 (20261028)”.
       placeholder: "1.3 (20261028)"
     validations:
       required: true
@@ -21,7 +21,7 @@ body:
     id: windows
     attributes:
       label: Windows
-      description: Edition and build, as in the first line of a saved report (or Settings › System › About). Useful for the Windows section's items and for software that is not found.
+      description: Edition and build, as shown on the first line of a saved report (or in Settings › System › About). Useful for the items of the Windows section and for software that is not found.
       placeholder: "Windows 11 Pro 25H2 (10.0.26200.9711)"
   - type: input
     id: software
@@ -54,13 +54,13 @@ body:
     id: truth
     attributes:
       label: What is true, and how you know
-      description: The publisher's release notes or advisory, the result of a test page in that browser, the file eMudScan should have read, where the software is installed...
+      description: The publisher’s release notes or advisory, the result of a test page in that browser, the file eMudScan should have read, where the software is installed…
     validations:
       required: true
   - type: checkboxes
     id: checks
     attributes:
-      label: Before sending
+      label: Before submitting
       options:
-        - label: I removed private information from what I pasted.
+        - label: I have removed private information from what I pasted.
           required: true

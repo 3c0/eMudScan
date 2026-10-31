@@ -19,12 +19,12 @@ body:
     id: software
     attributes:
       label: Software, with its homepage
-      description: For a software to add.
+      description: For software to add.
       placeholder: "Example 3.2 - https://example.org"
   - type: textarea
     id: details
     attributes:
       label: Details
-      description: For a software - how it verifies certificates (Windows' store, its own list, a bundled Python, Node.js, Java or Electron...), where it is installed, and what its publisher said about the eMudhra compromise (link). For an improvement - what should change, and why.
+      description: "For software to add: how it validates certificates (the Windows certificate store, its own root store, a bundled Python, Node.js, Java or Electron…), where it is installed, and what its publisher said about the eMudhra compromise (link). For an improvement: what should change, and why."
     validations:
       required: true

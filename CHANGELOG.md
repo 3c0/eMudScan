@@ -4,13 +4,14 @@ Versions: 1.0 is the first public version; the 1.x versions bring fixes and impr
 
 ## Unreleased
 
-- The commands that replace an outdated certificate list downloaded it to a temporary file with a fixed name, which another program could replace before it was copied. They now keep the download in memory and write it directly over the file.
-- Certificate lists in OpenSSL's trusted-certificate format (ca-bundle.trust.crt, next to Git's ca-bundle.crt) were not tested. They now are, with the uses each root is trusted for.
-- A Java whose block list rejects the compromised intermediates, as the first fix of 21 October does, was shown as fixed, while OpenJDK has since asked to remove the roots that lead to them. It is now amber, with the update as advice.
-- For a Java with no update yet, the advice was to add the 16 compromised certificates to its block list by hand. It now gives the commands that add them with the roots that OpenJDK removes, which Java then refuses as if they were removed.
+- The commands that replace an outdated certificate bundle downloaded the new one to a temporary file with a fixed name, which another program could replace before it was copied. They now keep the download in memory and write it directly over the file.
+- Certificate bundles in OpenSSL’s trusted-certificate format (ca-bundle.trust.crt, next to Git’s ca-bundle.crt) were not tested. They now are, taking into account the uses each root is trusted for.
+- A Java whose block list rejects the compromised intermediates, as the first fix of 21 October does, was shown as fixed, although OpenJDK has since asked for the roots that lead to them to be removed. It is now amber, with an update as the recommended action.
+- For a Java with no update available yet, the advice was to add the 16 compromised certificates to its block list manually. It now gives the commands that add them, along with the roots that OpenJDK removes, which Java then rejects as if they had been removed.
 - Backups made by the fix commands always had the same name (cacert.pem.bak), so running the commands twice overwrote the backup of the original file. Each backup is now named with the date and time the command runs (cacert.pem.emudscan-20261031-011500.bak).
 - Offer to restore a file from its eMudScan backup on the details page.
 - Rewrite the texts in clear, concise English with consistent terms (certificate bundle, root store, block list), and align the French texts.
+- Rewrite the documentation in the same style.
 
 ## 1.6 (20261030)
 
