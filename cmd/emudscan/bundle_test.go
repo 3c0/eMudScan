@@ -112,7 +112,8 @@ func TestGitBundleAdvice(t *testing.T) {
 }
 
 // The current list is downloaded once, into memory, and written directly over each
-// file after its backup: no file in between that another program could replace.
+// file after its backup, named after the time the command runs: no file in between
+// that another program could replace.
 func TestReplaceBundleFix(t *testing.T) {
 	Lang = 0
 	fix := replaceBundleFix(`C:\Program Files\App\cacert.pem`, `C:\Users\o'neil\$x\cert.pem`)
@@ -120,7 +121,7 @@ func TestReplaceBundleFix(t *testing.T) {
 		t.Errorf("download: %s", fix)
 	}
 	for _, f := range []string{`'C:\Program Files\App\cacert.pem'`, `'C:\Users\o''neil\$x\cert.pem'`} {
-		backup := strings.Index(fix, "Copy-Item -LiteralPath "+f+" -Destination "+f[:len(f)-1]+".bak'")
+		backup := strings.Index(fix, "Copy-Item -LiteralPath "+f+" -Destination ("+f[:len(f)-1]+".emudscan-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak')")
 		write := strings.Index(fix, "[IO.File]::WriteAllBytes("+f+", $cacert)")
 		if backup < 0 || write < backup {
 			t.Errorf("%s: backup at %d, write at %d", f, backup, write)

@@ -307,5 +307,8 @@ func (tp *appsContext) settingOne(it *Item, s certSetting) {
 		r.Status, r.Summary = StWarn, T("set.sumBad")
 		r.Details = joinParas(what, bundleProblem(br), fix)
 	}
+	if !s.dir {
+		r.Details = joinParas(r.Details, restoreAdvice(s.target))
+	}
 	tp.c.finish(it, r)
 }

@@ -995,6 +995,7 @@ func (tp *appsContext) gitOne(it *Item, root string) {
 		r.Status, r.Summary = StOK, T("git.sumOK")
 		r.Details = details + "\n\n" + T("git.okBundle")
 	}
+	r.Details = joinParas(r.Details, restoreAdvice(dedupePaths(candidates)...))
 	tp.c.finish(it, r)
 }
 
@@ -1061,6 +1062,7 @@ func (tp *appsContext) curlOne(it *Item, exe string) {
 	default:
 		r.Status, r.Summary, r.Details = StCaution, T("curl.sumUnknown"), details
 	}
+	r.Details = joinParas(r.Details, restoreAdvice(bundle))
 	tp.c.finish(it, r)
 }
 
@@ -1522,8 +1524,7 @@ func javaBlockCmd(bl javaBlockList, roots []javaRoot) string {
 	if len(missing) == 0 {
 		return ""
 	}
-	return psHeader(bl.file) + "\n" +
-		cmd(fmt.Sprintf(`Copy-Item -LiteralPath %s -Destination %s`, psQuote(bl.file), psQuote(bl.file+".bak"))) + "\n" +
+	return psHeader(bl.file) + "\n" + backupCmd(bl.file) + "\n" +
 		cmd(fmt.Sprintf(`Add-Content -LiteralPath %s -Value '',%s`, psQuote(bl.file), strings.Join(missing, ",")))
 }
 
@@ -1625,6 +1626,7 @@ func (tp *appsContext) javaOne(it *Item, home string) {
 	default:
 		r.Status, r.Summary, r.Details = StOK, T("java.sumNoRoots"), joinParas(details, T("java.okNoRoots"))
 	}
+	r.Details = joinParas(r.Details, restoreAdvice(bl.file))
 	tp.c.finish(it, r)
 }
 
@@ -2060,7 +2062,7 @@ func (tp *appsContext) checkBundles() {
 	all := dedupePaths(tp.d.bundles)
 	tp.c.stepStart(Tf("log.bundles", len(all)))
 	total, bad := 0, 0
-	var badPaths, badAll, okAll []string
+	var badPaths, badAll, okAll, restorable []string
 	for _, p := range all {
 		if tp.c.cancel() {
 			return
@@ -2079,6 +2081,9 @@ func (tp *appsContext) checkBundles() {
 			}
 		} else {
 			okAll = append(okAll, p)
+			if _, has := latestBackup(p); has && !tp.isHandled(p) {
+				restorable = append(restorable, p)
+			}
 		}
 	}
 	tp.c.activity("")
@@ -2089,12 +2094,7 @@ func (tp *appsContext) checkBundles() {
 	}
 	tp.c.stepEnd(st, sum)
 	const maxItems = 80
-	for i, p := range badPaths {
-		if i == maxItems {
-			tp.c.add(GroupApps, "info", Tf("bundle.moreName", len(badPaths)-maxItems), result{Status: StWarn, Summary: T("bundle.sumBad"), Details: T("bundle.moreDetails")})
-			break
-		}
-		p := p
+	item := func(p string) {
 		name := T("bundle.name")
 		lp := strings.ReplaceAll(lower(p), "/", `\`)
 		switch {
@@ -2106,6 +2106,17 @@ func (tp *appsContext) checkBundles() {
 			name = T("dotnet.name")
 		}
 		tp.c.begin(tp.groupOf(name, p), "bundle", name, filepath.Dir(p), func(it *Item) { tp.bundleOne(it, p) })
+	}
+	for i, p := range badPaths {
+		if i == maxItems {
+			tp.c.add(GroupApps, "info", Tf("bundle.moreName", len(badPaths)-maxItems), result{Status: StWarn, Summary: T("bundle.sumBad"), Details: T("bundle.moreDetails")})
+			break
+		}
+		item(p)
+	}
+	// up to date, but replaced by eMudScan's commands: it can be put back
+	for _, p := range restorable {
+		item(p)
 	}
 	for i, p := range badPaths {
 		if i >= maxItems {
@@ -2164,8 +2175,10 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 		tp.c.finish(it, result{Status: StOK, Summary: T("bundle.sumGone"), Details: T("bundle.goneDetails")})
 		return
 	}
+	// a list replaced by eMudScan's commands: it can be put back
+	restore := restoreAdvice(p)
 	if !br.Bad() {
-		r.Status, r.Summary, r.Details = StOK, T("bundle.sumNowOK"), T("ok.bundle")
+		r.Status, r.Summary, r.Details = StOK, T("bundle.sumNowOK"), joinParas(T("ok.bundle"), restore)
 		tp.c.finish(it, r)
 		return
 	}
@@ -2221,11 +2234,11 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 	r.Search = searchFor(o.Name, filepath.Base(filepath.Dir(p))+" "+filepath.Base(p), bundled)
 	if pyList && fx.protected() {
 		r.Status, r.Summary = StInfo, T("bundle.sumPySafe")
-		r.Details = joinParas(strings.TrimSpace(details), pythonBlocksText(fx), T("py.updateAnyway")+" "+fix)
+		r.Details = joinParas(strings.TrimSpace(details), pythonBlocksText(fx), T("py.updateAnyway")+" "+fix, restore)
 		tp.c.finish(it, r)
 		return
 	}
-	r.Status, r.Summary, r.Details = StWarn, T("bundle.sumBad"), details+"\n\n"+fix
+	r.Status, r.Summary, r.Details = StWarn, T("bundle.sumBad"), joinParas(details+"\n\n"+fix, restore)
 	tp.c.finish(it, r)
 }
 
@@ -2280,8 +2293,7 @@ func replaceBundleFix(files ...string) string {
 		cmd(`[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12`),
 		cmd(`$cacert = (Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem).RawContentStream.ToArray()`)}
 	for _, f := range files {
-		lines = append(lines, cmd(fmt.Sprintf(`Copy-Item -LiteralPath %s -Destination %s`, psQuote(f), psQuote(f+".bak"))),
-			cmd(fmt.Sprintf(`[IO.File]::WriteAllBytes(%s, $cacert)`, psQuote(f))))
+		lines = append(lines, backupCmd(f), cmd(fmt.Sprintf(`[IO.File]::WriteAllBytes(%s, $cacert)`, psQuote(f))))
 	}
 	return strings.Join(lines, "\n")
 }
