@@ -1,0 +1,141 @@
+{
+ "data": [
+  {
+   "schema": 1792270008816,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2083382",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": true,
+   "issuerName": "MFYxCzAJBgNVBAYTAklOMSUwIwYDVQQKDBxlTXVkaHJhIFRlY2hub2xvZ2llcyBMaW1pdGVkMSAwHgYDVQQDDBdlbVNpZ24gUm9vdCBUTFMgQ0EgLSBHMw==",
+   "serialNumber": "WIsuPCu4zaE+GhIJJUMh",
+   "id": "dfebe454-5411-4f64-bd26-ff0346cad020",
+   "last_modified": 1792274405312
+  },
+  {
+   "schema": 1792269992087,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2083382",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": true,
+   "issuerName": "MFYxCzAJBgNVBAYTAklOMSUwIwYDVQQKDBxlTXVkaHJhIFRlY2hub2xvZ2llcyBMaW1pdGVkMSAwHgYDVQQDDBdlbVNpZ24gUm9vdCBUTFMgQ0EgLSBHMw==",
+   "serialNumber": "AIAJkopkEHYBrwX6LxnxCQ==",
+   "id": "eefb82bf-3d32-4b7e-9dff-19fd2c21f755",
+   "last_modified": 1792274405309
+  },
+  {
+   "schema": 1792269983656,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2083382",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": true,
+   "issuerName": "MFYxCzAJBgNVBAYTAklOMSUwIwYDVQQKDBxlTXVkaHJhIFRlY2hub2xvZ2llcyBMaW1pdGVkMSAwHgYDVQQDDBdlbVNpZ24gUm9vdCBUTFMgQ0EgLSBHMw==",
+   "serialNumber": "bK2jZ/scEACIEg6iAtVo",
+   "id": "a0ac0973-ae76-4860-8f9c-eff5fd57bc3b",
+   "last_modified": 1792274405304
+  },
+  {
+   "schema": 1792269975630,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2083382",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": true,
+   "issuerName": "MFYxCzAJBgNVBAYTAklOMSUwIwYDVQQKDBxlTXVkaHJhIFRlY2hub2xvZ2llcyBMaW1pdGVkMSAwHgYDVQQDDBdlbVNpZ24gUm9vdCBUTFMgQ0EgLSBHMw==",
+   "serialNumber": "KWkmwiejoVJjkrGUgqUE",
+   "id": "c64301a0-888f-469d-86fc-a03bcd6bc407",
+   "last_modified": 1792274405300
+  },
+  {
+   "schema": 1792195211286,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2083382",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": true,
+   "issuerName": "MFYxCzAJBgNVBAYTAklOMSUwIwYDVQQKDBxlTXVkaHJhIFRlY2hub2xvZ2llcyBMaW1pdGVkMSAwHgYDVQQDDBdlbVNpZ24gUm9vdCBUTFMgQ0EgLSBHMw==",
+   "serialNumber": "AMfEHv6S2CXwXq6EGkqCwQ==",
+   "id": "5fb952e1-b09f-4187-805c-b87a91dad9bb",
+   "last_modified": 1792274405297
+  },
+  {
+   "schema": 1792269999860,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2083382",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": true,
+   "issuerName": "MFYxCzAJBgNVBAYTAklOMSUwIwYDVQQKDBxlTXVkaHJhIFRlY2hub2xvZ2llcyBMaW1pdGVkMSAwHgYDVQQDDBdlbVNpZ24gUm9vdCBUTFMgQ0EgLSBHMw==",
+   "serialNumber": "AKSu5njyM2K0wORgt3LyFA==",
+   "id": "bd595f9a-0da9-4980-bcc2-ef1e1bf70c7b",
+   "last_modified": 1792274405294
+  },
+  {
+   "schema": 1781802209467,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2048702",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": false,
+   "issuerName": "MEIxEjAQBgNVBAMMCUFDQ1ZSQUlaMTEQMA4GA1UECwwHUEtJQUNDVjENMAsGA1UECgwEQUNDVjELMAkGA1UEBhMCRVM=",
+   "serialNumber": "ZILEq2VLAKY=",
+   "id": "406e0418-2b0a-4705-99d9-f90be39332a9",
+   "last_modified": 1781825227560
+  },
+  {
+   "schema": 1781802210248,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2048702",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": false,
+   "issuerName": "MEIxEjAQBgNVBAMMCUFDQ1ZSQUlaMTEQMA4GA1UECwwHUEtJQUNDVjENMAsGA1UECgwEQUNDVjELMAkGA1UEBhMCRVM=",
+   "serialNumber": "INxlRne/yBU=",
+   "id": "5b63e1b6-8a20-43d2-8944-8b22ef8f1033",
+   "last_modified": 1781825227557
+  },
+  {
+   "schema": 1781802209310,
+   "details": {
+    "bug": "https://bugzilla.mozilla.org/show_bug.cgi?id=2048702",
+    "who": "",
+    "why": "",
+    "name": "",
+    "created": ""
+   },
+   "enabled": false,
+   "issuerName": "MEIxEjAQBgNVBAMMCUFDQ1ZSQUlaMTEQMA4GA1UECwwHUEtJQUNDVjENMAsGA1UECgwEQUNDVjELMAkGA1UEBhMCRVM=",
+   "serialNumber": "U5TkF0ZRnpY=",
+   "id": "17ae9853-7c64-4e51-8e69-77e31e699fae",
+   "last_modified": 1781825227554
+  }
+ ],
+ "timestamp": 1792274405312,
+ "_source": "excerpt of services/settings/dumps/security-state/onecrl.json, mozilla-firefox/firefox tag FIREFOX_158_0_1_RELEASE"
+}

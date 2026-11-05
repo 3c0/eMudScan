@@ -1,0 +1,368 @@
+package main
+
+// Package managers: Scoop, WinGet and Chocolatey, and the Microsoft Store (store.go).
+// Only local files are read (the installed packages): nothing is sent anywhere.
+
+import (
+	"encoding/json"
+	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"unicode"
+)
+
+// pkgRef is a package of a software in a package manager.
+type pkgRef struct {
+	Manager   string // Scoop, WinGet, Chocolatey
+	ID        string // package name or identifier
+	Page      string // page of the package
+	Installed bool   // installed with this manager
+	Update    string // command that updates it
+	UpdateAll string // command that updates everything installed with this manager
+}
+
+func scoopPage(app string) string { return "https://scoop.sh/#/apps?q=" + url.QueryEscape(app) }
+func wingetPage(id string) string { return "https://winstall.app/apps/" + url.PathEscape(id) }
+func chocoPage(id string) string {
+	return "https://community.chocolatey.org/packages/" + url.PathEscape(id)
+}
+
+type scoopManifest struct {
+	Homepage string `json:"homepage"`
+	Version  string `json:"version"`
+	bucket   string
+}
+
+// scoopApp reads what Scoop knows about an installed app.
+func (tp *appsContext) scoopApp(scoopRoot, app string) scoopManifest {
+	key := pathKey(scoopRoot) + "|" + lower(app)
+	if m, ok := tp.scoopApps[key]; ok {
+		return m
+	}
+	var m scoopManifest
+	cur := filepath.Join(scoopRoot, "apps", app, "current")
+	if data, ok := readScoopFile(cur, "manifest.json"); ok {
+		json.Unmarshal(data, &m)
+	}
+	var inst struct {
+		Bucket string `json:"bucket"`
+	}
+	if data, ok := readScoopFile(cur, "install.json"); ok {
+		json.Unmarshal(data, &inst)
+	}
+	m.bucket = inst.Bucket
+	tp.scoopApps[key] = m
+	return m
+}
+
+// readScoopFile reads one of the files Scoop keeps with an app: recent versions of
+// Scoop name them scoop-manifest.json and scoop-install.json, older ones manifest.json
+// and install.json.
+func readScoopFile(dir, name string) ([]byte, bool) {
+	for _, n := range []string{"scoop-" + name, name} {
+		if data, err := os.ReadFile(filepath.Join(dir, n)); err == nil {
+			return data, true
+		}
+	}
+	return nil, false
+}
+
+// scoopCurrentRe: a path through Scoop's "current" folder, a link to the folder of the
+// installed version (apps\<app>\current is apps\<app>\<version>).
+var scoopCurrentRe = regexp.MustCompile(`(?i)^(.*?[\\/]scoop[\\/]apps[\\/][^\\/]+)[\\/]current([\\/].*)?$`)
+
+// scoopReal is p through the version folder that Scoop's "current" links to, so that
+// a program reached both ways (PATH leads to "current", the drive scan to the version)
+// is checked once, under its version. p is unchanged when that folder is not found.
+func (tp *appsContext) scoopReal(p string) string {
+	m := scoopCurrentRe.FindStringSubmatch(p)
+	if m == nil {
+		return p
+	}
+	app := m[1]
+	if tp.scoopCurrent == nil {
+		tp.scoopCurrent = map[string]string{}
+	}
+	ver, ok := tp.scoopCurrent[pathKey(app)]
+	if !ok {
+		ver = linkedVersionDir(app)
+		if ver == "" { // else the folder named after the version that "current" holds
+			if v := tp.scoopApp(filepath.Dir(filepath.Dir(app)), filepath.Base(app)).Version; v != "" && isDir(filepath.Join(app, v)) {
+				ver = v
+			}
+		}
+		tp.scoopCurrent[pathKey(app)] = ver
+	}
+	if ver == "" {
+		return p
+	}
+	return filepath.Join(app, ver) + m[2]
+}
+
+// linkedVersionDir is the folder of app that its "current" link leads to: the one that
+// is the same folder (Windows compares their file identifiers).
+func linkedVersionDir(app string) string {
+	cur, err := os.Stat(filepath.Join(app, "current")) // follows the link
+	if err != nil || !cur.IsDir() {
+		return ""
+	}
+	ents, _ := os.ReadDir(app)
+	for _, e := range ents {
+		if !e.IsDir() || strings.EqualFold(e.Name(), "current") { // the link itself is not a plain folder
+			continue
+		}
+		if fi, err := os.Stat(filepath.Join(app, e.Name())); err == nil && os.SameFile(cur, fi) {
+			return e.Name()
+		}
+	}
+	return ""
+}
+
+// markHandled: a certificate bundle reported by a specific check, not again as a bundle.
+func (tp *appsContext) markHandled(p string) { tp.handled[pathKey(tp.scoopReal(p))] = true }
+
+func (tp *appsContext) isHandled(p string) bool { return tp.handled[pathKey(tp.scoopReal(p))] }
+
+type chocoPkg struct {
+	ID, Title, Version, URL string
+}
+
+// loadChocolatey reads the packages installed with Chocolatey.
+func (tp *appsContext) loadChocolatey() {
+	root := getenv("ChocolateyInstall")
+	if root == "" {
+		if pd := getenv("ProgramData"); pd != "" {
+			root = filepath.Join(pd, "chocolatey")
+		}
+	}
+	if root == "" {
+		return
+	}
+	tp.chocoRoot = root
+	specs, _ := filepath.Glob(filepath.Join(root, "lib", "*", "*.nuspec"))
+	for _, p := range specs {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		if pkg, ok := parseNuspec(string(data)); ok {
+			tp.choco = append(tp.choco, pkg)
+		}
+	}
+}
+
+// chocoOwner: files inside a Chocolatey package folder belong to that package.
+func (tp *appsContext) chocoOwner(p string) (ownerInfo, bool) {
+	if tp.chocoRoot == "" {
+		return ownerInfo{}, false
+	}
+	lib := filepath.Join(tp.chocoRoot, "lib")
+	if !hasPathPrefix(p, lib) {
+		return ownerInfo{}, false
+	}
+	rel := strings.TrimLeft(p[len(filepath.Clean(lib)):], `\/`)
+	id := strings.FieldsFunc(rel, func(c rune) bool { return c == '\\' || c == '/' })
+	if len(id) == 0 {
+		return ownerInfo{}, false
+	}
+	for _, c := range tp.choco {
+		if strings.EqualFold(c.ID, id[0]) {
+			name := c.Title
+			if name == "" {
+				name = c.ID
+			}
+			return ownerInfo{Name: name, URL: c.URL, Loc: filepath.Join(lib, id[0]), Version: c.Version}, true
+		}
+	}
+	return ownerInfo{}, false
+}
+
+// packageIDRe: a package name as package managers write them (yt-dlp,
+// Git.Git, python3_x64, Notepad++.Notepad++).
+var packageIDRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._+-]*$`)
+
+// The update commands of a package answer yes to the questions of its package
+// manager (WinGet's agreements, Chocolatey's confirmation), so that they run to the
+// end, from the details page as from the Fix function.
+
+// withCommands keeps the update commands of a package only when its name is an
+// ordinary one: the name comes from a folder name, and anything else in it (a space,
+// a semicolon) would end up as part of the command.
+func withCommands(p pkgRef) pkgRef {
+	if !packageIDRe.MatchString(p.ID) {
+		p.Update, p.UpdateAll = "", ""
+	}
+	return p
+}
+
+// packagesOf finds the package manager a software was installed with (the Microsoft
+// Store, Scoop, WinGet portable packages, Chocolatey).
+func (tp *appsContext) packagesOf(it *Item) []pkgRef {
+	if it.Group == GroupWindows {
+		return nil
+	}
+	path := firstNonEmpty(it.File, it.Folder)
+	if s, ok := tp.storePackageOf(path); ok { // the Store updates its apps: no command
+		name, _ := splitPackageFullName(s.fullName)
+		return []pkgRef{{Manager: storeManager, ID: name, Page: storePage(s.name), Installed: true}}
+	}
+	if m := scoopRe.FindStringSubmatch(path); m != nil {
+		return []pkgRef{withCommands(pkgRef{"Scoop", m[2], scoopPage(m[2]), true, "scoop update " + m[2], "scoop update -a"})}
+	}
+	if m := wingetRe.FindStringSubmatch(path); m != nil {
+		id := m[1]
+		if i := strings.Index(id, "_Microsoft.Winget"); i > 0 {
+			id = id[:i]
+		}
+		return []pkgRef{withCommands(pkgRef{"WinGet", id, wingetPage(id), true, "winget upgrade --id " + id + " --exact --accept-package-agreements --accept-source-agreements", "winget upgrade --all"})}
+	}
+	key := alnum(it.Program)
+	for _, c := range tp.choco {
+		inLib := path != "" && tp.chocoRoot != "" && hasPathPrefix(path, filepath.Join(tp.chocoRoot, "lib", c.ID))
+		if inLib || (key != "" && (alnum(c.ID) == key || alnum(c.Title) == key)) {
+			return []pkgRef{withCommands(pkgRef{"Chocolatey", c.ID, chocoPage(c.ID), true, "choco upgrade " + c.ID + " -y", "choco upgrade all"})}
+		}
+	}
+	return nil
+}
+
+// packageAdvice is run on each finished element: it records the package manager the
+// software was installed with and, when an update is needed, adds its update commands
+// (before the instructions to fix a file by hand, which are the last resort, and which
+// Store apps do not allow).
+func (tp *appsContext) packageAdvice(it *Item) {
+	it.Packages = tp.packagesOf(it)
+	if it.Status != StWarn && it.Status != StCaution && it.Status != StError {
+		return
+	}
+	for _, p := range it.Packages {
+		if p.Update == "" && p.Manager != storeManager {
+			continue // a package name not fit for a command
+		}
+		advice, given := T("fix.store"), T("fix.store") // the Store: no command
+		if p.Update != "" {
+			one, all := Tf("fix.pkg", p.Manager), Tf("fix.pkgAll", p.Manager)
+			if p.Manager == "Chocolatey" {
+				one, all = Tf("fix.pkgAdmin", p.Manager), Tf("fix.pkgAllAdmin", p.Manager)
+			}
+			f := newFix(fixAction{Kind: fixPackage, Admin: p.Manager == "Chocolatey", Cmds: []string{p.Update}, Manager: p.Manager})
+			advice, given = one+"\n"+f.lines()+"\n\n"+all+"\n"+cmd(p.UpdateAll), f.lines()
+		}
+		if strings.Contains(it.Details, given) {
+			continue
+		}
+		details := strings.Trim(it.Details, "\n")
+		cut := len(details)
+		for _, k := range []string{"fix.directly", "fix.orDirectly"} {
+			if i := strings.Index(details, T(k)); i >= 0 && i < cut {
+				cut = i
+			}
+		}
+		head, tail := strings.TrimRight(details[:cut], "\n"), details[cut:]
+		if p.Update == "" && tail != "" { // a Store app's folder cannot be changed by hand
+			tail = T("fix.storeLocked")
+		}
+		it.Details = joinParas(head, advice, tail)
+	}
+}
+
+// parseNuspec reads the id, title, version and project page of a Chocolatey package
+// from its .nuspec file: a small XML file, read here without encoding/xml (which
+// would add about 110 KB to eMudScan).
+func parseNuspec(s string) (chocoPkg, bool) {
+	meta, ok := xmlText(s, "metadata")
+	if !ok {
+		return chocoPkg{}, false
+	}
+	field := func(name string) string {
+		t, _ := xmlText(meta, name)
+		return xmlUnescape(t)
+	}
+	p := chocoPkg{ID: field("id"), Title: field("title"), Version: field("version"), URL: field("projectUrl")}
+	return p, p.ID != ""
+}
+
+// xmlText returns what is between the first <name …> and the following </name>.
+func xmlText(s, name string) (string, bool) {
+	for i := 0; ; {
+		j := strings.Index(s[i:], "<"+name)
+		if j < 0 {
+			return "", false
+		}
+		k := i + j + 1 + len(name)
+		if k < len(s) && strings.IndexByte(">/ \t\r\n", s[k]) >= 0 {
+			end := strings.IndexByte(s[k:], '>')
+			if end < 0 {
+				return "", false
+			}
+			if s[k+end-1] == '/' { // <name/>
+				return "", true
+			}
+			body := s[k+end+1:]
+			if c := strings.Index(body, "</"+name); c >= 0 {
+				return body[:c], true
+			}
+			return "", false
+		}
+		i = k
+	}
+}
+
+// xmlUnescape decodes the text of an XML element: CDATA and entities.
+func xmlUnescape(t string) string {
+	t = strings.TrimSpace(t)
+	if inner, ok := strings.CutPrefix(t, "<![CDATA["); ok {
+		return strings.TrimSpace(strings.TrimSuffix(inner, "]]>"))
+	}
+	if !strings.Contains(t, "&") {
+		return t
+	}
+	var b strings.Builder
+	for len(t) > 0 {
+		i := strings.IndexByte(t, '&')
+		j := strings.IndexByte(t[max(i, 0):], ';')
+		if i < 0 || j < 0 {
+			b.WriteString(t)
+			break
+		}
+		b.WriteString(t[:i])
+		ent := t[i+1 : i+j]
+		t = t[i+j+1:]
+		switch {
+		case ent == "amp":
+			b.WriteByte('&')
+		case ent == "lt":
+			b.WriteByte('<')
+		case ent == "gt":
+			b.WriteByte('>')
+		case ent == "quot":
+			b.WriteByte('"')
+		case ent == "apos":
+			b.WriteByte('\'')
+		case strings.HasPrefix(ent, "#x") || strings.HasPrefix(ent, "#X"):
+			if r, ok := charRef(ent[2:], 16); ok {
+				b.WriteRune(r)
+			}
+		case strings.HasPrefix(ent, "#"):
+			if r, ok := charRef(ent[1:], 10); ok {
+				b.WriteRune(r)
+			}
+		default:
+			b.WriteString("&" + ent + ";")
+		}
+	}
+	return b.String()
+}
+
+// charRef decodes the number of a character reference (233 in &#233;, E9 in
+// &#xE9;). It returns false when the number is not a Unicode code point.
+func charRef(s string, base int) (rune, bool) {
+	n, err := strconv.ParseUint(s, base, 32)
+	if err != nil || n > unicode.MaxRune {
+		return 0, false
+	}
+	return rune(n), true
+}

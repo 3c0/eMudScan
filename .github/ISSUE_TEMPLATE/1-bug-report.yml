@@ -1,0 +1,48 @@
+name: Bug report
+description: eMudScan crashes, shows an error, displays something wrong, or a fix goes wrong.
+title: "[Bug] "
+labels: ["bug"]
+assignees: ["3c0"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. If eMudScan judges software incorrectly, please use the **False detection** form instead.
+        Before pasting anything, remove what you want to keep private (your user name in folder names, for example).
+  - type: input
+    id: version
+    attributes:
+      label: eMudScan version
+      description: As shown in the window title, for example “2.0.0 (20261105)”.
+      placeholder: "2.0.0 (20261105)"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows
+      description: Edition and build, as shown at the top of a saved report (or in Settings › System › About).
+      placeholder: "Windows 11 Pro 25H2 (10.0.26200.9711)"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what eMudScan did, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log or report
+      description: The Log pane (select all, then copy), or the relevant part of a saved report (Save report, or the report that the Fix window saved in your Downloads folder). It is formatted as code automatically.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I am using the latest version (see the Releases page).
+        - label: I have removed private information from what I pasted.
+          required: true

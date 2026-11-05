@@ -1,0 +1,12 @@
+# The "New issue" chooser: the forms of this folder, no blank issue, and three links.
+blank_issues_enabled: false
+contact_links:
+  - name: My antivirus flags eMudScan.exe
+    url: https://github.com/3c0/eMudScan/blob/main/docs/using.md#if-your-antivirus-flags-emudscanexe
+    about: How to check your copy, and why only your antivirus’s publisher can fix a false positive.
+  - name: Security vulnerability
+    url: https://github.com/3c0/eMudScan/security/advisories/new
+    about: Report a vulnerability in eMudScan privately, not as a public issue.
+  - name: Documentation
+    url: https://github.com/3c0/eMudScan/tree/main/docs
+    about: Using eMudScan, what it checks, privacy, building it yourself.
