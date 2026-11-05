@@ -186,7 +186,7 @@ Once you accept:
 1. The updates through Scoop, WinGet and Chocolatey run first; then, for the
    software that they did not fix, the other fixes.
 2. The commands that need administrator rights run in a Windows PowerShell for
-   which Windows asks your permission: its prompt shows Microsoft as the
+   which Windows asks your permission, in a window that shows Microsoft as the
    verified publisher. eMudScan itself does not need them.
 3. The console shows each command with its result at the end of its line
    (“✓ Done”), then what it showed, and a blank line after the commands of each

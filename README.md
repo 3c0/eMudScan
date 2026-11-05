@@ -23,7 +23,7 @@
 
 In October 2026, the private keys of eight eMudhra intermediate certificate authorities were compromised. Windows, browsers and many programs have since been updated to stop trusting them, but not all of them, and not on every PC. eMudScan shows where yours stands.
 
-- 📦 **A single `.exe`:** nothing to install, no administrator rights needed.
+- 📦 **A single `.exe`:** nothing to install. It runs without administrator rights; for a fix that needs them, such as replacing a file in Program Files, Windows asks your permission.
 - 🔒 **You stay in control:** it changes nothing on your PC until you confirm a fix.
 - 🌍 **English and French.**
 

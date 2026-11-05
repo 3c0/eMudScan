@@ -31,7 +31,8 @@ them is not merged:
   accepts its warning, and it runs only commands that the details show
   (`newFix`, `fixes.go`).
 - **eMudScan itself needs no administrator rights.** The commands of a fix that
-  need them run in a Windows PowerShell started through the Windows prompt.
+  need them run in a Windows PowerShell for which Windows asks the user’s
+  permission (User Account Control).
 - **No connection** other than the online test, and none at all when the online
   test is not allowed (`docs/privacy.md`). The commands of a fix connect only to
   the sources of the package managers and to curl.se.
