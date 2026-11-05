@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/3c0/eMudScan/releases/latest"><img src="docs/images/badge-download.svg" alt="Download eMudScan.exe"></a>
   <a href="https://github.com/3c0/eMudScan/actions/workflows/build.yml"><img src="https://github.com/3c0/eMudScan/actions/workflows/build.yml/badge.svg" alt="Build"></a>
-  <a href="#-download"><img src="docs/images/badge-windows.svg" alt="Windows 10 and 11"></a>
+  <a href="#download"><img src="docs/images/badge-windows.svg" alt="Windows 10 and 11"></a>
   <a href="docs/using.md#the-window"><img src="docs/images/badge-languages.svg" alt="English and French"></a>
   <a href="LICENSE"><img src="docs/images/badge-license.svg" alt="License: GPL 3.0"></a>
 </p>
@@ -27,7 +27,7 @@ In October 2026, the private keys of eight eMudhra intermediate certificate auth
 - 🔒 **You stay in control:** it changes nothing on your PC until you confirm a fix.
 - 🌍 **English and French.**
 
-## 📥 Download
+## 📥 Download
 
 Download `eMudScan.exe` from the [latest release](https://github.com/3c0/eMudScan/releases/latest) and run it. It requires Windows 10 version 1809 or later, Windows 11, or Windows Server 2019 or later, and a screen of at least 1024 × 720 once scaled (such as 1920 × 1080 at 150%).
 
@@ -35,7 +35,7 @@ eMudScan is not code-signed yet, so Windows SmartScreen may show it as an unreco
 
 The [latest release](https://github.com/3c0/eMudScan/releases/latest) links to the antivirus test results of its `eMudScan.exe`. If your antivirus flags it anyway, see [If your antivirus flags eMudScan.exe](docs/using.md#if-your-antivirus-flags-emudscanexe).
 
-## ▶️ Use
+## 🧭 Use
 
 1. Select the drives to scan (local drives are selected by default).
 2. Leave **Allow the online test** checked, or clear it to scan without any internet connection.
@@ -59,7 +59,7 @@ The details window explains why, says what to update, and provides the commands 
   <img src="docs/images/details-window.png" width="560" alt="The details window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown, or with Fix this software">
 </p>
 
-## 🛠️ Fix
+## 🔧 Fix
 
 **Fix**, beside **Scan**, lists the software that eMudScan can fix, with the PowerShell commands that will run:
 
@@ -73,7 +73,7 @@ Nothing runs until you accept a warning. The certificate files are backed up bef
   <img src="docs/images/fix-window.png" width="860" alt="The Fix software window: the software that eMudScan can fix, Inkscape ticked, and the PowerShell commands that replace its outdated certificate bundle">
 </p>
 
-## 🔍 What it checks
+## 🔍 What it checks
 
 - 🪟 **Windows:** whether it blocks the 16 compromised certificates, offline and with an online test, and whether an antivirus or a proxy inspects secure connections.
 - 🌐 **Browsers and internet apps:** web browsers, messaging, email, sync, VPN and remote-access software.
@@ -81,11 +81,11 @@ Nothing runs until you accept a warning. The certificate files are backed up bef
 
 See [What eMudScan checks](docs/checks.md) for details.
 
-## 🔒 Privacy
+## 🔒 Privacy
 
 A scan connects to the internet only when **Allow the online test** is checked: 3 connections to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version. Nothing else is sent. A fix connects once you accept it: package managers download their updates from their own sources, and Mozilla’s certificate bundle comes from curl.se. See [Privacy](docs/privacy.md).
 
-## 📖 Documentation
+## 📖 Documentation
 
 - [Using eMudScan](docs/using.md): the window, the statuses, the details, fixes and the report
 - [What eMudScan checks](docs/checks.md)
@@ -96,11 +96,11 @@ A scan connects to the internet only when **Allow the online test** is checked: 
 - [Roadmap](docs/roadmap.md): what the next versions will bring
 - [Changelog](CHANGELOG.md)
 
-## 🤖 Made with AI
+## 🤖 Made with AI
 
 eMudScan was developed by [3c0](https://github.com/3c0) with the help of [Claude](https://claude.com/), Anthropic’s AI.
 
-## ⚖️ License
+## 📜 License
 
 Copyright © 2026 [3c0](https://github.com/3c0). eMudScan is free software, licensed under the [GNU General Public License, version 3 or later](LICENSE).
 
