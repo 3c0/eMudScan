@@ -12,8 +12,8 @@
 <p align="center">
   <a href="https://github.com/3c0/eMudScan/releases/latest"><img src="https://img.shields.io/badge/download-eMudScan.exe-2ea44f" alt="Download eMudScan.exe"></a>
   <a href="https://github.com/3c0/eMudScan/actions/workflows/build.yml"><img src="https://github.com/3c0/eMudScan/actions/workflows/build.yml/badge.svg" alt="Build"></a>
-  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4" alt="Windows 10 and 11">
-  <img src="https://img.shields.io/badge/languages-English%20%7C%20Fran%C3%A7ais-8250df" alt="English and French">
+  <a href="#-download"><img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4" alt="Windows 10 and 11"></a>
+  <a href="docs/using.md#the-window"><img src="https://img.shields.io/badge/languages-English%20%7C%20Fran%C3%A7ais-8250df" alt="English and French"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL 3.0"></a>
 </p>
 
