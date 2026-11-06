@@ -4,6 +4,8 @@
 // https://github.com/galadran/we-have-a-problem.com), with its notice and license,
 // the license of Go, whose standard library is built into the program, and a copy
 // of eMudScan's own license (the LICENSE file at the root of the repository).
+//
+// The chains of chains/rollover are not embedded: the tests use them.
 package data
 
 import "embed"

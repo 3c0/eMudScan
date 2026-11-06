@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -39,6 +42,67 @@ func TestVerifyPool(t *testing.T) {
 		got, aa := verifyPool(c.roots)
 		if got != c.want || aa != c.wantAA {
 			t.Errorf("%s: got %d (%d via AAA), want %d (%d)", c.name, got, aa, c.want, c.wantAA)
+		}
+	}
+}
+
+// The advisory's two rollover chains (data/chains/rollover, for the tests only):
+// their leaf is signed by a new CA key, which the G3B intermediate certified with a
+// "key rollover" certificate that it issued to itself. A bundle that trusts the
+// roots trusts them too, and the compromised G3B intermediate is still in the chain.
+func TestRolloverChains(t *testing.T) {
+	files, _ := filepath.Glob(filepath.Join("..", "..", "data", "chains", "rollover", "*.pem"))
+	if len(files) != 2 {
+		t.Fatalf("%d rollover chains, want 2", len(files))
+	}
+	compromised := map[string]bool{}
+	for _, b := range badCerts {
+		compromised[strings.ToUpper(b.SHA256)] = true
+	}
+	isCompromised := func(c *x509.Certificate) bool {
+		h := sha256.Sum256(c.Raw)
+		return compromised[strings.ToUpper(hex.EncodeToString(h[:]))]
+	}
+	g3, aaa := rootByName(rootNameECCG3).Cert, rootByName(rootNameAAA).Cert
+	for _, f := range files {
+		raw, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var certs []*x509.Certificate
+		for rest := raw; ; {
+			var b *pem.Block
+			if b, rest = pem.Decode(rest); b == nil {
+				break
+			}
+			c, err := x509.ParseCertificate(b.Bytes)
+			if err != nil {
+				t.Fatalf("%s: %v", f, err)
+			}
+			certs = append(certs, c)
+		}
+		name := filepath.Base(f)
+		if len(certs) < 3 {
+			t.Fatalf("%s: %d certificates", name, len(certs))
+		}
+		leaf, inter := certs[0], certs[1:]
+		rollover, g3b := inter[0], inter[1]
+		if !bytes.Equal(rollover.RawSubject, g3b.RawSubject) || !bytes.Equal(rollover.RawIssuer, g3b.RawSubject) ||
+			isCompromised(rollover) || !isCompromised(g3b) {
+			t.Errorf("%s: not a rollover certificate issued by a compromised intermediate", name)
+		}
+		root, other := g3, aaa
+		if strings.Contains(name, "-aaa-") {
+			root, other = aaa, g3
+		}
+		pool := func(r *x509.Certificate) map[string][]*x509.Certificate {
+			return map[string][]*x509.Certificate{string(r.RawSubject): {r}}
+		}
+		if !usableAt(leaf) || !chainsTo(leaf, inter, pool(root), 0) {
+			t.Errorf("%s: not trusted through %s", name, root.Subject.CommonName)
+		}
+		if chainsTo(leaf, inter, pool(other), 0) {
+			t.Errorf("%s: trusted through %s", name, other.Subject.CommonName)
 		}
 	}
 }
