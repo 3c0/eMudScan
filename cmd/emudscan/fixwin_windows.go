@@ -490,6 +490,12 @@ func (d *fixDlg) preview(a *ui) {
 	items := a.fixItems(d.targets())
 	d.titles = fixTitles(items)
 	lines := fixPreview(items, d.backup())
+	// "Back up the certificate files" only when a fix backs up files
+	show := uintptr(0) // SW_HIDE
+	if backsUp(items) {
+		show = 5 // SW_SHOW
+	}
+	pShowWindow.Call(d.bBackup, show)
 	if len(items) == 0 {
 		lines = []fixLine{{lineComment, T("fix.noneSelected")}}
 	}

@@ -146,3 +146,24 @@ func TestCondaFix(t *testing.T) {
 		t.Errorf("no conda: %q", text)
 	}
 }
+
+// "Back up the certificate files" is shown only for fixes that back up files: not for
+// updates (pip, a package manager), which make no backup.
+func TestBacksUp(t *testing.T) {
+	pip := Item{Fixes: []fixAction{{Kind: fixPip, Cmds: []string{"python -m pip install --upgrade certifi"}}}}
+	bundle := Item{Fixes: []fixAction{{Kind: fixBundle, Cmds: []string{"backup; write"}, Plain: []string{"write"}}}}
+	for i, x := range []struct {
+		items []Item
+		want  bool
+	}{
+		{[]Item{pip}, false},
+		{[]Item{pip, pip}, false},
+		{[]Item{pip, bundle}, true},
+		{[]Item{bundle}, true},
+		{nil, false},
+	} {
+		if got := backsUp(x.items); got != x.want {
+			t.Errorf("case %d: %v, want %v", i, got, x.want)
+		}
+	}
+}

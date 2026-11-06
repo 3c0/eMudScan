@@ -64,6 +64,20 @@ func tickedFirst(items []Item) bool {
 	return false
 }
 
+// backsUp tells whether a fix of these elements backs up files (fixAction.Plain), the
+// only ones that "Back up the certificate files" changes: the Fix window shows that
+// box for them alone.
+func backsUp(items []Item) bool {
+	for _, it := range items {
+		for _, f := range it.Fixes {
+			if f.Plain != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // key identifies a fix by its commands.
 func (f fixAction) key() string { return strings.Join(f.Cmds, "\n") }
 

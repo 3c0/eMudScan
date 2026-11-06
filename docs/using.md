@@ -173,7 +173,8 @@ software alone, without the list; its button is **Run the fix now**.
 **Back up the certificate files**, ticked by default, backs up each certificate
 bundle and Java block list before it is replaced or changed, next to the
 original, as the details window does (see above). It does not cover the updates
-made by package managers.
+made by package managers or pip, so it is shown only when a fix to run backs up a
+file.
 
 Nothing runs until you accept a warning, which says what the commands do: they
 update software and replace files; package managers will not ask you anything,

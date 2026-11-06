@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Shorter details for Python: one sentence for the problem, then the recommended action, which names the program a bundled Python belongs to.
 - A finding in several places shows its explanation once, with the commands for each place.
 
+### Fixed
+
+- The Fix window no longer shows “Back up the certificate files” when no fix to run backs up a file, such as an update with pip.
+
 ## [2.0.0] - 2026-11-05
 
 First public version.
