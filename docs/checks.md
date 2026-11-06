@@ -72,7 +72,18 @@ is judged like other software that copies the Windows root store. The engine
 copies in Flutter projects are not reported: they are rebuilt with the Flutter
 SDK.
 
-**JetBrains:** jetbrainsd, the background service of the JetBrains Toolbox App
+**JetBrains:** the IDEs (IntelliJ IDEA, PyCharm, PhpStorm, RubyMine, WebStorm,
+Rider, CLion, DataSpell, DataGrip, GoLand, RustRover) and Gateway are recognized
+by their `product-info.json` and checked by their version, with the fixed
+versions of JetBrains’ bulletin. These fix both the Java runtime they include,
+which eMudScan also checks by its contents, and their built-in browser (JCEF).
+The 2025.2.6 updates fix only the Java runtime, so eMudScan explains how to turn
+the built-in browser off, and versions 2025.1 and earlier get no fix. The Java
+runtime of an IDE or of the Toolbox App is shown as a part of it, with the
+version that fixes it. Copies of IDEs that Gradle downloads to build plugins are
+not reported.
+
+jetbrainsd, the background service of the JetBrains Toolbox App
 and of the JetBrains IDEs, checks its connections with its own built-in list of
 trusted certificates, which neither Windows nor the IDEs’ Java changes. eMudScan
 checks the one installed for each user

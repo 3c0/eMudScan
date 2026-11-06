@@ -81,7 +81,7 @@ updates them.
 | Godot | Fix pending. |
 | gRPC | By contents: its `roots.pem` (in Python’s grpcio package, for example) is tested like every certificate bundle. |
 | Immich | Not on a Windows PC: a server. |
-| JetBrains IDEs | By contents: the Java runtime they include (JetBrains Runtime). Their embedded browser (JCEF) is not checked: it receives Chrome’s block list from version 2025.3 on. |
+| JetBrains IDEs | By contents: the Java runtime they include (JetBrains Runtime). By version: the IDE itself (IntelliJ IDEA, PyCharm, PhpStorm, RubyMine, WebStorm, Rider, CLion, DataSpell, DataGrip, GoLand, RustRover and Gateway), whose fixed versions also fix its built-in browser (JCEF). |
 | JetBrains Toolbox App | By contents: the Java runtime it includes (`bin\jre`). Its jetbrainsd service, which keeps its own list of trusted certificates and is installed by the Toolbox App and the IDEs: by contents, then version (0.9.9728). |
 | LibreOffice | Fix pending. |
 | litellm | By contents: the certifi of its Python environment. |

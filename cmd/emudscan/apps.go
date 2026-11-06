@@ -143,7 +143,7 @@ func runThirdPartyChecks(c *checker, drives []string, windowsBlock bool, pyStore
 	c.stepEnd(StOK, Tf("log.ownersDone", len(tp.owners)))
 	tp.discover()
 	for _, f := range []func(){tp.checkBrowsers, tp.checkGit, tp.checkCurl, tp.checkPython, tp.checkNode, tp.checkJava,
-		tp.checkElectron, tp.checkWebView2Copies, tp.checkGo, tp.checkCertSettings, tp.checkUninstallApps, tp.checkYtDlp, tp.checkDart, tp.checkJetbrainsd, tp.checkEmbeddedTools, tp.checkBundles,
+		tp.checkElectron, tp.checkWebView2Copies, tp.checkGo, tp.checkCertSettings, tp.checkUninstallApps, tp.checkYtDlp, tp.checkDart, tp.checkJetbrainsd, tp.checkJetbrainsIDEs, tp.checkEmbeddedTools, tp.checkBundles,
 		tp.checkInternetFolders, tp.checkOthers} {
 		if c.cancel() {
 			return
@@ -510,6 +510,9 @@ func (tp *appsContext) findOwner(p string) ownerInfo {
 		if hasPathPrefix(p, o.dir) {
 			return ownerInfo{Name: o.name, URL: o.url, Loc: o.dir, Version: o.version, Exe: o.exe}
 		}
+	}
+	if o, ok := jetbrainsOwner(p); ok {
+		return o
 	}
 	// fall back on the program's top-level folder in the usual install locations
 	lad := getenv("LOCALAPPDATA")
@@ -1692,6 +1695,7 @@ func (tp *appsContext) javaOne(it *Item, home string) {
 	if bundled {
 		update = bundledAdvice(o)
 	}
+	update = joinParas(update, jetbrainsJavaHint(home))
 	block := ""
 	if c := javaBlockCmd(bl, toBlock); c != "" {
 		block = T("java.blockRoots")

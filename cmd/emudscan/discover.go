@@ -29,6 +29,7 @@ type discovery struct {
 	flutterApps  map[string]bool // folders of apps built with Flutter (flutter_windows.dll)
 	webview2Dirs map[string]bool // folders of a WebView2 shipped by software (msedgewebview2.exe)
 	jetbrainsds  map[string]bool // the installed jetbrainsd.exe of each user (isJetbrainsdExe)
+	ideDirs      map[string]bool // folders of a JetBrains IDE (product-info.json)
 
 	dirs, files int
 	lastLog     time.Time
@@ -39,7 +40,7 @@ type discovery struct {
 
 // found is everything found, by kind.
 func (d *discovery) found() []map[string]bool {
-	return []map[string]bool{d.bundles, d.javaHomes, d.nodeExes, d.pythonExes, d.gitRoots, d.curlExes, d.electronDirs, d.goRoots, d.browsers, d.ytdlpExes, d.dartSDKs, d.flutterApps, d.webview2Dirs, d.jetbrainsds}
+	return []map[string]bool{d.bundles, d.javaHomes, d.nodeExes, d.pythonExes, d.gitRoots, d.curlExes, d.electronDirs, d.goRoots, d.browsers, d.ytdlpExes, d.dartSDKs, d.flutterApps, d.webview2Dirs, d.jetbrainsds, d.ideDirs}
 }
 
 // prune forgets what was found outside the selected drives.
@@ -75,7 +76,7 @@ func newDiscovery() *discovery {
 		pythonExes: map[string]bool{}, gitRoots: map[string]bool{}, curlExes: map[string]bool{},
 		electronDirs: map[string]bool{}, goRoots: map[string]bool{}, browsers: map[string]bool{}, ytdlpExes: map[string]bool{},
 		dartSDKs: map[string]bool{}, flutterApps: map[string]bool{}, webview2Dirs: map[string]bool{},
-		jetbrainsds: map[string]bool{}, seenRoots: map[string]bool{}, explicit: map[string]bool{},
+		jetbrainsds: map[string]bool{}, ideDirs: map[string]bool{}, seenRoots: map[string]bool{}, explicit: map[string]bool{},
 	}
 }
 
@@ -294,6 +295,10 @@ func (d *discovery) classify(p, name string, e fs.DirEntry) {
 	case name == "flutter_windows.dll":
 		if localFile(e) && !flutterBuildFile(p) {
 			d.flutterApps[parent] = true
+		}
+	case name == "product-info.json":
+		if isDir(filepath.Join(parent, "bin")) {
+			d.ideDirs[parent] = true
 		}
 	case name == "jetbrainsd.exe":
 		if localFile(e) && isJetbrainsdExe(p) {

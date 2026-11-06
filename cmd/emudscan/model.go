@@ -273,7 +273,7 @@ func (it Item) SearchText() string {
 }
 
 // programKinds are items that are a program themselves (not a component of one).
-var programKinds = map[string]bool{"browser": true, "netapp": true, "app": true, "tool": true, "electron": true, "ytdlp": true, "dart": true}
+var programKinds = map[string]bool{"browser": true, "netapp": true, "app": true, "tool": true, "electron": true, "ytdlp": true, "dart": true, "jetbrains": true}
 
 // fillDisplay computes Program and Component.
 func (it *Item) fillDisplay(component string) {
