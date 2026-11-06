@@ -77,7 +77,7 @@ Nothing runs until you accept a warning, and for the commands that need administ
 
 - 🪟 **Windows:** whether it blocks the 16 compromised certificates, offline and with an online test, and whether an antivirus or a proxy inspects secure connections.
 - 🌐 **Browsers and internet apps:** web browsers, messaging, email, sync, VPN and remote-access software.
-- 🧰 **Other software:** Python, Java, Node.js, Git, Go, Electron applications, programs with their own root store, and every certificate bundle on the scanned drives.
+- 🧰 **Other software:** Python, Java, Node.js, Git, Go, Electron applications, JetBrains’ background service, programs with their own root store, and every certificate bundle on the scanned drives.
 
 See [What eMudScan checks](docs/checks.md) for details.
 

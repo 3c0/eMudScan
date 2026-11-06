@@ -532,9 +532,9 @@ func (tp *appsContext) geckoNotBlocked(r *result, name, dir string) {
 // Internet programs with nothing else to report: read their files for a built-in root list
 
 // componentKinds: elements that report one file of a program (yt-dlp.exe, the Flutter
-// engine…), not its whole folder. The folder of an internet program that holds one is
+// engine, jetbrainsd.exe…), not its whole folder. The folder of an internet program that holds one is
 // still checked, without that file.
-var componentKinds = map[string]bool{"ytdlp": true, "flutter": true}
+var componentKinds = map[string]bool{"ytdlp": true, "flutter": true, "jetbrainsd": true}
 
 // componentFiles: the files reported by component elements (pathKey).
 func (tp *appsContext) componentFiles() map[string]bool {

@@ -762,6 +762,7 @@ var fixRules = map[string]fixRule{
 	"claude-code":    {0, []string{"2.1.303"}, FixOutdated},
 	"yt-dlp":         {0, []string{"2026.10.26"}, FixOutdated},
 	"dart":           {2, []string{"3.13.7"}, FixUnsupported},
+	"jetbrainsd":     {0, []string{"0.9.9728"}, FixOutdated},
 }
 
 // How fixed versions are written by their publishers, when it differs from the numeric form.

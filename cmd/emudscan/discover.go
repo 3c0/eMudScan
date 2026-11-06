@@ -28,6 +28,7 @@ type discovery struct {
 	dartSDKs     map[string]bool // dart-sdk folders (bin\dart.exe and version), also inside Flutter SDKs
 	flutterApps  map[string]bool // folders of apps built with Flutter (flutter_windows.dll)
 	webview2Dirs map[string]bool // folders of a WebView2 shipped by software (msedgewebview2.exe)
+	jetbrainsds  map[string]bool // the installed jetbrainsd.exe of each user (isJetbrainsdExe)
 
 	dirs, files int
 	lastLog     time.Time
@@ -38,7 +39,7 @@ type discovery struct {
 
 // found is everything found, by kind.
 func (d *discovery) found() []map[string]bool {
-	return []map[string]bool{d.bundles, d.javaHomes, d.nodeExes, d.pythonExes, d.gitRoots, d.curlExes, d.electronDirs, d.goRoots, d.browsers, d.ytdlpExes, d.dartSDKs, d.flutterApps, d.webview2Dirs}
+	return []map[string]bool{d.bundles, d.javaHomes, d.nodeExes, d.pythonExes, d.gitRoots, d.curlExes, d.electronDirs, d.goRoots, d.browsers, d.ytdlpExes, d.dartSDKs, d.flutterApps, d.webview2Dirs, d.jetbrainsds}
 }
 
 // prune forgets what was found outside the selected drives.
@@ -74,7 +75,7 @@ func newDiscovery() *discovery {
 		pythonExes: map[string]bool{}, gitRoots: map[string]bool{}, curlExes: map[string]bool{},
 		electronDirs: map[string]bool{}, goRoots: map[string]bool{}, browsers: map[string]bool{}, ytdlpExes: map[string]bool{},
 		dartSDKs: map[string]bool{}, flutterApps: map[string]bool{}, webview2Dirs: map[string]bool{},
-		seenRoots: map[string]bool{}, explicit: map[string]bool{},
+		jetbrainsds: map[string]bool{}, seenRoots: map[string]bool{}, explicit: map[string]bool{},
 	}
 }
 
@@ -293,6 +294,10 @@ func (d *discovery) classify(p, name string, e fs.DirEntry) {
 	case name == "flutter_windows.dll":
 		if localFile(e) && !flutterBuildFile(p) {
 			d.flutterApps[parent] = true
+		}
+	case name == "jetbrainsd.exe":
+		if localFile(e) && isJetbrainsdExe(p) {
+			d.jetbrainsds[p] = true
 		}
 	case name == "msedgewebview2.exe":
 		if localFile(e) && !microsoftWebView2(p) {

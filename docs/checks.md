@@ -72,6 +72,15 @@ is judged like other software that copies the Windows root store. The engine
 copies in Flutter projects are not reported: they are rebuilt with the Flutter
 SDK.
 
+**JetBrains:** jetbrainsd, the background service of the JetBrains Toolbox App
+and of the JetBrains IDEs, checks its connections with its own built-in list of
+trusted certificates, which neither Windows nor the IDEs’ Java changes. eMudScan
+checks the one installed for each user
+(`%LOCALAPPDATA%\JetBrains\Daemon\bundles\current\jetbrainsd\bin\jetbrainsd.exe`):
+version 0.9.9728 or later is fixed, and so is a version whose program holds the
+fingerprints of the compromised certificates, which this version adds to it. The
+Toolbox App or an IDE installs the newest version when it starts.
+
 **Microsoft Edge WebView2:** software that displays web content with WebView2
 uses the WebView2 Runtime of Windows, which eMudScan checks for the block list
 built into its `msedge.dll`: once the runtime has it, each software is protected

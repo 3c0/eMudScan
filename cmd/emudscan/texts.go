@@ -366,6 +366,14 @@ var tr = map[string][2]string{
 	"ytdlp.noSelfUpdate": {"Avoid its self-updater (yt-dlp -U), as its developers advise: an old version’s connections can be intercepted, including the one that downloads the update. Update it with your package manager instead, or download the new version from https://github.com/yt-dlp/yt-dlp/releases/latest.",
 		"Évitez son outil de mise à jour intégré (yt-dlp -U), comme le conseillent ses développeurs\u00a0: les connexions d’une ancienne version peuvent être interceptées, y compris celle qui télécharge la mise à jour. Mettez-le plutôt à jour avec votre gestionnaire de paquets, ou téléchargez la nouvelle version sur https://github.com/yt-dlp/yt-dlp/releases/latest."},
 
+	// --- JetBrains
+	"jbd.ok": {"%s includes the fix: it rejects the compromised certificates itself.\n\nNo action needed.",
+		"%s contient le correctif\u00a0: il refuse lui-même les certificats compromis.\n\nAucune action nécessaire."},
+	"jbd.why": {"jetbrainsd is the background service of the JetBrains Toolbox App and of the JetBrains IDEs. It checks its connections with its own built-in list of trusted certificates: updating Windows or the Java of the IDEs does not fix it.",
+		"jetbrainsd est le service d’arrière-plan de JetBrains Toolbox App et des IDE JetBrains. Il vérifie ses connexions avec sa propre liste intégrée de certificats de confiance\u00a0: mettre à jour Windows ou le Java des IDE ne le corrige pas."},
+	"jbd.fix": {"Recommended action: update the Toolbox App (3.9.1 or later, or 3.8.2) or a JetBrains IDE to a fixed version, then start it. It installs jetbrainsd %s or later, which replaces the older one for all your IDEs.\n\nIf you cannot update them, JetBrains explains how to update jetbrainsd by hand: %s",
+		"Action recommandée\u00a0: mettez à jour Toolbox App (3.9.1 ou ultérieure, ou 3.8.2) ou un IDE JetBrains vers une version corrigée, puis démarrez-le. Il installe jetbrainsd %s ou ultérieur, qui remplace l’ancien pour tous vos IDE.\n\nSi vous ne pouvez pas les mettre à jour, JetBrains explique comment mettre à jour jetbrainsd à la main\u00a0: %s"},
+
 	// --- Git
 	"git.backendLbl": {"HTTPS backend used by git (http.sslBackend)", "Bibliothèque HTTPS utilisée par git (http.sslBackend)"},
 	"git.badBundle":  {"**Outdated certificate bundles:**", "**Fichiers de certificats obsolètes\u00a0:**"},
