@@ -266,7 +266,7 @@ disclaimer. **Licenses and notices** shows the full license texts.
 
 ## If your antivirus flags eMudScan.exe
 
-Some antivirus programs flag new programs that are not code-signed yet, such as
+Some antivirus programs flag new programs that are not code-signed, such as
 eMudScan, even though they contain no malware: a false positive. To check your
 copy of `eMudScan.exe`:
 

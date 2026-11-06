@@ -31,7 +31,7 @@ In October 2026, the private keys of eight eMudhra intermediate certificate auth
 
 Download `eMudScan.exe` from the [latest release](https://github.com/3c0/eMudScan/releases/latest) and run it. It requires Windows 10 version 1809 or later, Windows 11, or Windows Server 2019 or later, and a screen of at least 1024 × 720 once scaled (such as 1920 × 1080 at 150%).
 
-eMudScan is not code-signed yet, so Windows SmartScreen may show it as an unrecognized app: select **More info**, then **Run anyway**.
+eMudScan is not code-signed, so Windows SmartScreen may show it as an unrecognized app: select **More info**, then **Run anyway**.
 
 The [latest release](https://github.com/3c0/eMudScan/releases/latest) links to the antivirus test results of its `eMudScan.exe`. If your antivirus flags it anyway, see [If your antivirus flags eMudScan.exe](docs/using.md#if-your-antivirus-flags-emudscanexe).
 
