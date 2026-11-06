@@ -23,7 +23,7 @@
 
 In October 2026, the private keys of eight eMudhra intermediate certificate authorities were compromised. Windows, browsers and many programs have since been updated to stop trusting them, but not all of them, and not on every PC. eMudScan shows where yours stands.
 
-- 📦 **A single `.exe`:** nothing to install. It runs without administrator rights; for a fix that needs them, such as replacing a file in Program Files, Windows asks your permission.
+- 📦 **A single `.exe`:** nothing to install, no administrator rights needed to scan.
 - 🔒 **You stay in control:** it changes nothing on your PC until you confirm a fix.
 - 🌍 **English and French.**
 
@@ -67,7 +67,7 @@ The details window explains why, says what to update, and provides the commands 
 - Mozilla’s current certificate bundle in place of an outdated one, downloaded from curl.se and checked against its SHA-256 checksum;
 - the compromised certificates added to a Java block list.
 
-Nothing runs until you accept a warning. The certificate files are backed up before they are replaced, each software is then checked again, and a report is saved in your Downloads folder. Once a software is fixed, **Restore the backup**, in its details window, puts its files back as they were. See [Fixing software](docs/using.md#fixing-software).
+Nothing runs until you accept a warning, and for the commands that need administrator rights, such as replacing a file in Program Files, Windows also asks your permission. The certificate files are backed up before they are replaced, each software is then checked again, and a report is saved in your Downloads folder. Once a software is fixed, **Restore the backup**, in its details window, puts its files back as they were. See [Fixing software](docs/using.md#fixing-software).
 
 <p align="center">
   <img src="docs/images/fix-window.png" width="860" alt="The Fix software window: the software that eMudScan can fix, Inkscape ticked, and the PowerShell commands that replace its outdated certificate bundle">
