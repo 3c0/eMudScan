@@ -105,9 +105,25 @@ Otherwise, publish the hotfix from a branch:
    its version to `model.go`, as in the tag, in a commit
    `chore(release): add 2.1.1 to main`. If a commit of the fix conflicts with
    `main`, it stops and says how to go on.
-5. Push `main` and delete the branch (`git branch -D hotfix-2.1.1`: the tag
-   keeps its commits). Then take back your work: rebase your branches on `main`
-   (`git switch wip`, then `git rebase main`) and `git stash pop`.
+5. Finish in `main`:
+   - `git push`: sends to GitHub what `hotfix-to-main.sh` added to your `main`,
+     the fix and `chore(release): add 2.1.1 to main`, so that the next version
+     includes the fix. No tag to create: `release.sh` already created and pushed
+     `2.1.1`, on the hotfix branch.
+   - `git branch -D hotfix-2.1.1`: deletes the branch, which is no longer
+     needed. `-D` because Git sees that its commits are not in `main` (only
+     copies of them are) and would refuse `-d`. Nothing is lost: the tag `2.1.1`
+     keeps them.
+   - If you moved commits to `wip` at the start, put them back on `main`, after
+     the fix:
+     - `git switch wip`, then `git rebase main`: replays your commits on top of
+       the fix, as if you had started them after it. Where `CHANGELOG.md`
+       conflicts, keep both sides: your entries under `## [Unreleased]`, the
+       2.1.1 section below.
+     - `git switch main`, then `git merge --ff-only wip`: moves `main` forward
+       to your commits, without a merge commit.
+     - `git branch -d wip`: deletes `wip`, whose commits are now in `main`.
+   - If you stashed changes at the start, `git stash pop` gives them back.
 
 A build that is not of a release, that is of a commit other than the one tagged
 with `appVersion`, or with changes not yet committed, shows “+dev” and its commit
