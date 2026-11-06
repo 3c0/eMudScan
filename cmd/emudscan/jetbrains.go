@@ -14,6 +14,8 @@ package main
 //     it starts; the newest version replaces the older ones.
 
 import (
+	"debug/pe"
+	"encoding/binary"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -77,12 +79,13 @@ func (tp *appsContext) jetbrainsdOne(it *Item, exe string) {
 		r.Owner = "JetBrains"
 	}
 	f, _ := tp.scan(exe, scanRoots)
-	r.Status, r.Summary, r.Details = jetbrainsdVerdict(ver, f)
+	r.Status, r.Summary, r.Details = jetbrainsdVerdict(ver, f, downloadChoice(exe))
 	tp.c.finish(it, r)
 }
 
-// jetbrainsdVerdict judges version ver of jetbrainsd, whose program holds f.
-func jetbrainsdVerdict(ver string, f embedFindings) (Status, string, string) {
+// jetbrainsdVerdict judges version ver of jetbrainsd, whose program holds f; choice is
+// the Toolbox App to download for its processor (downloadChoice).
+func jetbrainsdVerdict(ver string, f embedFindings, choice string) (Status, string, string) {
 	details := ""
 	if f.HasRoots() {
 		details = rootsField(f)
@@ -91,7 +94,7 @@ func jetbrainsdVerdict(ver string, f embedFindings) (Status, string, string) {
 	if f.Blocklist || st == FixOK {
 		return StOK, T("app.sumOK"), joinParas(details, Tf("jbd.ok", strings.TrimSpace("jetbrainsd "+ver)))
 	}
-	fix := Tf("jbd.fix", fixRules["jetbrainsd"].fixed[0], jetbrainsBlog)
+	fix := joinParas(Tf("jbd.fix", fixRules["jetbrainsd"].fixed[0]), Tf("jb.toolboxGet", toolboxURL, choice), Tf("jbd.byHand", jetbrainsBlog))
 	if st == FixOutdated {
 		return StWarn, Tf("app.sumOutdated", fixed), joinParas(details, T("jbd.why"), fix)
 	}
@@ -101,25 +104,19 @@ func jetbrainsdVerdict(ver string, f embedFindings) (Status, string, string) {
 // ---------------------------------------------------------------------------
 // IDEs and the Toolbox App
 
-const toolboxURL = "https://www.jetbrains.com/toolbox-app/"
+// The pages to download the Toolbox App and the other JetBrains products.
+const (
+	toolboxURL  = "https://www.jetbrains.com/toolbox-app/"
+	productsURL = "https://www.jetbrains.com/products/"
+)
 
 // jetbrainsProducts: the IDEs of JetBrains' bulletin, by the product code of their
-// product-info.json: their fixed versions (fixRules) and their page.
-var jetbrainsProducts = map[string]struct{ rule, url string }{
-	"IU": {"jb-idea", "https://www.jetbrains.com/idea/"},
-	"IC": {"jb-idea", "https://www.jetbrains.com/idea/"},
-	"PY": {"jb-pycharm", "https://www.jetbrains.com/pycharm/"},
-	"PC": {"jb-pycharm", "https://www.jetbrains.com/pycharm/"},
-	"PS": {"jb-pycharm", "https://www.jetbrains.com/phpstorm/"},
-	"RM": {"jb-pycharm", "https://www.jetbrains.com/ruby/"},
-	"WS": {"jb-pycharm", "https://www.jetbrains.com/webstorm/"},
-	"RD": {"jb-rider", "https://www.jetbrains.com/rider/"},
-	"CL": {"jb-clion", "https://www.jetbrains.com/clion/"},
-	"DS": {"jb-dataspell", "https://www.jetbrains.com/dataspell/"},
-	"DB": {"jb-datagrip", "https://www.jetbrains.com/datagrip/"},
-	"GO": {"jb-goland", "https://www.jetbrains.com/go/"},
-	"RR": {"jb-rustrover", "https://www.jetbrains.com/rust/"},
-	"GW": {"jb-gateway", "https://www.jetbrains.com/remote-development/gateway/"},
+// product-info.json, with their fixed versions (fixRules).
+var jetbrainsProducts = map[string]string{
+	"IU": "jb-idea", "IC": "jb-idea",
+	"PY": "jb-pycharm", "PC": "jb-pycharm", "PS": "jb-pycharm", "RM": "jb-pycharm", "WS": "jb-pycharm",
+	"RD": "jb-rider", "CL": "jb-clion", "DS": "jb-dataspell", "DB": "jb-datagrip", "GO": "jb-goland",
+	"RR": "jb-rustrover", "GW": "jb-gateway",
 }
 
 // The fixed versions of the bulletin, one per release line. "2026.3" stands for the
@@ -205,7 +202,7 @@ func toolboxVersion(bin string) string {
 func jetbrainsOwner(p string) (ownerInfo, bool) {
 	for dir, i := p, 0; i < 4; dir, i = filepath.Dir(dir), i+1 {
 		if pi, ok := readProductInfo(dir); ok {
-			return ownerInfo{Name: pi.Name, URL: jetbrainsProducts[pi.ProductCode].url, Loc: dir, Version: pi.shownVersion(), Exe: pi.launcher(dir)}, true
+			return ownerInfo{Name: pi.Name, URL: productsURL, Loc: dir, Version: pi.shownVersion(), Exe: pi.launcher(dir)}, true
 		}
 		if isToolboxBin(dir) {
 			return ownerInfo{Name: "JetBrains Toolbox App", URL: toolboxURL, Loc: filepath.Dir(dir), Version: toolboxVersion(dir),
@@ -218,25 +215,74 @@ func jetbrainsOwner(p string) (ownerInfo, bool) {
 	return ownerInfo{}, false
 }
 
-// jetbrainsJavaHint completes the advice for the Java of an IDE (home: its jbr folder)
-// or of the Toolbox App (its bin\jre folder) with the version that fixes it.
-func jetbrainsJavaHint(home string) string {
+// jetbrainsJavaAdvice is the advice for the Java of an IDE (home: its jbr folder) or
+// of the Toolbox App (its bin\jre folder): update it to the version that fixes it,
+// and how. For any other Java, it is update.
+func jetbrainsJavaAdvice(home, update string) string {
 	parent := filepath.Dir(home)
 	if isToolboxBin(parent) {
-		return T("jb.toolbox")
+		return joinParas(T("jb.toolbox"), Tf("jb.toolboxGet", toolboxURL, downloadChoice(filepath.Join(parent, "jetbrains-toolbox.exe"))),
+			T("jb.toolboxDaemon"))
 	}
 	pi, ok := readProductInfo(parent)
 	if !ok || !strings.EqualFold(filepath.Base(home), "jbr") {
-		return ""
+		return update
 	}
-	rule := jetbrainsProducts[pi.ProductCode].rule
+	full, rule := pi.Name+" "+pi.shownVersion(), jetbrainsProducts[pi.ProductCode]
+	rec := Tf("jb.ideUpdate", pi.Name)
 	switch st, fixed := fixStatus(rule, ParseVersion(pi.Version)); st {
 	case FixOutdated:
-		return Tf("jb.ideFixed", pi.Name, fixed)
+		rec = Tf("app.fix", pi.Name, fixed)
 	case FixUnsupported:
-		return Tf("jb.ideNoFix", pi.Name+" "+pi.shownVersion(), firstFixedLine(rule))
+		rec = Tf("jb.ideNoFix", full, firstFixedLine(rule))
+	}
+	return joinParas(Tf("jb.ideOwner", full), rec, ideGet(pi))
+}
+
+// ideGet says how to update the IDE pi: with the Toolbox App, from the IDE, or from
+// JetBrains' products page (which no longer has DataSpell).
+func ideGet(pi productInfo) string {
+	if pi.ProductCode == "DS" {
+		return Tf("jb.ideGetNoPage", pi.Name)
+	}
+	return Tf("jb.ideGet", pi.Name, productsURL)
+}
+
+// exeMachine is the processor of a Windows program, from its header: "amd64",
+// "arm64" or "".
+func exeMachine(p string) string {
+	f, err := os.Open(p)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	var h [6]byte
+	if _, err := f.ReadAt(h[:4], 0x3c); err != nil {
+		return ""
+	}
+	off := int64(binary.LittleEndian.Uint32(h[:4]))
+	if _, err := f.ReadAt(h[:], off); err != nil || string(h[:4]) != "PE\x00\x00" {
+		return ""
+	}
+	switch binary.LittleEndian.Uint16(h[4:]) {
+	case pe.IMAGE_FILE_MACHINE_AMD64:
+		return "amd64"
+	case pe.IMAGE_FILE_MACHINE_ARM64:
+		return "arm64"
 	}
 	return ""
+}
+
+// downloadChoice is the file to choose on the Toolbox App's page, for the processor of
+// exe, a JetBrains program installed on the PC.
+func downloadChoice(exe string) string {
+	switch exeMachine(exe) {
+	case "amd64":
+		return ".exe (Windows)"
+	case "arm64":
+		return ".exe (Windows ARM64)"
+	}
+	return T("jb.anyArch")
 }
 
 // firstFixedLine is the oldest release line that JetBrains fixes (2025.2).
@@ -268,11 +314,10 @@ func (tp *appsContext) checkJetbrainsIDEs() {
 
 func (tp *appsContext) jetbrainsIDEOne(it *Item, dir string) {
 	pi, _ := readProductInfo(dir)
-	p := jetbrainsProducts[pi.ProductCode]
 	r := result{Version: pi.shownVersion(), File: firstNonEmpty(pi.launcher(dir), filepath.Join(dir, "product-info.json")), Exe: pi.launcher(dir), Folder: dir,
-		ProductURL: p.url, Search: pi.Name}
+		ProductURL: productsURL, Search: pi.Name}
 	tp.withOwner(&r, dir)
-	r.Status, r.Summary, r.Details = jetbrainsIDEVerdict(pi, p.rule)
+	r.Status, r.Summary, r.Details = jetbrainsIDEVerdict(pi, jetbrainsProducts[pi.ProductCode])
 	tp.c.finish(it, r)
 }
 
@@ -280,28 +325,28 @@ func (tp *appsContext) jetbrainsIDEOne(it *Item, dir string) {
 func jetbrainsIDEVerdict(pi productInfo, rule string) (Status, string, string) {
 	v := ParseVersion(pi.Version)
 	full := pi.Name + " " + pi.shownVersion()
-	why, bulletin := T("jb.why"), Tf("jb.bulletin", jetbrainsBlog)
+	why, get, bulletin := T("jb.why"), ideGet(pi), Tf("jb.bulletin", jetbrainsBlog)
 	line := lineOf(v, 2)
 	st, fixed := fixStatus(rule, v)
 	fixes := fixRules[rule].fixed
 	newest := lineOf(ParseVersion(fixes[len(fixes)-1]), 2)
 	switch {
 	case line == nil:
-		return StCaution, T("version.unknown"), joinParas(why, Tf("jb.fixedList", fixedVersionsList(rule)), bulletin)
+		return StCaution, T("version.unknown"), joinParas(why, Tf("jb.fixedList", fixedVersionsList(rule)), get, bulletin)
 	case pi.VersionSuffix != "" && !strings.HasPrefix(strings.ToUpper(pi.VersionSuffix), "RC") && line.Cmp(newest) == 0:
 		// a preview build of the newest line: only the latest ones have the fix
-		return StCaution, T("jb.sumPreview"), joinParas(why, Tf("jb.preview", line.String(), line.String()), bulletin)
+		return StCaution, T("jb.sumPreview"), joinParas(why, Tf("jb.preview", line.String(), line.String()), get, bulletin)
 	case st == FixOK && line.Cmp(Version{2025, 2}) == 0:
 		// the 2025.2.6 updates fix the Java runtime only
-		return StCaution, T("jb.sumBrowser"), joinParas(Tf("jb.jbrOnly", full, fixedAfter(rule, line)), T("jb.jcefOff"), bulletin)
+		return StCaution, T("jb.sumBrowser"), joinParas(Tf("jb.jbrOnly", full, fixedAfter(rule, line)), get, T("jb.jcefOff"), bulletin)
 	case st == FixOK:
 		return StOK, T("app.sumOK"), joinParas(Tf("jb.ok", full), T("jb.jcefOff"), bulletin)
 	case st == FixOutdated:
-		fix := Tf("app.fix", pi.Name, fixed)
+		fix := joinParas(Tf("app.fix", pi.Name, fixed), get)
 		if line.Cmp(Version{2025, 2}) == 0 {
 			fix = joinParas(fix, Tf("jb.line20252", pi.Name+" "+fixed, fixedAfter(rule, line)), T("jb.jcefOff"))
 		}
 		return StWarn, Tf("app.sumOutdated", fixed), joinParas(why, fix, bulletin)
 	}
-	return StWarn, T("jb.sumUnsupported"), joinParas(why, Tf("jb.unsupported", full, firstFixedLine(rule), fixedVersionsList(rule)), bulletin)
+	return StWarn, T("jb.sumUnsupported"), joinParas(why, Tf("jb.unsupported", full, firstFixedLine(rule), fixedVersionsList(rule)), get, bulletin)
 }

@@ -29,7 +29,7 @@ func TestIsJetbrainsdExe(t *testing.T) {
 // keeping the affected roots in its list; 0.9.8000 holds only the roots.
 func TestJetbrainsdVerdict(t *testing.T) {
 	roots := []string{rootNameAAA, rootNameECCG3}
-	fix := Tf("jbd.fix", "0.9.9728", jetbrainsBlog)
+	fix := joinParas(Tf("jbd.fix", "0.9.9728"), Tf("jb.toolboxGet", toolboxURL, ".exe (Windows)"), Tf("jbd.byHand", jetbrainsBlog))
 	for _, c := range []struct {
 		ver    string
 		f      embedFindings
@@ -42,7 +42,7 @@ func TestJetbrainsdVerdict(t *testing.T) {
 		{"", embedFindings{Roots: roots, Blocklist: true}, StOK, []string{Tf("jbd.ok", "jetbrainsd")}},
 		{"", embedFindings{Roots: roots}, StCaution, []string{T("version.unknown"), fix}},
 	} {
-		st, sum, details := jetbrainsdVerdict(c.ver, c.f)
+		st, sum, details := jetbrainsdVerdict(c.ver, c.f, ".exe (Windows)")
 		if st != c.status {
 			t.Errorf("%s: status %v, want %v", c.ver, st, c.status)
 		}
@@ -117,7 +117,8 @@ func TestJetbrainsIDEVerdict(t *testing.T) {
 		status            Status
 		want              []string
 	}{
-		{"IU", "2026.2.3", "", StWarn, []string{Tf("app.sumOutdated", "2026.2.4"), T("jb.why"), Tf("app.fix", "IntelliJ IDEA", "2026.2.4")}},
+		{"IU", "2026.2.3", "", StWarn, []string{Tf("app.sumOutdated", "2026.2.4"), T("jb.why"), Tf("app.fix", "IntelliJ IDEA", "2026.2.4"),
+			Tf("jb.ideGet", "IntelliJ IDEA", productsURL)}},
 		{"IU", "2026.2.4", "", StOK, []string{T("app.sumOK"), Tf("jb.ok", "IntelliJ IDEA 2026.2.4")}},
 		{"IU", "2026.3", "", StOK, []string{T("app.sumOK")}},
 		{"IU", "2026.3", "RC", StOK, []string{T("app.sumOK")}},
@@ -130,10 +131,11 @@ func TestJetbrainsIDEVerdict(t *testing.T) {
 		{"RD", "2025.2.6", "", StWarn, []string{T("jb.sumUnsupported"), "2025.3 "}},
 		{"CL", "2026.2.4", "", StWarn, []string{Tf("app.sumOutdated", "2026.2.4.1")}},
 		{"IU", "", "", StCaution, []string{T("version.unknown")}},
+		{"DS", "2025.1.3", "", StWarn, []string{T("jb.sumUnsupported"), Tf("jb.ideGetNoPage", "DataSpell")}},
 	} {
-		names := map[string]string{"IU": "IntelliJ IDEA", "PS": "PhpStorm", "RD": "Rider", "CL": "CLion"}
+		names := map[string]string{"IU": "IntelliJ IDEA", "PS": "PhpStorm", "RD": "Rider", "CL": "CLion", "DS": "DataSpell"}
 		pi := productInfo{Name: names[c.code], Version: c.ver, VersionSuffix: c.suffix, ProductCode: c.code}
-		st, sum, details := jetbrainsIDEVerdict(pi, jetbrainsProducts[c.code].rule)
+		st, sum, details := jetbrainsIDEVerdict(pi, jetbrainsProducts[c.code])
 		if st != c.status {
 			t.Errorf("%s %s %s: status %v, want %v", c.code, c.ver, c.suffix, st, c.status)
 		}
@@ -146,9 +148,10 @@ func TestJetbrainsIDEVerdict(t *testing.T) {
 }
 
 // An IDE is found by its product-info.json, reported under its name and version,
-// and its Java (jbr) is shown as a part of it, with the version that fixes it. The
-// Toolbox App's Java is shown as a part of the Toolbox App. Copies of IDEs that
-// Gradle downloads and products outside the bulletin are not reported.
+// and its Java (jbr) is shown as a part of it, with the version that fixes it and how
+// to update it. The Toolbox App's Java is shown as a part of the Toolbox App, with
+// where to download it. Copies of IDEs that Gradle downloads and products outside the
+// bulletin are not reported.
 func TestJetbrainsIDEs(t *testing.T) {
 	Lang = 0
 	g3 := rootByName(rootNameECCG3)
@@ -206,10 +209,47 @@ func TestJetbrainsIDEs(t *testing.T) {
 	if len(ides) != 1 || ides[0].Program != "IntelliJ IDEA" || ides[0].Version != "2026.2.3" || ides[0].Status != StWarn {
 		t.Errorf("IDEs: %+v", ides)
 	}
-	if it, ok := javas["IntelliJ IDEA"]; !ok || it.ProgVersion != "2026.2.3" || !strings.Contains(it.Details, Tf("jb.ideFixed", "IntelliJ IDEA", "2026.2.4")) {
-		t.Errorf("the IDE's Java: %+v", javas)
+	advises := func(it Item, texts ...string) bool {
+		for _, s := range texts {
+			if !strings.Contains(it.Details, s) {
+				return false
+			}
+		}
+		return !strings.Contains(it.Details, Tf("bundled.advice", it.Program, it.Program, productsURL))
 	}
-	if it, ok := javas["JetBrains Toolbox App"]; !ok || it.ProgVersion != "3.9.0" || !strings.Contains(it.Details, T("jb.toolbox")) {
-		t.Errorf("the Toolbox App's Java: %+v", javas)
+	if it, ok := javas["IntelliJ IDEA"]; !ok || it.ProgVersion != "2026.2.3" ||
+		!advises(it, Tf("jb.ideOwner", "IntelliJ IDEA 2026.2.3"), Tf("app.fix", "IntelliJ IDEA", "2026.2.4"), Tf("jb.ideGet", "IntelliJ IDEA", productsURL)) {
+		t.Errorf("the IDE's Java: %+v", javas["IntelliJ IDEA"])
+	}
+	if it, ok := javas["JetBrains Toolbox App"]; !ok || it.ProgVersion != "3.9.0" ||
+		!advises(it, T("jb.toolbox"), Tf("jb.toolboxGet", toolboxURL, T("jb.anyArch")), T("jb.toolboxDaemon")) {
+		t.Errorf("the Toolbox App's Java: %+v", javas["JetBrains Toolbox App"])
+	}
+}
+
+// The download to choose for the Toolbox App follows the processor of the JetBrains
+// program installed on the PC, read from its header.
+func TestDownloadChoice(t *testing.T) {
+	Lang = 0
+	dir := t.TempDir()
+	exe := func(name string, machine uint16) string {
+		b := make([]byte, 0x40+4+20)
+		copy(b, "MZ")
+		b[0x3c] = 0x40
+		copy(b[0x40:], "PE\x00\x00")
+		b[0x44], b[0x45] = byte(machine), byte(machine>>8)
+		p := filepath.Join(dir, name)
+		os.WriteFile(p, b, 0o644)
+		return p
+	}
+	for p, want := range map[string]string{
+		exe("x64.exe", 0x8664):            ".exe (Windows)",
+		exe("arm64.exe", 0xaa64):          ".exe (Windows ARM64)",
+		exe("x86.exe", 0x14c):             T("jb.anyArch"),
+		filepath.Join(dir, "missing.exe"): T("jb.anyArch"),
+	} {
+		if got := downloadChoice(p); got != want {
+			t.Errorf("%s: %q, want %q", filepath.Base(p), got, want)
+		}
 	}
 }

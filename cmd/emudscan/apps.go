@@ -1695,7 +1695,7 @@ func (tp *appsContext) javaOne(it *Item, home string) {
 	if bundled {
 		update = bundledAdvice(o)
 	}
-	update = joinParas(update, jetbrainsJavaHint(home))
+	update = jetbrainsJavaAdvice(home, update)
 	block := ""
 	if c := javaBlockCmd(bl, toBlock); c != "" {
 		block = T("java.blockRoots")
