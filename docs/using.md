@@ -65,8 +65,9 @@ In the lists, each status has a shield; the log and the report use a symbol.
 
 The same finding in several places (two copies of Node.js inside the same
 program) is a single item: its **Outdated file** ends with *(+1)*, and its
-details list every copy. **Scan again** checks each copy; copies that no longer
-match get their own items again.
+details list every copy, then their explanation once, with the commands for each
+copy. **Scan again** checks each copy; copies that no longer match get their own
+items again.
 
 Click a column header to sort, click a path to open it in File Explorer, and
 hover over a cell to see its full content.

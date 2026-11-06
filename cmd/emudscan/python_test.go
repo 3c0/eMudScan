@@ -183,9 +183,9 @@ func TestPythonVerdicts(t *testing.T) {
 			t.Errorf("%s: the lists' update should stay as good practice:\n%s", c.name, got.Details)
 		case c.name == "old, old lists" && !strings.Contains(got.Details, "update Python to 3.13.18"):
 			t.Errorf("%s: the Python update should come first:\n%s", c.name, got.Details)
-		case c.name == "old" && !strings.Contains(got.Details, "12 of 12 test chains"):
+		case c.name == "old" && !strings.Contains(got.Details, "12 of the 12 test chains"):
 			t.Errorf("%s: the Windows copy risk should be explained:\n%s", c.name, got.Details)
-		case c.name == "nothing known" && (!strings.Contains(got.Details, T("py.unknown")) || !strings.Contains(got.Details, "12 of 12 test chains") || !strings.Contains(got.Details, Tf("py.unknownFix", fixedVersionsList("python")))):
+		case c.name == "nothing known" && (!strings.Contains(got.Details, T("py.unknown")) || !strings.Contains(got.Details, "12 of the 12 test chains") || !strings.Contains(got.Details, Tf("py.unknownFix", fixedVersionsList("python")))):
 			t.Errorf("%s: what is known and what to do:\n%s", c.name, got.Details)
 		}
 	}
@@ -221,24 +221,28 @@ func TestVenvBundleWithFixedPython(t *testing.T) {
 	}
 }
 
-// A Python inside another program: that program's update is given once, then what
-// those who manage this Python themselves can do, each sentence introducing its own
-// commands.
+// A Python inside another program: that program's update is given once, in the
+// recommended action, then the command that updates the outdated bundles until then,
+// after the warning about modifying a copy inside a program. One sentence says what
+// is wrong.
 func TestBundledPythonAdvice(t *testing.T) {
 	Lang = 0
 	badBundle := outdatedBundle(t)
 	root := t.TempDir()
+	program := "Recommended action: update Example App 1, which this copy belongs to,"
+	until := Tf("py.untilThen", "certifi") + "\n"
+	warned := T("bundled.warn") + "\nIn PowerShell:\n" // inside a program
 	for i, c := range []struct {
 		name, version string
 		blocklist     bool
 		owned         bool
 		want          []string // in this order
 	}{
-		{"bundled, old", "3.13.17", false, true, []string{"**This copy belongs to Example App 1.**", "If you manage this Python yourself, update it to 3.13.18.", "Until then, update the outdated bundles. In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"bundled, version unknown", "", false, true, []string{"**This copy belongs to Example App 1.**", "If you manage this Python yourself, update the outdated bundles. In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"bundled, fixed", "3.13.18", true, true, []string{"Updating is still good practice. **This copy belongs to Example App 1.**", "If you manage this Python yourself, update the outdated bundles. In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"own, old", "3.13.17", false, false, []string{"Recommended action: update Python to 3.13.18.", "Until then, update the outdated bundles. In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"own, fixed", "3.13.18", true, false, []string{"Updating is still good practice. In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"bundled, old", "3.13.17", false, true, []string{"Python 3.13.17 does not reject the compromised certificates yet (Python 3.13.18 does), and its certifi still trusts ", program, until, warned, "pip install --upgrade certifi"}},
+		{"bundled, version unknown", "", false, true, []string{"certifi, in this Python, still trusts ", program, until, warned, "pip install --upgrade certifi"}},
+		{"bundled, fixed", "3.13.18", true, true, []string{"rejects the compromised certificates itself", Tf("py.listsOldSafe.1", "certifi"), program, until, warned, "pip install --upgrade certifi"}},
+		{"own, old", "3.13.17", false, false, []string{"Recommended action: update Python to 3.13.18.", until + "In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"own, fixed", "3.13.18", true, false, []string{Tf("py.listsOldSafe.1", "certifi") + "\nIn PowerShell:\n", "pip install --upgrade certifi"}},
 	} {
 		app := filepath.Join(root, "app"+itoa(i))
 		home := filepath.Join(app, "python")
@@ -266,10 +270,10 @@ func TestBundledPythonAdvice(t *testing.T) {
 			}
 			at += i + len(w)
 		}
-		if n := strings.Count(d, "This copy belongs to"); n != map[bool]int{true: 1, false: 0}[c.owned] {
+		if n := strings.Count(d, "which this copy belongs to"); n != map[bool]int{true: 1, false: 0}[c.owned] || strings.Contains(d, T("bundled.warn")) != c.owned {
 			t.Errorf("%s: the program's advice %d times:\n%s", c.name, n, d)
 		}
-		for _, bad := range []string{"yourself: Recommended action", "yourself: In PowerShell", ":\nIn PowerShell"} {
+		for _, bad := range []string{"If you manage", ":\nIn PowerShell"} {
 			if strings.Contains(d, bad) {
 				t.Errorf("%s: %q:\n%s", c.name, bad, d)
 			}

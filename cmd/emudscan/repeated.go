@@ -118,11 +118,18 @@ func shortPlaces(paths []string, fits func(string) bool) []string {
 	return out
 }
 
-// copyPath is the place of one copy: its file, else its folder.
-func (it Item) copyPath() string { return firstNonEmpty(it.File, it.Folder) }
+// copyPath is the place of one copy: its file, else its folder; for a Python, its
+// folder, whatever file it reports.
+func (it Item) copyPath() string {
+	if it.Kind == "python" && it.Folder != "" {
+		return it.Folder
+	}
+	return firstNonEmpty(it.File, it.Folder)
+}
 
 // shownDetails is the explanation of an element. A merged element lists its copies
-// first; their explanation follows once when it is the same for all, else for each.
+// first; their explanation follows once, but for the paragraphs that differ (the
+// commands, which name each copy): their lines that differ follow for each copy.
 func (it Item) shownDetails() string {
 	if len(it.Copies) == 0 {
 		return it.Details
@@ -144,9 +151,50 @@ func (it Item) shownDetails() string {
 	if same {
 		return joinParas(intro, it.Details)
 	}
+	paras := make([][]string, len(all))
+	for i, m := range all {
+		paras[i] = strings.Split(m.Details, "\n\n")
+		if len(paras[i]) != len(paras[0]) { // not alike: each explanation in full
+			parts := []string{intro}
+			for _, m := range all {
+				parts = append(parts, Tf("copies.in", link(m))+"\n"+m.Details)
+			}
+			return joinParas(parts...)
+		}
+	}
 	parts := []string{intro}
-	for _, m := range all {
-		parts = append(parts, Tf("copies.in", link(m))+"\n"+m.Details)
+	for k, p := range paras[0] {
+		alike := true
+		for _, ps := range paras[1:] {
+			alike = alike && ps[k] == p
+		}
+		if alike {
+			parts = append(parts, p)
+			continue
+		}
+		// the lines that all copies share at the start of this paragraph, then the others
+		// of each copy, after its place
+		lines := make([][]string, len(all))
+		shared := -1
+		for i := range all {
+			lines[i] = strings.Split(paras[i][k], "\n")
+			if shared < 0 || len(lines[i])-1 < shared {
+				shared = len(lines[i]) - 1
+			}
+		}
+		for c := 0; c < shared; c++ {
+			for _, ls := range lines[1:] {
+				if ls[c] != lines[0][c] {
+					shared = c
+				}
+			}
+		}
+		block := append([]string(nil), lines[0][:shared]...)
+		for i, m := range all {
+			block = append(block, Tf("copies.for", link(m)))
+			block = append(block, lines[i][shared:]...)
+		}
+		parts = append(parts, strings.Join(block, "\n"))
 	}
 	return joinParas(parts...)
 }

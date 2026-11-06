@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Checks the JetBrains IDEs and Gateway by their version, for their built-in browser, and names the Java runtime of an IDE or of the Toolbox App after it, with the version that fixes it.
 - Updates an outdated Python 3.14 or later installed with the Python Install Manager, with that manager, when it is installed.
 
+### Changed
+
+- Shorter details for Python: one sentence for the problem, then the recommended action, which names the program a bundled Python belongs to.
+- A finding in several places shows its explanation once, with the commands for each place.
+
 ## [2.0.0] - 2026-11-05
 
 First public version.

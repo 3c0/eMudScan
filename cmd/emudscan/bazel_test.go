@@ -33,7 +33,7 @@ func TestBazelOwner(t *testing.T) {
 	}
 	tp := testApps(t)
 	it := tp.c.begin(GroupApps, "java", "Java", home, func(it *Item) { tp.javaOne(it, home) })
-	if it.Status != StWarn || !strings.Contains(it.Details, "**This copy belongs to Bazel.**") || strings.Contains(it.Details, T("java.fix")) {
+	if it.Status != StWarn || !strings.Contains(it.Details, "update Bazel, which this copy belongs to,") || strings.Contains(it.Details, T("java.fix")) {
 		t.Errorf("status %v:\n%s", it.Status, it.Details)
 	}
 }

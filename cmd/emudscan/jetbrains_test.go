@@ -215,10 +215,10 @@ func TestJetbrainsIDEs(t *testing.T) {
 				return false
 			}
 		}
-		return !strings.Contains(it.Details, Tf("bundled.advice", it.Program, it.Program, productsURL))
+		return !strings.Contains(it.Details, Tf("bundled.advice", it.Program, productsURL))
 	}
 	if it, ok := javas["IntelliJ IDEA"]; !ok || it.ProgVersion != "2026.2.3" ||
-		!advises(it, Tf("jb.ideOwner", "IntelliJ IDEA 2026.2.3"), Tf("app.fix", "IntelliJ IDEA", "2026.2.4"), Tf("jb.ideGet", "IntelliJ IDEA", productsURL)) {
+		!advises(it, Tf("jb.javaFix", "IntelliJ IDEA", "2026.2.4"), Tf("jb.ideGet", "IntelliJ IDEA", productsURL)) {
 		t.Errorf("the IDE's Java: %+v", javas["IntelliJ IDEA"])
 	}
 	if it, ok := javas["JetBrains Toolbox App"]; !ok || it.ProgVersion != "3.9.0" ||

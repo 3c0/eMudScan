@@ -228,15 +228,15 @@ func jetbrainsJavaAdvice(home, update string) string {
 	if !ok || !strings.EqualFold(filepath.Base(home), "jbr") {
 		return update
 	}
-	full, rule := pi.Name+" "+pi.shownVersion(), jetbrainsProducts[pi.ProductCode]
-	rec := Tf("jb.ideUpdate", pi.Name)
+	rule := jetbrainsProducts[pi.ProductCode]
+	rec := Tf("jb.javaUpdate", pi.Name)
 	switch st, fixed := fixStatus(rule, ParseVersion(pi.Version)); st {
 	case FixOutdated:
-		rec = Tf("app.fix", pi.Name, fixed)
+		rec = Tf("jb.javaFix", pi.Name, fixed)
 	case FixUnsupported:
-		rec = Tf("jb.ideNoFix", full, firstFixedLine(rule))
+		rec = Tf("jb.javaNoFix", pi.Name+" "+pi.shownVersion(), firstFixedLine(rule))
 	}
-	return joinParas(Tf("jb.ideOwner", full), rec, ideGet(pi))
+	return joinParas(rec, ideGet(pi))
 }
 
 // ideGet says how to update the IDE pi: with the Toolbox App, from the IDE, or from

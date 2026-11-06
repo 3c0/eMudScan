@@ -89,7 +89,7 @@ func TestSearchRowAndTestLinks(t *testing.T) {
 			t.Errorf("test link: %+v", b.runs)
 		}
 	}
-	if s := plainText(Tf("py.sslStore", 6, 12, refWinCopy())); strings.Contains(s, "[[") || !strings.Contains(s, T("ref.winCopy")) {
+	if s := plainText(Tf("py.storeRisk", 6, 12, refWinCopy())); strings.Contains(s, "[[") || !strings.Contains(s, T("ref.winCopy")) {
 		t.Errorf("reference: %s", s)
 	}
 }

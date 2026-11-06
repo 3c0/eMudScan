@@ -848,9 +848,9 @@ func copyWarning(details string) string {
 
 func bundledAdvice(o ownerInfo) string {
 	if o.URL != "" {
-		return Tf("bundled.advice", o.Name, o.Name, o.URL)
+		return Tf("bundled.advice", o.Name, o.URL)
 	}
-	return Tf("bundled.adviceSearch", o.Name, o.Name, searchLink(o.Name))
+	return Tf("bundled.adviceSearch", o.Name, searchLink(o.Name))
 }
 
 // searchLink is a markup link to a web search. Its text keeps no "|", which would end
@@ -1272,9 +1272,9 @@ func (tp *appsContext) pythonFix(env pyEnv) pyFix {
 // or the block list found in its ssl module.
 func pythonBlocksText(f pyFix) string {
 	if f.state != FixOK && f.inSSL {
-		return Tf("py.sslBlocksFile", lk(f.sslLib)) + "\n\n" + T("py.sslBlocksNote")
+		return Tf("py.sslBlocksFile", lk(f.sslLib))
 	}
-	return Tf("py.sslBlocksVersion", f.version, fixedVersionsList("python")) + "\n\n" + T("py.sslBlocksNote")
+	return Tf("py.sslBlocksVersion", f.version)
 }
 
 func (tp *appsContext) checkPython() {
@@ -1293,6 +1293,54 @@ func (tp *appsContext) checkPython() {
 
 func (tp *appsContext) pythonOne(it *Item, exe string) { tp.pythonOneEnv(it, pythonEnvFor(exe)) }
 
+// pyLists: the certificate bundles of pip and certifi in a Python, tested.
+type pyLists struct {
+	bad, badPkgs []string // the outdated ones ("pip 26.2.1"), and their packages ("pip")
+	ok           []string // the up-to-date ones
+	trusted      int      // the most test chains that one of the outdated ones trusts
+	roots        []string // the affected roots that they hold
+}
+
+func (l *pyLists) add(pkg, ver string, br bundleResult) {
+	name := strings.TrimSpace(pkg + " " + ver)
+	if !br.Bad() {
+		l.ok = append(l.ok, name)
+		return
+	}
+	l.bad, l.badPkgs = append(l.bad, name), append(l.badPkgs, pkg)
+	l.trusted = max(l.trusted, br.Trusted)
+	for _, r := range br.RootsPresent {
+		if !slices.Contains(l.roots, r) {
+			l.roots = append(l.roots, r)
+		}
+	}
+}
+
+// andList joins one or two names: "pip and certifi".
+func andList(names []string) string {
+	if len(names) == 2 {
+		return Tf("py.and", names[0], names[1])
+	}
+	return strings.Join(names, ", ")
+}
+
+// n is the suffix of the texts for one name ("1") or two ("N").
+func n(names []string) string {
+	if len(names) > 1 {
+		return "N"
+	}
+	return "1"
+}
+
+// trust says how much the outdated bundles trust: "6 of the 12 test chains (via …)".
+func (l pyLists) trust() string {
+	roots := strings.Join(l.roots, ", ")
+	if roots == "" {
+		roots = "?"
+	}
+	return Tf("py.trust", l.trusted, tlsChainsTotal, roots)
+}
+
 func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	exe := env.exe
 	r := result{Version: env.version, Folder: env.home, File: exe, Exe: exe, ProductURL: "https://www.python.org/downloads/windows/"}
@@ -1301,27 +1349,17 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	r.Bundled = bundled
 	r.Search = searchFor(o.Name, "Python "+env.version, bundled)
 	fx := tp.pythonFix(env)
-	var problems, cmds []string
-	listsChecked := false // pip's or certifi's list exists and was tested
-	pipVer := distInfoVersion(env.sitePackages, "pip")
-	pipBundle := filepath.Join(env.sitePackages, "pip", "_vendor", "certifi", "cacert.pem")
-	if br, ok := tp.checkBundleFile(pipBundle); ok {
-		listsChecked = true
-		if br.Bad() {
-			problems = append(problems, Tf("py.pipBad", pipVer, lk(pipBundle))+" "+bundleProblem(br))
-			cmds = append(cmds, pipLine(exe, "pip", needsAdmin(exe)))
-			r.File = pipBundle
-		}
-	}
-	certifiVer := distInfoVersion(env.sitePackages, "certifi")
-	certifiBundle := filepath.Join(env.sitePackages, "certifi", "cacert.pem")
-	if br, ok := tp.checkBundleFile(certifiBundle); ok {
-		listsChecked = true
-		if br.Bad() {
-			problems = append(problems, Tf("py.certifiBad", certifiVer, lk(certifiBundle))+" "+bundleProblem(br))
-			cmds = append(cmds, pipLine(exe, "certifi", needsAdmin(exe)))
-			if r.File == exe {
-				r.File = certifiBundle
+	var lists pyLists
+	listsChecked := false // pip's or certifi's bundle exists and was tested
+	for _, l := range []struct{ pkg, bundle string }{
+		{"pip", filepath.Join(env.sitePackages, "pip", "_vendor", "certifi", "cacert.pem")},
+		{"certifi", filepath.Join(env.sitePackages, "certifi", "cacert.pem")},
+	} {
+		if br, ok := tp.checkBundleFile(l.bundle); ok {
+			listsChecked = true
+			lists.add(l.pkg, distInfoVersion(env.sitePackages, l.pkg), br)
+			if br.Bad() && r.File == exe {
+				r.File = l.bundle
 			}
 		}
 	}
@@ -1329,130 +1367,111 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	if m, _ := filepath.Glob(filepath.Join(env.home, "Lib", "ensurepip", "_bundled", "pip-*.whl")); len(m) > 0 {
 		ensurepip = plain(strings.SplitN(strings.TrimPrefix(filepath.Base(m[len(m)-1]), "pip-"), "-", 2)[0])
 	}
-	var dl []string
-	if pipVer != "" {
-		dl = append(dl, field(T("py.pipVerLbl"), pipVer))
-	}
-	if certifiVer != "" {
-		dl = append(dl, field(T("py.certifiVerLbl"), certifiVer))
-	}
-	details := strings.Join(dl, "\n")
-	// the pip and certifi commands, after the sentence that introduces them (or why
-	// there are none)
-	noAdmin := ""
-	if len(cmds) > 0 {
-		noAdmin = pipUnsafe(env)
-	}
+	// the command that updates the outdated bundles, after the sentence that introduces
+	// it (or why there is none)
 	listsFix := func(lead string) string {
-		switch {
-		case len(cmds) == 0:
+		if len(lists.bad) == 0 {
 			return ""
-		case noAdmin != "":
-			return joinParas(lead, noAdmin)
 		}
-		f := newFix(fixAction{Kind: fixPip, Admin: needsAdmin(exe), Cmds: cmds})
-		return strings.TrimSpace(lead+" "+psHeader(exe)) + "\n" + f.lines()
+		if why := pipUnsafe(env); why != "" {
+			return joinParas(lead, why)
+		}
+		admin := needsAdmin(exe)
+		f := newFix(fixAction{Kind: fixPip, Admin: admin, Cmds: []string{pipLine(exe, strings.Join(lists.badPkgs, " "), admin)}})
+		// the lead on its own line: a warning for a copy inside a program goes between it
+		// and the commands
+		if lead != "" {
+			lead += "\n"
+		}
+		return lead + psHeader(exe) + "\n" + f.lines()
 	}
 	if fx.protected() {
-		// the ssl module refuses the compromised certificates: the lists no longer decide
+		// the ssl module refuses the compromised certificates: the bundles no longer decide
 		r.File = exe
 		r.Status, r.Summary = StOK, T("py.sumSSLBlocks")
-		r.Details = joinParas(pythonBlocksText(fx), details)
-		if len(problems) > 0 {
-			advice := listsFix(T("py.updateAnyway"))
-			if bundled { // its program's update first, then for those who manage this Python
-				advice = joinParas(T("py.updateAnyway")+" "+bundledAdvice(o), listsFix(T("py.ifYouManageLists")))
-			}
-			r.Details = joinParas(r.Details, T("py.listsOldSafe")+"\n"+strings.Join(problems, "\n"), advice)
-		} else if listsChecked {
-			r.Details = joinParas(r.Details, T("py.okDetails"))
+		r.Details = pythonBlocksText(fx)
+		switch {
+		case len(lists.bad) > 0 && bundled:
+			r.Details = joinParas(r.Details, Tf("py.listsOldSafe."+n(lists.bad), andList(lists.bad)), bundledAdvice(o),
+				listsFix(Tf("py.untilThen", andList(lists.badPkgs))))
+		case len(lists.bad) > 0:
+			r.Details = joinParas(r.Details, listsFix(Tf("py.listsOldSafe."+n(lists.bad), andList(lists.bad))))
+		case len(lists.ok) > 0:
+			r.Details = joinParas(r.Details, Tf("py.listsOK."+n(lists.ok), andList(lists.ok)))
 		}
 		tp.c.finish(it, r)
 		return
 	}
-	ensureOld := ensurepip != "" && ParseVersion(ensurepip).Cmp(ParseVersion("26.2.2")) < 0
-	ensureText := ""
-	if ensureOld {
-		ensureText = Tf("py.ensurepip", ensurepip, pyFixedText(fx.state, fx.fixed))
+	// what is wrong, in one sentence
+	what := ""
+	switch {
+	case fx.state == FixOutdated && len(lists.bad) > 0:
+		what = Tf("py.outdatedLists."+n(lists.bad), fx.version, fx.fixed, andList(lists.bad), lists.trust())
+	case fx.state == FixOutdated:
+		what = Tf("py.outdated", fx.version, fx.fixed)
+	case fx.state == FixUnsupported && len(lists.bad) > 0:
+		what = Tf("py.unsupportedLists."+n(lists.bad), fx.version, andList(lists.bad), lists.trust())
+	case fx.state == FixUnsupported:
+		what = Tf("py.unsupported", fx.version)
+	case len(lists.bad) > 0:
+		what = Tf("py.listsBad."+n(lists.bad), andList(lists.bad), lists.trust())
 	}
-	// what this Python does not do yet, and the update that brings it
-	exposed := ""
-	if fx.state != FixUnknown {
-		exposed = Tf("py.notBlocking", pyFixedVersions(fx))
+	if tp.pyStoreRisk > 0 && what != "" {
+		what += " " + Tf("py.storeRisk", tp.pyStoreRisk, tlsChainsTotal, refWinCopy())
 	}
-	if tp.pyStoreRisk > 0 {
-		exposed = joinParas(exposed, Tf("py.sslStore", tp.pyStoreRisk, tlsChainsTotal, refWinCopy()))
-	}
-	// what to do: for a copy inside another program, that program's update first (once),
-	// then what those who manage this Python themselves can do
-	updateKey, unsupportedKey, listsLead := "py.updateFix", "py.unsupportedFix", ""
-	if bundled {
-		updateKey, unsupportedKey, listsLead = "py.ifYouManageUpdate", "py.ifYouManageUnsupported", T("py.ifYouManageLists")
-	}
+	// what to do: for a copy inside another program, that program's update
 	update := ""
-	switch fx.state {
-	case FixOutdated:
-		update = Tf(updateKey, fx.fixed)
-	case FixUnsupported:
-		update = Tf(unsupportedKey, fx.version, fixedVersionsList("python"))
+	switch {
+	case bundled && (fx.state == FixOutdated || fx.state == FixUnsupported || len(lists.bad) > 0):
+		update = bundledAdvice(o)
+	case fx.state == FixOutdated:
+		update = Tf("py.updateFix", fx.fixed)
+	case fx.state == FixUnsupported:
+		update = Tf("py.unsupportedFix", fixedVersionsList("python"))
 	}
 	if rt, ok := pymanagerRuntimeOf(env.home); ok && update != "" && !bundled && pymanagerInstalled() {
-		update = joinParas(update, pymanagerAdvice(rt, fx))
+		if a := pymanagerAdvice(rt, fx); a != "" {
+			update = a
+		}
 	}
+	lead := Tf("py.updateLists", andList(lists.badPkgs))
 	if update != "" {
-		listsLead = T("py.untilThenLists")
+		lead = Tf("py.untilThen", andList(lists.badPkgs))
 	}
-	lists := listsFix(listsLead)
-	if bundled && (update != "" || lists != "") {
-		update = joinParas(bundledAdvice(o), update)
+	// new virtual environments start with the pip of ensurepip: said when no update of
+	// Python or of its program is recommended
+	ensureOld := ensurepip != "" && ParseVersion(ensurepip).Cmp(ParseVersion("26.2.2")) < 0
+	ensureText := ""
+	if ensureOld && fx.state != FixOutdated && !(bundled && update != "") {
+		ensureText = Tf("py.ensurepip", ensurepip)
 	}
+	details := joinParas(what, update, listsFix(lead), ensureText)
 	switch {
-	case len(problems) > 0:
-		r.Status, r.Summary = StWarn, T("py.sumBad")
-		r.Details = joinParas(details, strings.Join(problems, "\n"), exposed, update, lists, ensureText)
+	case len(lists.bad) > 0:
+		r.Status, r.Summary, r.Details = StWarn, T("py.sumBad"), details
 	case fx.state == FixOutdated:
-		r.Status, r.Summary = StCaution, Tf("py.sumUpdate", fx.fixed)
-		r.Details = joinParas(details, exposed, update, ensureText)
+		r.Status, r.Summary, r.Details = StCaution, Tf("py.sumUpdate", fx.fixed), details
 	case fx.state == FixUnsupported:
-		r.Status, r.Summary = StCaution, Tf("py.sumUnsupported", fx.version)
-		r.Details = joinParas(details, exposed, update, ensureText)
+		r.Status, r.Summary, r.Details = StCaution, Tf("py.sumUnsupported", fx.version), details
 	case ensureOld:
-		r.Status, r.Summary = StCaution, Tf("py.sumEnsurepip", ensurepip)
-		r.Details = joinParas(details, exposed, ensureText)
-	case listsChecked: // version unknown: judged by its lists, as before
-		r.Status, r.Summary, r.Details = StOK, T("py.sumOK"), joinParas(T("py.okDetails"), details, exposed)
+		r.Status, r.Summary, r.Details = StCaution, Tf("py.sumEnsurepip", ensurepip), details
+	case listsChecked: // version unknown: judged by its bundles, as before
+		r.Status, r.Summary, r.Details = StOK, T("py.sumOK"), joinParas(Tf("py.listsOK."+n(lists.ok), andList(lists.ok)), details)
 	default: // version unknown, and neither pip nor certifi: only the Windows roots it loads tell
 		r.Summary = T("version.unknown")
-		advice := T("py.unknownNoRisk")
+		known, advice := T("py.unknown"), T("py.unknownNoRisk")
 		r.Status = StInfo
 		if tp.pyStoreRisk > 0 {
 			r.Status = StCaution
+			known += " " + Tf("py.storeRisk", tp.pyStoreRisk, tlsChainsTotal, refWinCopy())
 			advice = Tf("py.unknownFix", fixedVersionsList("python"))
 			if bundled {
-				advice = joinParas(bundledAdvice(o), Tf("py.ifYouManageUnknown", fixedVersionsList("python")))
+				advice = bundledAdvice(o)
 			}
 		}
-		r.Details = joinParas(details, T("py.unknown"), exposed, advice)
+		r.Details = joinParas(known, advice)
 	}
 	tp.c.finish(it, r)
-}
-
-// pyFixedVersions is the fixed version of this Python's line, or all of them.
-func pyFixedVersions(f pyFix) string {
-	if f.state == FixOutdated && f.fixed != "" {
-		return f.fixed
-	}
-	return fixedVersionsList("python")
-}
-
-func pyFixedText(st FixState, fixed string) string {
-	switch st {
-	case FixOutdated:
-		return Tf("py.updateTo", fixed)
-	case FixUnsupported:
-		return Tf("py.unsupportedLine", fixedVersionsList("python"))
-	}
-	return T("py.upgradePipEach")
 }
 
 // ---------------------------------------------------------------------------

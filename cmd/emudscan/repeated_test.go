@@ -50,14 +50,15 @@ func TestMergeRepeated(t *testing.T) {
 	}
 }
 
-// Copies whose explanations differ (their commands name their own python.exe) each
-// keep theirs.
+// Copies whose explanations differ only by their commands, which name their own
+// python.exe, share the rest of their explanation, shown once; each copy, named by its
+// Python folder, keeps its commands.
 func TestMergeRepeatedDifferentDetails(t *testing.T) {
 	Lang = 0
 	py := func(id int, home string) Item {
 		it := Item{ID: id, Group: GroupApps, Kind: "python", Name: "Python", Version: "3.14.7", Owner: "Example App 2",
-			Status: StWarn, Summary: "Outdated certificate bundle (pip/certifi)", File: home + `\python.exe`,
-			Details: "In PowerShell:\n" + pipCmd(home+`\python.exe`, "pip")}
+			Status: StWarn, Summary: "Outdated certificate bundle (pip/certifi)", File: home + `\Lib\site-packages\certifi\cacert.pem`, Folder: home,
+			Details: "Python 3.14.7 does not reject them.\n\nRecommended action: update it.\n\nUntil then: In PowerShell:\n" + pipCmd(home+`\python.exe`, "pip certifi")}
 		it.fillDisplay("Python")
 		return it
 	}
@@ -66,10 +67,17 @@ func TestMergeRepeatedDifferentDetails(t *testing.T) {
 		t.Fatalf("%d elements, want 1", len(got))
 	}
 	d := got[0].shownDetails()
-	for _, want := range []string{`In [[C:\a\python\python.exe]]:`, `& 'C:\a\python\python.exe' -m pip`, `& 'C:\b\python\python.exe' -m pip`} {
-		if !strings.Contains(d, want) {
-			t.Errorf("details without %q:\n%s", want, d)
-		}
+	want := "• [[C:\\a\\python]]\n• [[C:\\b\\python]]\n\nPython 3.14.7 does not reject them.\n\nRecommended action: update it.\n\nUntil then: In PowerShell:\n" +
+		"For [[C:\\a\\python]]:\n" + pipCmd(`C:\a\python\python.exe`, "pip certifi") + "\nFor [[C:\\b\\python]]:\n" + pipCmd(`C:\b\python\python.exe`, "pip certifi")
+	if !strings.HasSuffix(d, want) {
+		t.Errorf("details:\n%s\nwant the end:\n%s", d, want)
+	}
+	// explanations that are not alike: each in full, after its place
+	other := py(2, `C:\b\python`)
+	other.Details += "\n\nOne more paragraph."
+	d = mergeRepeated([]Item{py(1, `C:\a\python`), other})[0].shownDetails()
+	if strings.Count(d, "Recommended action") != 2 || !strings.Contains(d, "In [[C:\\b\\python]]:\nPython 3.14.7") {
+		t.Errorf("explanations not alike:\n%s", d)
 	}
 }
 

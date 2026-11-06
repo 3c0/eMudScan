@@ -75,7 +75,7 @@ func TestJavaVerdicts(t *testing.T) {
 		{"all roots blocked", withTLSG3, false, header + roots + tlsG3, StOK,
 			[]string{T("java.okRootsBlocked")}, []string{"Add-Content"}},
 		{"inside another program", openJDK, true, header, StWarn,
-			[]string{"**This copy belongs to Example App 1.**", T("java.blockRoots"), T("bundled.warn") + "\n" + T("fix.ps"), "Add-Content"},
+			[]string{"update Example App 1, which this copy belongs to,", T("java.blockRoots"), T("bundled.warn") + "\n" + T("fix.ps"), "Add-Content"},
 			[]string{T("java.fix")}},
 	} {
 		app := filepath.Join(root, "app"+itoa(i))
