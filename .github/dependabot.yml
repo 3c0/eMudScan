@@ -1,0 +1,8 @@
+# Dependabot proposes a pull request when a new version of an action used by the
+# build is published (the actions are pinned to exact commits in build.yml).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

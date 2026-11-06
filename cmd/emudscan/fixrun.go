@@ -1,0 +1,756 @@
+package main
+
+// The Fix function runs the fixes of the software the user selects (fixes.go), in
+// Windows PowerShell, then checks each software again. The Restore button of the
+// details runs in the same way the restore of a software's backups, without a window;
+// eMudScan then moves the files itself when they need no administrator rights
+// (fixRunner.restore, moveBackups).
+//
+// It works in two rounds. First the updates through the package managers that
+// installed the software, which may bring the fix; then, for the software still not
+// fixed, the fixes of its files. After each round, the software that ran something is
+// checked again: it counts as fixed only when its check finds nothing left to fix.
+// Stop takes effect before the next software, so that none is left half fixed.
+//
+// The commands of one software run in one PowerShell, as they would when pasted
+// together. Those that need administrator rights run, for all the software of a
+// round, in one Windows PowerShell started as administrator: one Windows prompt,
+// which names Microsoft as the publisher, and eMudScan itself never runs as
+// administrator.
+//
+// PowerShell reads the commands from a script that eMudScan writes in the user's
+// Temp folder; the command line that starts PowerShell, which the Windows prompt
+// approves, holds the SHA-256 of that script, and PowerShell runs it only if it has
+// not changed since (fixBootstrap). Each command writes what it shows into a log, between
+// markers that the runner reads as the commands run (fixLog).
+
+import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode/utf16"
+)
+
+// fixUnit is one fix, as the runner runs it: once for all the elements that have it,
+// such as the update of a software for two of its problems.
+type fixUnit struct {
+	ids    []int    // the elements
+	titles []string // their titles, for the console
+	fix    fixAction
+	cmds   []string // what runs: the commands, with or without the backups
+}
+
+// fixLineKind is what a line of the console of the Fix window is. The console shows
+// the commands as plain PowerShell, with what they do as comments, then their results.
+type fixLineKind int
+
+const (
+	lineNote     fixLineKind = iota // a message of eMudScan
+	lineSoftware                    // the software whose commands follow
+	lineComment                     // what the commands that follow do
+	lineCommand                     // a command
+	lineOutput                      // what a command showed
+	lineOK                          // a command succeeded
+	lineFailed                      // a command failed
+	lineError                       // the commands could not run
+	lineFixed                       // a software is fixed
+	lineNotFixed                    // a software is still not fixed
+)
+
+// fixLine is a line of the console.
+type fixLine struct {
+	kind fixLineKind
+	text string
+}
+
+// plain is the line as text, for the report: the commands and their results
+// indented under their software, what the commands showed further.
+func (l fixLine) plain() string {
+	switch l.kind {
+	case lineSoftware:
+		return Tf("fix.software", l.text)
+	case lineComment:
+		return "# " + l.text
+	case lineCommand, lineOK, lineFailed:
+		return "  " + l.text
+	case lineOutput:
+		return "      " + l.text
+	}
+	return l.text
+}
+
+// reportLines is lines as text, for the report: the result of a command at the end
+// of its line, as in the console ("  scoop update app  ✓ Done").
+func reportLines(lines []fixLine) []string {
+	var out []string
+	for i, l := range lines {
+		if (l.kind == lineOK || l.kind == lineFailed) && i > 0 && lines[i-1].kind == lineCommand {
+			out[len(out)-1] += "  " + l.text
+			continue
+		}
+		out = append(out, strings.TrimRight(l.plain(), " "))
+	}
+	return out
+}
+
+// plainLines is lines as text.
+func plainLines(lines []fixLine) []string {
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = l.plain()
+	}
+	return out
+}
+
+// unitResult is what came of a fix: whether its commands ran, and all succeeded.
+type unitResult struct{ ran, ok bool }
+
+// fixExecutor runs fixes in Windows PowerShell: all of them in one PowerShell
+// started as administrator when admin is true (one Windows prompt), else in one
+// PowerShell. It writes the console with out as the commands run, and returns a
+// result for each fix, or an error when they could not run at all.
+type fixExecutor func(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, error)
+
+// fixRunner runs the fixes of elements; the window that shows it gives its functions.
+type fixRunner struct {
+	exec      fixExecutor
+	item      func(id int) (Item, bool) // an element as it is now
+	recheck   func(ids []int)           // checks elements again (checker.recheck)
+	stopped   func() bool               // Stop was clicked
+	out       func(fixLine)             // the console
+	fixed     func(id int)              // an element is fixed: the window unselects it
+	simulated func(id int)              // simulation only: shows an element as fixed, or restored
+	backup    bool                      // "Back up the certificate files"
+	titles    map[int]string            // the titles of the elements, for the console (fixTitles)
+	fixedAny  bool                      // a software is fixed, or restored: it is to be restarted if it was open
+	restoring bool                      // it restores backups (restore), instead of fixing
+	restores  map[int][]string          // for a restore: the restores of each element, by their commands (fixAction.key)
+}
+
+// anyRan: at least one fix ran.
+func anyRan(res []unitResult) bool {
+	for _, r := range res {
+		if r.ran {
+			return true
+		}
+	}
+	return false
+}
+
+// fixedStatus: a status that leaves nothing to fix.
+func fixedStatus(st Status) bool { return st == StOK || st == StInfo }
+
+// run fixes the elements ids. It reports whether Stop ended it. Once a software is
+// fixed, it ends by saying to restart those that were open.
+func (r *fixRunner) run(ids []int) (stopped bool) {
+	var items []Item // those to fix, as the Fix window names them
+	for _, id := range ids {
+		if it, ok := r.item(id); ok && len(it.Fixes) > 0 && !fixedStatus(it.Status) {
+			items = append(items, it)
+		}
+	}
+	r.titles = fixTitles(items)
+	for _, update := range []bool{true, false} {
+		ran, ok, stop := r.round(ids, func(it Item) []fixAction {
+			if fixedStatus(it.Status) {
+				return nil
+			}
+			var out []fixAction
+			for _, f := range it.Fixes {
+				if (f.Kind == fixPackage) == update {
+					out = append(out, f)
+				}
+			}
+			return out
+		})
+		r.checkAgain(ran, ok)
+		if stop {
+			stopped = true
+			break
+		}
+	}
+	if r.fixedAny {
+		r.out(fixLine{lineNote, T("fix.restart")})
+	}
+	return stopped
+}
+
+// restore puts back the backups of the elements ids (Item.Restores), in one round,
+// then checks them again. It reports whether Stop ended it. Once a software is
+// restored, it ends by saying to restart it if it was open.
+func (r *fixRunner) restore(ids []int) (stopped bool) {
+	r.restoring = true
+	r.restores = map[int][]string{}
+	var items []Item
+	for _, id := range ids {
+		if it, ok := r.item(id); ok && len(it.Restores) > 0 {
+			items = append(items, it)
+			for _, f := range it.Restores {
+				r.restores[id] = append(r.restores[id], f.key())
+			}
+		}
+	}
+	r.titles = fixTitles(items)
+	ran, ok, stopped := r.round(ids, func(it Item) []fixAction { return it.Restores })
+	r.checkAgain(ran, ok)
+	if r.fixedAny {
+		r.out(fixLine{lineNote, T("restore.restart")})
+	}
+	return stopped
+}
+
+// restored: none of the restores that ran for it are still proposed: the check
+// found no backup left to put back, or another one, older.
+func (r *fixRunner) restored(it Item) bool {
+	for _, k := range r.restores[it.ID] {
+		for _, f := range it.Restores {
+			if f.key() == k {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// restoreOutcome is what the message at the end of a restore says, from what the
+// runner reported (lines): for each software, whether it is restored; then why not,
+// from the errors and what the failed commands showed; and, once one is restored, to
+// restart it. ok: all are restored.
+func restoreOutcome(lines []fixLine) (msg string, ok bool) {
+	var results, why []string
+	ok, restored, failed := true, false, false
+	for _, l := range lines {
+		switch l.kind {
+		case lineFixed:
+			results = append(results, l.text)
+			restored = true
+		case lineNotFixed:
+			results = append(results, l.text)
+			ok = false
+		case lineCommand:
+			failed = false
+		case lineFailed:
+			failed = true
+		case lineOutput:
+			if failed {
+				why = append(why, l.text)
+			}
+		case lineError:
+			why = append(why, l.text)
+		}
+	}
+	if len(why) > 8 { // the report has all of it
+		why = append(why[:8], "…")
+	}
+	msg = strings.Join(results, "\n")
+	if !ok && len(why) > 0 {
+		msg += "\n\n" + strings.Join(why, "\n")
+	}
+	if restored {
+		msg += "\n\n" + T("restore.restart")
+	}
+	return strings.TrimSpace(msg), ok && restored
+}
+
+// unit is the fix f of it, with the commands to run.
+func (r *fixRunner) unit(it Item, f fixAction) fixUnit {
+	cmds := f.Cmds
+	if !r.backup && f.Plain != nil {
+		cmds = f.Plain
+	}
+	return fixUnit{ids: []int{it.ID}, titles: []string{r.title(it)}, fix: f, cmds: cmds}
+}
+
+// title is the title of an element in the console.
+func (r *fixRunner) title(it Item) string {
+	if t, ok := r.titles[it.ID]; ok {
+		return t
+	}
+	return itemTitle(it)
+}
+
+// fixTitles are the titles of items in the console where no file follows them (in
+// what the fixes do, and in "Then, if the update does not fix …"): their own, but for
+// copies of a software, which have the same, followed by the place of each.
+func fixTitles(items []Item) map[int]string {
+	count, inFolder := map[string]int{}, map[string]int{}
+	for _, it := range items {
+		count[itemTitle(it)]++
+		inFolder[itemTitle(it)+"\x00"+it.Folder]++
+	}
+	out := map[int]string{}
+	for _, it := range items {
+		t := itemTitle(it)
+		if count[t] > 1 {
+			place := it.Folder
+			if place == "" || inFolder[t+"\x00"+place] > 1 { // in the same folder: its file
+				place = it.copyPath()
+			}
+			if place != "" {
+				t = Tf("fix.titleIn", t, shownPath(place))
+			}
+		}
+		out[it.ID] = t
+	}
+	return out
+}
+
+// unitTitles are the titles of the elements of units, each once.
+func unitTitles(units []fixUnit) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, u := range units {
+		for _, t := range u.titles {
+			if !seen[t] {
+				seen[t] = true
+				out = append(out, t)
+			}
+		}
+	}
+	return out
+}
+
+// round runs the actions of the elements ids (their updates, the other fixes, or their
+// restores): the commands of each element in turn, then those that need administrator
+// rights, together. A fix that several elements have, such as the update of a software
+// for two of its problems, runs once, with the first of them. It returns the elements
+// that ran something, with whether all their commands succeeded.
+func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int, ok map[int]bool, stopped bool) {
+	ok = map[int]bool{}
+	note := func(units []fixUnit, res []unitResult, err error) {
+		if err != nil {
+			r.out(fixLine{lineError, err.Error()})
+		} else if !anyRan(res) {
+			r.out(fixLine{lineError, T("fix.notRun")}) // PowerShell started, but ran nothing (blocked by a policy?)
+		}
+		for i, u := range units {
+			for _, id := range u.ids {
+				if _, seen := ok[id]; !seen {
+					ok[id] = true
+					ran = append(ran, id)
+				}
+				ok[id] = ok[id] && err == nil && i < len(res) && res[i].ran && res[i].ok
+			}
+		}
+	}
+	var jobs [][]*fixUnit // for each element, its fixes that run without administrator rights
+	var elevated []*fixUnit
+	byCmds := map[string]*fixUnit{}
+	for _, id := range ids {
+		it, found := r.item(id)
+		if !found {
+			continue
+		}
+		var own []*fixUnit
+		for _, f := range actions(it) {
+			u := r.unit(it, f)
+			k := strings.Join(u.cmds, "\n")
+			if first := byCmds[k]; first != nil { // already run for another element
+				first.ids = append(first.ids, u.ids...)
+				first.titles = append(first.titles, u.titles...)
+				continue
+			}
+			byCmds[k] = &u
+			if f.Admin {
+				elevated = append(elevated, &u)
+			} else {
+				own = append(own, &u)
+			}
+		}
+		if len(own) > 0 {
+			jobs = append(jobs, own)
+		}
+	}
+	values := func(us []*fixUnit) []fixUnit {
+		out := make([]fixUnit, len(us))
+		for i, u := range us {
+			out[i] = *u
+		}
+		return out
+	}
+	// Stop: an element that has a fix that ran, and others that did not, is not fixed;
+	// the console says so in red below the commands that ran
+	notRun := func(left ...[]*fixUnit) {
+		r.out(fixLine{lineError, T("fix.interrupted")})
+		r.out(fixLine{lineNote, ""})
+		for _, us := range left {
+			for _, u := range us {
+				for _, id := range u.ids {
+					if _, seen := ok[id]; seen {
+						ok[id] = false
+					}
+				}
+			}
+		}
+	}
+	for i, job := range jobs {
+		if r.stopped() {
+			notRun(append(jobs[i:], elevated)...)
+			return ran, ok, true
+		}
+		units := values(job)
+		for _, t := range unitTitles(units) {
+			r.out(fixLine{lineSoftware, t})
+		}
+		res, err := r.exec(units, false, r.out)
+		note(units, res, err)
+		r.out(fixLine{lineNote, ""}) // a blank line after the commands of each software
+	}
+	if len(elevated) > 0 {
+		if r.stopped() {
+			notRun(elevated)
+			return ran, ok, true
+		}
+		r.out(fixLine{lineNote, T("fix.adminPrompt")}) // the log names each software as its commands run
+		units := values(elevated)
+		res, err := r.exec(units, true, r.out)
+		note(units, res, err)
+		r.out(fixLine{lineNote, ""})
+	}
+	return ran, ok, false
+}
+
+// checkAgain checks again the elements that ran something, and reports each one:
+// fixed, or restored.
+func (r *fixRunner) checkAgain(ids []int, ok map[int]bool) {
+	if len(ids) == 0 {
+		return
+	}
+	r.out(fixLine{lineNote, T("fix.checking")})
+	r.recheck(ids)
+	for _, id := range ids {
+		it, found := r.item(id)
+		if !found {
+			continue
+		}
+		if r.restoring {
+			if fixSimulation && ok[id] && !r.restored(it) && r.simulated != nil {
+				r.simulated(id) // nothing changed on disk: the simulation shows what a restore would
+				it, _ = r.item(id)
+			}
+			if ok[id] && r.restored(it) {
+				r.out(fixLine{lineFixed, Tf("restore.done", r.title(it))})
+				r.fixedAny = true
+			} else {
+				r.out(fixLine{lineNotFixed, Tf("restore.notDone", r.title(it))})
+			}
+			continue
+		}
+		if fixSimulation && ok[id] && !fixedStatus(it.Status) && r.simulated != nil {
+			r.simulated(id) // nothing changed on disk: the simulation shows what a fix would
+			it, _ = r.item(id)
+		}
+		if fixedStatus(it.Status) {
+			r.out(fixLine{lineFixed, Tf("fix.fixed", r.title(it))})
+			r.fixed(id)
+			r.fixedAny = true
+		} else {
+			r.out(fixLine{lineNotFixed, Tf("fix.notFixed", r.title(it))})
+		}
+	}
+}
+
+// fixPreview is what the Fix window shows before the fixes run: for each element, its
+// title and, below it, its file, which also tells copies of a software apart; then the
+// commands of each fix, as they will run, after a comment that says what they do. The elements that share an
+// update, such as two problems of the same software, are shown together, with the
+// update once, as it runs: the fixes of their files follow, for when it does not fix
+// them.
+func fixPreview(items []Item, backup bool) []fixLine {
+	var out []fixLine
+	cmdLines := func(f fixAction) {
+		out = append(out, fixLine{lineComment, fixIntro(f)})
+		cmds := f.Cmds
+		if !backup && f.Plain != nil {
+			cmds = f.Plain
+		}
+		for _, c := range cmds {
+			out = append(out, fixLine{lineCommand, c})
+		}
+	}
+	titles := fixTitles(items)
+	for _, group := range updateGroups(items) {
+		var updates []fixAction
+		seen := map[string]bool{}
+		for _, it := range group {
+			out = append(out, fixLine{lineSoftware, itemTitle(it)})
+			if p := it.copyPath(); p != "" {
+				out = append(out, fixLine{lineComment, shownPath(p)})
+			}
+			for _, f := range it.Fixes {
+				if f.Kind == fixPackage && !seen[f.key()] {
+					seen[f.key()] = true
+					updates = append(updates, f)
+				}
+			}
+		}
+		for _, f := range updates {
+			cmdLines(f)
+		}
+		for _, it := range group {
+			first := true
+			for _, f := range it.Fixes {
+				if f.Kind == fixPackage {
+					continue
+				}
+				if first && len(updates) > 0 {
+					if len(group) > 1 {
+						out = append(out, fixLine{lineComment, Tf("fix.stillFor", titles[it.ID])})
+					} else {
+						out = append(out, fixLine{lineComment, T("fix.ifStillNeeded")})
+					}
+				}
+				first = false
+				cmdLines(f)
+			}
+		}
+		out = append(out, fixLine{lineNote, ""})
+	}
+	return out
+}
+
+// updateGroups are the elements that have fixes, in groups that share an update
+// (the same commands), in the order of their first element.
+func updateGroups(items []Item) [][]Item {
+	parent := make([]int, len(items)) // the group of each element: a smaller index in it, down to its first
+	find := func(i int) int {
+		for parent[i] != i {
+			i = parent[i]
+		}
+		return i
+	}
+	first := map[string]int{} // the first element of each update
+	for i, it := range items {
+		parent[i] = i
+		for _, f := range it.Fixes {
+			if f.Kind != fixPackage {
+				continue
+			}
+			if j, ok := first[f.key()]; ok {
+				a, b := find(i), find(j)
+				parent[max(a, b)] = min(a, b)
+			} else {
+				first[f.key()] = i
+			}
+		}
+	}
+	var groups [][]Item
+	at := map[int]int{}
+	for i, it := range items {
+		if len(it.Fixes) == 0 {
+			continue
+		}
+		root := find(i)
+		if g, ok := at[root]; ok {
+			groups[g] = append(groups[g], it)
+		} else {
+			at[root] = len(groups)
+			groups = append(groups, []Item{it})
+		}
+	}
+	return groups
+}
+
+// fixIntro says what a fix does.
+func fixIntro(f fixAction) string {
+	admin := ""
+	if f.Admin {
+		admin = " " + T("fix.asAdmin")
+	}
+	switch f.Kind {
+	case fixPackage:
+		return Tf("fix.kindPackage", f.Manager, admin)
+	case fixPip:
+		return Tf("fix.kindPip", admin)
+	case fixConda:
+		return Tf("fix.kindConda", admin)
+	case fixJava:
+		return Tf("fix.kindJava", admin)
+	}
+	return Tf("fix.kindBundle", admin)
+}
+
+// ---------------------------------------------------------------------------
+// The script and its log
+
+// fixMarker starts the lines of the log that are not output: a token drawn for each
+// run, which no output can guess.
+func fixMarker() string {
+	b := make([]byte, 8)
+	rand.Read(b)
+	return "##emudscan-" + hex.EncodeToString(b)
+}
+
+// fixScript is the PowerShell script that runs units, writing into logPath, for each
+// command, a marker, what it shows, and a marker with its result: failed when it
+// raised an error, other than the lines that a program writes to its error output
+// (which pip, WinGet or Chocolatey do for information), or exited with a code other
+// than 0. An error shows as its message only: PowerShell would show it with the line
+// of this script where it happened, which is not the user's command. The commands run
+// in the script's scope, so that the variables of a fix ($cacert, $ok) go from one
+// command to the next.
+func fixScript(units []fixUnit, logPath, marker string) string {
+	var b strings.Builder
+	b.WriteString("$ErrorActionPreference = 'Continue'\n")
+	b.WriteString("$ProgressPreference = 'SilentlyContinue'\n") // Invoke-WebRequest is much slower with its progress bar
+	fmt.Fprintf(&b, "$emudscanLog = %s\n", psQuote(logPath))
+	b.WriteString("function Write-EmudscanLog([string]$s) { [IO.File]::AppendAllText($emudscanLog, $s + \"`n\", [Text.UTF8Encoding]::new($false)) }\n")
+	prev := 0 // the first element of the previous fix
+	for u, unit := range units {
+		first := -1 - u // a fix without elements (in the tests): one of its own
+		if len(unit.ids) > 0 {
+			first = unit.ids[0]
+		}
+		if simulatedPause != "" && (u == 0 || first != prev) { // the commands of another software
+			b.WriteString(simulatedPause)
+		}
+		prev = first
+		for c, command := range unit.cmds {
+			if fixSimulation {
+				command = simulatedCommand(command)
+			}
+			fmt.Fprintf(&b, "Write-EmudscanLog '%s cmd %d %d'\n", marker, u, c)
+			b.WriteString("$Error.Clear(); $global:LASTEXITCODE = 0\n")
+			fmt.Fprintf(&b, "try { $emudscanOut = . {\n%s\n} *>&1 | ForEach-Object { if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { $_ } } | Out-String -Width 4096 } catch { $emudscanOut = $_.ToString() }\n", command)
+			b.WriteString("$emudscanCode = $global:LASTEXITCODE; if ($null -eq $emudscanCode) { $emudscanCode = 0 }\n")
+			b.WriteString("$emudscanFailed = $emudscanCode -ne 0 -or @($Error | Where-Object { \"$($_.FullyQualifiedErrorId)\" -notlike 'NativeCommandError*' }).Count -gt 0\n")
+			b.WriteString("Write-EmudscanLog (\"$emudscanOut\".TrimEnd())\n")
+			fmt.Fprintf(&b, "Write-EmudscanLog ('%s end %d %d ' + [int]$emudscanFailed + ' ' + $emudscanCode)\n", marker, u, c)
+		}
+	}
+	b.WriteString("exit 0\n")
+	return b.String()
+}
+
+// fixBootstrap is the command that starts the script: it reads it, and runs it only
+// if its SHA-256 is the one it was written with; otherwise it exits with code 97.
+func fixBootstrap(scriptPath string, script []byte) string {
+	sum := sha256.Sum256(script)
+	return fmt.Sprintf("$t = [IO.File]::ReadAllText(%s, [Text.Encoding]::UTF8)\n"+
+		"$h = -join ([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($t)) | ForEach-Object { $_.ToString('X2') })\n"+
+		"if ($h -ne '%s') { exit 97 }\n"+
+		". ([scriptblock]::Create($t))\n", psQuote(scriptPath), strings.ToUpper(hex.EncodeToString(sum[:])))
+}
+
+// fixTampered is the exit code of a script that changed before it ran.
+const fixTampered = 97
+
+// encodedCommand is a command as PowerShell's -EncodedCommand takes it: UTF-16, in
+// Base64.
+func encodedCommand(s string) string {
+	u := utf16.Encode([]rune(s))
+	b := make([]byte, 2*len(u))
+	for i, c := range u {
+		binary.LittleEndian.PutUint16(b[2*i:], c)
+	}
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+// fixLog reads the log of a script as it grows, and writes the console: each command,
+// its result, and what it showed. With titles, it names the software before its
+// first command (for the commands of several software, run as administrator).
+type fixLog struct {
+	units   []fixUnit
+	marker  string
+	out     func(fixLine)
+	titles  bool
+	last    int // the first element of the fix named last, plus 1
+	results []unitResult
+	partial string   // a line not complete yet
+	shown   []string // what the command running showed, given after its result
+}
+
+func newFixLog(units []fixUnit, marker string, out func(fixLine), titles bool) *fixLog {
+	return &fixLog{units: units, marker: marker, out: out, titles: titles, results: make([]unitResult, len(units))}
+}
+
+// write takes what was added to the log since the last call.
+func (l *fixLog) write(data string) {
+	data = l.partial + data
+	lines := strings.Split(data, "\n")
+	l.partial = lines[len(lines)-1]
+	for _, line := range lines[:len(lines)-1] {
+		l.line(strings.TrimRight(line, "\r"))
+	}
+}
+
+// close takes what remains once the script has ended.
+func (l *fixLog) close() {
+	if l.partial != "" {
+		l.line(l.partial)
+		l.partial = ""
+	}
+	l.flush()
+}
+
+// flush gives what the last command showed.
+func (l *fixLog) flush() {
+	for _, s := range l.shown {
+		l.out(fixLine{lineOutput, s})
+	}
+	l.shown = nil
+}
+
+// line takes a line of the log. The script writes what a command showed once it has
+// ended, just before its result: the console gives the result first, at the end of
+// the command's line, then what it showed ("scoop update app  ✓ Done").
+func (l *fixLog) line(s string) {
+	rest, ok := strings.CutPrefix(s, l.marker+" ")
+	if !ok {
+		if strings.TrimSpace(s) != "" {
+			l.shown = append(l.shown, s)
+		}
+		return
+	}
+	f := strings.Fields(rest)
+	num := func(i int) int {
+		if i < len(f) {
+			if n, err := strconv.Atoi(f[i]); err == nil {
+				return n
+			}
+		}
+		return -1
+	}
+	u, c := num(1), num(2)
+	if u < 0 || u >= len(l.units) || c < 0 || c >= len(l.units[u].cmds) {
+		return
+	}
+	switch f[0] {
+	case "cmd":
+		l.flush()
+		if l.titles && l.last != l.units[u].ids[0]+1 {
+			if l.last != 0 { // a blank line after the commands of the software before
+				l.out(fixLine{lineNote, ""})
+			}
+			l.last = l.units[u].ids[0] + 1
+			for _, t := range l.units[u].titles {
+				l.out(fixLine{lineSoftware, t})
+			}
+		}
+		l.out(fixLine{lineCommand, l.units[u].cmds[c]})
+		if c == 0 {
+			l.results[u] = unitResult{ran: true, ok: true}
+		}
+	case "end":
+		failed, code := num(3) != 0, num(4)
+		switch {
+		case fixSimulation && !failed:
+			l.out(fixLine{lineOK, "✓ " + simulatedResult(false)})
+		case fixSimulation:
+			l.out(fixLine{lineFailed, "✗ " + simulatedResult(true)})
+		case !failed:
+			l.out(fixLine{lineOK, "✓ " + T("fix.cmdOK")})
+		case code != 0:
+			l.out(fixLine{lineFailed, "✗ " + Tf("fix.cmdFailedCode", code)})
+		default:
+			l.out(fixLine{lineFailed, "✗ " + T("fix.cmdFailed")})
+		}
+		l.flush()
+		l.results[u].ok = l.results[u].ok && !failed
+	}
+}
