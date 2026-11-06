@@ -36,6 +36,10 @@ type fixAction struct {
 	Files   []string // the files the commands change, backed up first
 	From    []string // for a restore: the backup of each file, which is put back in its place
 	Manager string   // for an update: the package manager (Scoop, WinGet, Chocolatey)
+	// Optional: the fix replaces a component inside a program (its node.exe, the ssl
+	// files of its Python), a heavier change than the others, which the Fix window does
+	// not tick: the user ticks it, or clicks Select All.
+	Optional bool
 }
 
 // lines are the commands of the fix as the details page shows them.
@@ -45,6 +49,19 @@ func (f fixAction) lines() string {
 		out = append(out, cmd(c))
 	}
 	return strings.Join(out, "\n")
+}
+
+// tickedFirst tells whether the Fix window ticks a row of these elements when it
+// opens: not when all their fixes are optional (fixAction.Optional).
+func tickedFirst(items []Item) bool {
+	for _, it := range items {
+		for _, f := range it.Fixes {
+			if !f.Optional {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // key identifies a fix by its commands.

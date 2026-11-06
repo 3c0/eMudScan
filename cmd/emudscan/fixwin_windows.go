@@ -11,8 +11,9 @@ package main
 // are shown again, checked anew, when it closes.
 //
 // Opened from the main window ("Fix the selected software"), it lists every software
-// that can be fixed, with its vulnerable component, each with a check box, all ticked,
-// above the console, which shows the commands of those ticked. A fixed software is
+// that can be fixed, with its vulnerable component, each with a check box, ticked
+// unless its fixes are optional (tickedFirst), above the console, which shows the
+// commands of those ticked. A fixed software is
 // unticked, so that running the fixes again, after Stop, does not fix it twice. At the
 // end, a report is saved in the Downloads folder.
 
@@ -184,8 +185,9 @@ func (a *ui) openFixAll() {
 	}
 	d.updating = true
 	for i, it := range d.rows {
-		row := a.setRow(d.list, i, it, []string{fixSoftware(it), appCell(it, colComponent), fixSummary(a.fixItems(it.memberIDs())), it.copyPath(), ""}, true)
-		d.check(row, true)
+		items := a.fixItems(it.memberIDs())
+		row := a.setRow(d.list, i, it, []string{fixSoftware(it), appCell(it, colComponent), fixSummary(items), it.copyPath(), ""}, true)
+		d.check(row, tickedFirst(items))
 	}
 	d.fitPlaces(a)
 	d.updating = false

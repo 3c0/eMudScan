@@ -79,6 +79,43 @@ func TestFixesOfElement(t *testing.T) {
 	}
 }
 
+// The Fix window ticks the software whose fixes it can run, except those whose fixes
+// are all optional (a component inside a program replaced): the flag goes with the
+// fix that the details show, and one fix that is not optional is enough to tick it.
+func TestTickedFirst(t *testing.T) {
+	Lang = 0
+	light := newFix(fixAction{Kind: fixBundle, Cmds: []string{"Copy-Item a b"}})
+	heavy := newFix(fixAction{Kind: fixBundle, Cmds: []string{"Copy-Item c d"}, Optional: true})
+	c := newChecker(nopReporter{}, nil)
+	item := func(fixes ...fixAction) Item {
+		var parts []string
+		for _, f := range fixes {
+			parts = append(parts, T("fix.ps")+"\n"+f.lines())
+		}
+		return *c.begin(GroupApps, "bundle", "App", "", func(it *Item) {
+			c.finish(it, result{Status: StWarn, Details: strings.Join(parts, "\n\n")})
+		})
+	}
+	for i, x := range []struct {
+		items []Item
+		want  bool
+	}{
+		{[]Item{item(light)}, true},
+		{[]Item{item(heavy)}, false},
+		{[]Item{item(heavy, light)}, true},
+		{[]Item{item(heavy), item(light)}, true},
+		{[]Item{item(heavy), item(heavy)}, false},
+		{nil, false},
+	} {
+		if got := tickedFirst(x.items); got != x.want {
+			t.Errorf("case %d: %v, want %v", i, got, x.want)
+		}
+	}
+	if it := item(heavy); len(it.Fixes) != 1 || !it.Fixes[0].Optional {
+		t.Errorf("the optional fix as the details show it: %+v", it.Fixes)
+	}
+}
+
 // conda's certificates are updated by the conda that manages the environment, named
 // by its full path, for that environment (-p), without asking: the Fix function runs
 // that command. Without a conda, the command alone is shown, and not run.

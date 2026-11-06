@@ -146,11 +146,13 @@ listed: its details say what to do.
 can fix. It opens the **Fix software** window, with, from top to bottom:
 
 - **Select All**, **Select None**, and how many software are selected.
-- The software that eMudScan can fix, all ticked, with its vulnerable component,
-  the fix, its location and, after the fixes, the result. A software found in
-  several places has a row for each. Click a location to show it in File
-  Explorer. Drag the bar below the list to make it taller or shorter, down to a
-  single row.
+- The software that eMudScan can fix, with its vulnerable component, the fix,
+  its location and, after the fixes, the result. They are all ticked, except
+  those whose fix replaces a component inside a program (its `node.exe`, the ssl
+  files of its Python), a heavier change: tick them yourself, or click
+  **Select All**. A software found in several places has a row for each. Click
+  a location to show it in File Explorer. Drag the bar below the list to make it
+  taller or shorter, down to a single row.
 - The PowerShell commands that will run for the ticked software, or for the
   software you click. The button in their top right corner copies them, with
   their comments, as in the details window; after the fixes, it copies their
