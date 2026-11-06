@@ -7,7 +7,7 @@
 | `cmd/emudscan/` | The program (Go, one package), its tests, and `rsrc_windows_amd64.syso` (icon, manifest, version information) |
 | `data/` | The reference data from emudhra.we-have-a-problem.com, with its notice and license, Go’s license and a copy of `LICENSE`, all embedded in the program |
 | `docs/` | This documentation; `docs/images/` holds the screenshots and icons shown here and in the README (the icons are drawn by eMudScan’s own code, `cmd/emudscan/icons.go`) |
-| `scripts/` | Build scripts for your own PC |
+| `scripts/` | Build scripts for your own PC, and the scripts that publish a version (`release.sh`) and copy a hotfix into `main` (`hotfix-to-main.sh`) |
 | `.github/` | The GitHub build (`workflows/build.yml`), the release page template (`release-notes.md`), the Dependabot settings (`dependabot.yml`), the security policy (`SECURITY.md`), the issue forms (`ISSUE_TEMPLATE/`), the pull request template and the contributing guide |
 
 ## GitHub builds the program
@@ -16,20 +16,42 @@ Each push to `main` and each pull request runs the checks and the tests, then
 builds `eMudScan.exe`. The exe can be downloaded from the run’s page on the
 **Actions** tab, under **Artifacts** (a zip file).
 
+## Branches
+
+`main` is where the next version is prepared, and each version is a tag on it.
+Its history is linear (no merge commits):
+
+- pull requests are merged on GitHub with **Rebase and merge**, or **Squash and
+  merge** to turn them into a single commit;
+- for your own work, commit on `main` and run `git pull --rebase` before
+  `git push`: your commits then go on top of what GitHub has.
+  `git config pull.rebase true` makes a plain `git pull` do the same. With
+  changes not committed, Git refuses to rebase: commit or stash them first;
+- a commit on `main` goes out with the next push, finished or not: for longer
+  work, use a branch, rebase it on `main` often (`git rebase main`), and bring
+  it in with `git merge --ff-only`. If unfinished commits are already on `main`,
+  `git branch wip` keeps them on a branch, then `git reset --hard origin/main`
+  takes `main` back to what GitHub has.
+
 ## Publishing a version
 
-1. In `cmd/emudscan/model.go`, set `appVersion` (three numbers from 2.0.0, such
-   as `2.1.0`) and `appDate` (YYYYMMDD).
-2. In `CHANGELOG.md`, rename the `## [Unreleased]` section, where changes are
-   recorded as they are made, to `## [<version>] - <YYYY-MM-DD>`, with the date
-   of `appDate`, and add an empty `## [Unreleased]` section above it. At the end
-   of the file, point the `[unreleased]` link to `<version>...HEAD` and add a
-   link for the version, to `<previous version>...<version>`. The version’s
-   section, with its Security, Fixed, Changed… subsections, is copied to the
-   release page, where GitHub keeps line breaks: write each paragraph and each
-   item on a single line.
-3. Commit these changes as `chore(release): <version>`, push them, then push a
-   tag named after the version, such as `2.1.0`.
+1. Check that `## [Unreleased]` in `CHANGELOG.md` lists the version’s changes,
+   in its Security, Fixed, Changed… subsections. They are copied to the release
+   page, where GitHub keeps line breaks: write each paragraph and each item on a
+   single line.
+2. In Git Bash, at the root of eMudScan, on an up-to-date `main` (`git pull`),
+   run `sh scripts/release.sh 2.1.0` with the new version (three numbers, as
+   explained at the top of [CHANGELOG.md](../CHANGELOG.md)).
+
+The script first checks that the version follows the current one, that nothing
+is left uncommitted, that `main` is up to date with GitHub, and that the
+changelog has changes to publish. It shows the commit the version is based on,
+the commits it brings (and those not pushed yet, which it would publish too),
+and the changes, then asks for your confirmation. Only then does it set
+`appVersion` and `appDate` (today) in `cmd/emudscan/model.go`, turn
+`## [Unreleased]` into `## [2.1.0] - <date>` with its links, run the checks and
+the tests (putting the files back if they fail), commit
+`chore(release): 2.1.0`, push it, and create and push the tag `2.1.0`.
 
 GitHub then builds the exe and checks that the tag matches `appVersion` and that
 `CHANGELOG.md` has a section for this version. It creates a **draft release**
@@ -51,20 +73,41 @@ the release, as the GPL requires. Publish only a draft that is right: releases
 are immutable in this repository, so the tag of a published release can never be
 reused, even after the release is deleted.
 
-Version numbers are explained at the top of [CHANGELOG.md](../CHANGELOG.md).
+If the GitHub build fails, no draft is created. Fix the problem in a new
+commit and push it, then move the tag to it: the **Version tags** ruleset
+protects tags, so set it to **Disabled** meanwhile, run
+`git push origin :refs/tags/2.1.0`, `git tag -f 2.1.0` and
+`git push origin 2.1.0`, then set it back to **Active**.
 
 ## Publishing a hotfix
 
 A hotfix brings only an urgent fix to the latest version, such as 2.1.1 after
-2.1.0; an older version gets none. When `main` holds no other change since that
-version, publish it from `main` as above. Otherwise:
+2.1.0; an older version gets none.
 
-1. Create a branch from the version’s tag: `git switch -c hotfix-2.1.1 2.1.0`.
-2. Commit the fix there, with its changelog entry, then publish the version from
-   this branch as above: commit `chore(release): 2.1.1`, then push the tag.
-3. Merge the branch into `main` (`git switch main`, then
-   `git merge hotfix-2.1.1`), keeping the unreleased changes of `main` where
-   `CHANGELOG.md` conflicts, then delete the branch (`git branch -d hotfix-2.1.1`).
+- When the commits on `main` since that version can be published with the fix,
+  such as documentation changes, commit the fix on `main` and publish it as
+  above: `sh scripts/release.sh 2.1.1`.
+- When `main` holds changes for the next version, publish them with the fix as
+  the next minor version (2.2.0) instead, if they are ready.
+
+Otherwise, publish the hotfix from a branch:
+
+1. Put your work in progress aside: `git stash` the changes not committed, and
+   move the commits not pushed yet to a branch (`git branch wip`, then
+   `git reset --hard origin/main`).
+2. Create a branch from the version’s tag: `git switch -c hotfix-2.1.1 2.1.0`.
+3. Commit the fix there, with its changelog entry, then run
+   `sh scripts/release.sh 2.1.1`: on this branch, it pushes only the tag.
+4. Copy the hotfix into `main`: `git switch main`, then
+   `sh scripts/hotfix-to-main.sh 2.1.1`. It copies the commits of the fix,
+   without merge commits, and leaves the unreleased changes in `CHANGELOG.md` as
+   they are. Then it adds the 2.1.1 section and its links to `CHANGELOG.md`, and
+   its version to `model.go`, as in the tag, in a commit
+   `chore(release): add 2.1.1 to main`. If a commit of the fix conflicts with
+   `main`, it stops and says how to go on.
+5. Push `main` and delete the branch (`git branch -D hotfix-2.1.1`: the tag
+   keeps its commits). Then take back your work: rebase your branches on `main`
+   (`git switch wip`, then `git rebase main`) and `git stash pop`.
 
 A build that is not of a release, that is of a commit other than the one tagged
 with `appVersion`, or with changes not yet committed, shows “+dev” and its commit

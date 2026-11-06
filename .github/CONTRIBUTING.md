@@ -17,6 +17,9 @@ issue (see [SECURITY.md](SECURITY.md)).
   merged.
 - One subject per pull request, kept small; the description template lists what
   to check before opening it.
+- `main` has a linear history, without merge commits: pull requests are merged
+  with **Rebase and merge** or **Squash and merge**. To bring your branch up to
+  date, rebase it on `main` (`git rebase main`) instead of merging `main` into it.
 - The GitHub build runs on a pull request from a fork once the maintainer
   approves it.
 
