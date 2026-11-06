@@ -176,7 +176,9 @@ func versionResource() []byte {
 		str("ProductVersion", appVersionDate()),
 		str("CompanyName", appAuthor),
 		str("LegalCopyright", "Copyright © 2026 "+appAuthor+" - GNU GPL 3.0 or later"),
-		str("Comments", "Checks whether your PC still trusts the eMudhra certificates compromised in October 2026. By "+appAuthor+" - "+appURL+". Reference data: emudhra.we-have-a-problem.com, "+dataSourceURL+" (Apache License 2.0)"),
+		// " | " between the parts, so that the description does not run into the
+		// author's name
+		str("Comments", "Checks whether your PC still trusts the eMudhra certificates compromised in October 2026 | Made by "+appAuthor+" - "+appURL+" | Reference data: emudhra.we-have-a-problem.com, "+dataSourceURL+" (Apache License 2.0)"),
 	)
 	sfi := versionNode("StringFileInfo", 1, nil, 0, table)
 	var tr bytes.Buffer
