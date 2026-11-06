@@ -34,8 +34,9 @@ Then:
 Fixes connect to the internet once you accept the warning, whether or not
 **Allow the online test** is checked:
 
-- an update through a package manager (Scoop, WinGet, Chocolatey, pip or conda)
-  connects to that package manager’s sources, as when you run it yourself;
+- an update through a package manager (Scoop, WinGet, Chocolatey, the Python
+  Install Manager, pip or conda) connects to that package manager’s sources, as
+  when you run it yourself;
 - replacing a certificate bundle downloads Mozilla’s current bundle and its
   SHA-256 checksum from [curl.se](https://curl.se/docs/caextract.html), which
   sees your IP address and the User-Agent of Windows PowerShell, which names its

@@ -162,6 +162,14 @@ needed, the details give the command (`scoop update â€¦`, `winget upgrade --id â
 details explain how to get the update sooner. Windows protects the folders of
 Store apps, so no manual fix is offered for them.
 
+A Python installed with the Python Install Manager (`py install`) is recognized
+by the `__install__.json` in its folder. When the manager is installed, an
+outdated Python 3.14 or later is updated with it
+(`pymanager install --update -y 3.14-64`), which keeps its installed packages.
+python.org publishes no Windows build of the fixed 3.11, 3.12 and 3.13, so for
+these the details suggest installing Python 3.14 beside it. Pythons installed
+otherwise are left to their own updates.
+
 ## Not covered
 
 Linux distributions in WSL, Docker images and virtual machines: they have their

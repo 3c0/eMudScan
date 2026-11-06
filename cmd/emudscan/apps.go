@@ -1396,6 +1396,9 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	case FixUnsupported:
 		update = Tf(unsupportedKey, fx.version, fixedVersionsList("python"))
 	}
+	if rt, ok := pymanagerRuntimeOf(env.home); ok && update != "" && !bundled && pymanagerInstalled() {
+		update = joinParas(update, pymanagerAdvice(rt, fx))
+	}
 	if update != "" {
 		listsLead = T("py.untilThenLists")
 	}
