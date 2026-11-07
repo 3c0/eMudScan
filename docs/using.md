@@ -190,7 +190,7 @@ Once you accept:
 
 1. The updates through Scoop, WinGet, Chocolatey, the Python Install Manager, uv
    and pipx run first; then, for the software that they did not fix, the other
-   fixes.
+   fixes (such as the upgrade of a Python with uv, once uv itself is updated).
 2. The commands that need administrator rights run in a Windows PowerShell for
    which Windows asks your permission, in a window that shows Microsoft as the
    verified publisher. eMudScan itself does not need them.

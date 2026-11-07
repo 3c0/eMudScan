@@ -563,7 +563,7 @@ func fixIntro(f fixAction) string {
 		admin = " " + T("fix.asAdmin")
 	}
 	switch f.Kind {
-	case fixPackage:
+	case fixPackage, fixTool:
 		return Tf("fix.kindPackage", f.Manager, admin)
 	case fixPip:
 		return Tf("fix.kindPip", admin)

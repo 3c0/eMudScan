@@ -26,6 +26,11 @@ type pkgRef struct {
 
 func scoopPage(app string) string { return "https://scoop.sh/#/apps?q=" + url.QueryEscape(app) }
 func wingetPage(id string) string { return "https://winstall.app/apps/" + url.PathEscape(id) }
+
+// wingetUpdate is the command that updates the WinGet package id.
+func wingetUpdate(id string) string {
+	return "winget upgrade --id " + id + " --exact --accept-package-agreements --accept-source-agreements"
+}
 func chocoPage(id string) string {
 	return "https://community.chocolatey.org/packages/" + url.PathEscape(id)
 }
@@ -221,7 +226,7 @@ func (tp *appsContext) packagesOf(it *Item) []pkgRef {
 		if i := strings.Index(id, "_Microsoft.Winget"); i > 0 {
 			id = id[:i]
 		}
-		return []pkgRef{withCommands(pkgRef{"WinGet", id, wingetPage(id), true, "winget upgrade --id " + id + " --exact --accept-package-agreements --accept-source-agreements", "winget upgrade --all"})}
+		return []pkgRef{withCommands(pkgRef{"WinGet", id, wingetPage(id), true, wingetUpdate(id), "winget upgrade --all"})}
 	}
 	key := alnum(it.Program)
 	for _, c := range tp.choco {

@@ -25,6 +25,7 @@ const (
 	fixBundle                 // replaces a certificate bundle with Mozilla's current one
 	fixJava                   // adds the compromised certificates to a Java block list
 	fixRestore                // puts back files that eMudScan's commands backed up (restoreAdvice)
+	fixTool                   // updates with a tool, after the package managers' updates (uv's Python, after uv)
 )
 
 // fixAction is one fix: commands that run together, in Windows PowerShell.

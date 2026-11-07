@@ -196,12 +196,17 @@ A Python installed by uv is recognized by its folder
 (`cpython-3.12.9-windows-x86_64-none`, beside uv’s `.lock`). When it is
 outdated, it is in the folder where uv installs its Pythons (the one that
 `UV_PYTHON_INSTALL_DIR` names, as Scoop sets it, else `%APPDATA%\uv\python`) and
-uv is on the PATH, it is upgraded with uv (`uv python upgrade 3.12`; uv 0.13.6
-or later knows the fixed versions), then removed (`uv python uninstall`), only
-once a fixed version of its release line is installed. The virtual environments
-that uv created for its release line follow the upgrade; those found that use
-the removed copy itself are named, in the details and in the warning before the
-fix runs, so that you can recreate them.
+uv is on the PATH, uv is first updated as it was installed, which eMudScan finds
+from that `uv.exe`: `scoop update uv`, `winget upgrade --id astral-sh.uv …`,
+`choco upgrade uv` (as administrator), `uv self update` (for the standalone
+installer, whose receipt names that folder) or `pipx upgrade uv`. This update
+runs with the other package managers’ updates. Then the Python is upgraded with
+uv (`uv python upgrade 3.12`; uv 0.13.6 or later knows the fixed versions), and
+removed (`uv python uninstall`), only once a fixed version of its release line
+is installed. The virtual environments that uv created for its release line
+follow the upgrade; those found that use the removed copy itself are named, in
+the details and in the warning before the fix runs, so that you can recreate
+them.
 
 Pythons installed otherwise are left to their own updates.
 

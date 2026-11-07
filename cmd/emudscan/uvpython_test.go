@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -108,7 +109,7 @@ func TestUvPythonAdvice(t *testing.T) {
 		"uv python upgrade 3.12",
 		fmt.Sprintf(`if (uv python find --system --managed-python '>=3.12.16,<3.13' 2>$null) { uv python uninstall cpython-3.12.9-windows-x86_64-none } else { Write-Warning %s }`, psQuote(Tf("py.uvKept", "3.12"))),
 	}
-	if len(got.Fixes) != 1 || got.Fixes[0].Kind != fixPackage || got.Fixes[0].Manager != "uv" || got.Fixes[0].Optional ||
+	if len(got.Fixes) != 1 || got.Fixes[0].Kind != fixTool || got.Fixes[0].Manager != "uv" || got.Fixes[0].Optional ||
 		strings.Join(got.Fixes[0].Cmds, "\n") != strings.Join(want, "\n") {
 		t.Errorf("the fix: %+v", got.Fixes)
 	}
@@ -172,5 +173,105 @@ func TestUvPythonScoop(t *testing.T) {
 	f := fixesIn(it.Details)
 	if len(f) != 1 || f[0].Manager != "uv" || strings.Contains(it.Details, "scoop") || len(it.Packages) != 1 || it.Packages[0].Manager != "Scoop" {
 		t.Errorf("%+v %+v\n%s", f, it.Packages, it.Details)
+	}
+}
+
+// uv is updated first, as it was installed, which eMudScan finds from the uv.exe on
+// the PATH: its update runs with the package managers' updates (as administrator for
+// Chocolatey), the Python's upgrade after them. Without a known way, the Python's
+// upgrade alone.
+func TestUvUpdate(t *testing.T) {
+	Lang = 0
+	root := t.TempDir()
+	put := func(p, s string) {
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, []byte(s), 0o644)
+	}
+	home := filepath.Join(root, "home")
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("LOCALAPPDATA", filepath.Join(root, "local"))
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("PIPX_HOME", filepath.Join(root, "pipx"))
+	t.Setenv("PIPX_BIN_DIR", "")
+	t.Setenv("ProgramData", filepath.Join(root, "ProgramData"))
+	winget := filepath.Join(root, "local", "Microsoft", "WinGet", "Packages", "astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe", "uv.exe")
+	put(winget, "MZ")
+	links := filepath.Join(root, "local", "Microsoft", "WinGet", "Links")
+	os.MkdirAll(links, 0o755)
+	if err := os.Symlink(winget, filepath.Join(links, "uv.exe")); err != nil {
+		t.Fatal(err)
+	}
+	choco := filepath.Join(root, "ProgramData", "chocolatey")
+	put(filepath.Join(choco, "bin", "uv.exe"), "MZ")
+	os.MkdirAll(filepath.Join(choco, "lib", "uv"), 0o755)
+	bin := filepath.Join(home, ".local", "bin")
+	put(filepath.Join(bin, "uv.exe"), "MZ")
+	for _, c := range []struct {
+		name, dir string
+		extra     func()
+		manager   string // "" for none
+		command   string
+		admin     bool
+	}{
+		{"Scoop", filepath.Join(home, "scoop", "shims"), func() {
+			put(filepath.Join(home, "scoop", "shims", "uv.exe"), "MZ")
+			put(filepath.Join(home, "scoop", "shims", "uv.shim"), `path = "`+filepath.Join(home, "scoop", "apps", "uv", "current", "uv.exe")+"\"\r\n")
+		}, "Scoop", "scoop update uv", false},
+		{"Scoop for all users", filepath.Join(root, "ProgramData", "scoop", "shims"), func() {
+			put(filepath.Join(root, "ProgramData", "scoop", "shims", "uv.exe"), "MZ")
+			put(filepath.Join(root, "ProgramData", "scoop", "shims", "uv.shim"), `path = "`+filepath.Join(root, "ProgramData", "scoop", "apps", "uv", "current", "uv.exe")+`"`)
+		}, "", "", false},
+		{"WinGet", links, nil, "WinGet", wingetUpdate("astral-sh.uv"), false},
+		{"Chocolatey", filepath.Join(choco, "bin"), nil, "Chocolatey", "choco upgrade uv -y", true},
+		{"pipx", bin, func() { put(filepath.Join(root, "pipx", "venvs", "uv", "pipx_metadata.json"), "{}") }, "pipx", "pipx upgrade uv", false},
+		{"standalone installer", bin, func() {
+			put(filepath.Join(root, "local", "uv", "uv-receipt.json"), `{"install_prefix": `+strconv.Quote(bin)+`, "version": "0.13.6"}`)
+		}, "uv", "uv self update", false},
+		{"a receipt for another uv", bin, func() {
+			os.RemoveAll(filepath.Join(root, "pipx"))
+			put(filepath.Join(root, "local", "uv", "uv-receipt.json"), `{"install_prefix": "C:\\Other\\bin"}`)
+		}, "", "", false},
+	} {
+		if c.extra != nil {
+			c.extra()
+		}
+		t.Setenv("PATH", c.dir)
+		tp := testApps(t)
+		tp.chocoRoot = choco
+		f, ok := tp.uvUpdate()
+		if ok != (c.manager != "") || ok && (f.Kind != fixPackage || f.Manager != c.manager || f.Admin != c.admin || f.Cmds[0] != c.command) {
+			t.Errorf("%s: %v %+v", c.name, ok, f)
+		}
+	}
+
+	// the details and fixes, in their order: uv's update, then the Python's
+	t.Setenv("APPDATA", filepath.Join(root, "AppData"))
+	t.Setenv("UV_PYTHON_INSTALL_DIR", "")
+	dir := filepath.Join(root, "AppData", "uv", "python")
+	put(filepath.Join(dir, ".lock"), "")
+	for _, c := range []struct {
+		path, text string
+		first      fixAction
+	}{
+		{filepath.Join(home, "scoop", "shims"), T("py.uvFixUpdate"), fixAction{Kind: fixPackage, Manager: "Scoop", Cmds: []string{"scoop update uv"}}},
+		{filepath.Join(choco, "bin"), "Update with Chocolatey (as administrator):\n$ choco upgrade uv -y\nUpdate with uv:\n$ uv python upgrade 3.12", fixAction{Kind: fixPackage, Manager: "Chocolatey", Admin: true, Cmds: []string{"choco upgrade uv -y"}}},
+	} {
+		py := filepath.Join(dir, "cpython-3.12.9-windows-x86_64-none")
+		fakePython(t, py, false)
+		t.Setenv("PATH", c.path)
+		tp := testApps(t)
+		tp.chocoRoot = choco
+		exe := filepath.Join(py, "python.exe")
+		it := tp.c.begin(GroupApps, "python", "Python", py, func(it *Item) {
+			env := pythonEnvFor(exe)
+			env.version = "3.12.9"
+			tp.pythonOneEnv(it, env)
+		})
+		f := fixesIn(it.Details)
+		if len(f) != 2 || f[0].key() != c.first.key() || f[0].Kind != fixPackage || f[0].Admin != c.first.Admin || f[0].Manager != c.first.Manager ||
+			f[1].Kind != fixTool || f[1].Cmds[0] != "uv python upgrade 3.12" || !strings.Contains(f[1].Cmds[1], psQuote(Tf("py.uvKeptAfter", "3.12"))) ||
+			!strings.Contains(it.Details, c.text) {
+			t.Errorf("%s: %+v\n%s", c.first.Manager, f, it.Details)
+		}
 	}
 }
