@@ -69,6 +69,18 @@ which uv says never to change with pip: its packages are updated with
 folder of your uv (the one that `UV_TOOL_DIR` names, as Scoop sets it, else
 `%APPDATA%\uv\tools`) and uv is on the PATH.
 
+An application that pipx installed has no pip of its own either: its packages
+are updated with `pipx runpip <application> install --upgrade certifi`, run when
+it is in the folder of your pipx (the one that `PIPX_HOME` names, else pipx’s
+own) and pipx is on the PATH. Pipenv, Poetry and uv keep a project’s virtual
+environment as its lock file says (`Pipfile.lock`, `poetry.lock`, `uv.lock`), so
+the project’s next install would bring the old `certifi` back: when the lock
+file of the project (the folder of its `.venv`, or the one that Pipenv links to
+its environment) names the outdated version, the details also give the command
+that updates it there (`pipenv update certifi`, `poetry update certifi`,
+`uv sync --upgrade-package certifi`). eMudScan never runs it, since it changes
+your project.
+
 Certificate bundles are not judged by their version: each one is tested against
 the 12 test chains, so the result shows whether that file would really accept a
 compromised certificate.

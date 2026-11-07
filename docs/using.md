@@ -131,8 +131,8 @@ eMudScan can run for you the commands that the details give to fix a software,
 and no others:
 
 - an update through the package manager that installed the software or its
-  component: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pip or
-  conda;
+  component: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx,
+  pip or conda;
 - an outdated certificate bundle replaced with Mozilla’s current one, which
   PowerShell downloads from curl.se and checks against the SHA-256 checksum that
   curl publishes;
@@ -188,8 +188,9 @@ software to fix and save your work first.
 
 Once you accept:
 
-1. The updates through Scoop, WinGet, Chocolatey, the Python Install Manager and
-   uv run first; then, for the software that they did not fix, the other fixes.
+1. The updates through Scoop, WinGet, Chocolatey, the Python Install Manager, uv
+   and pipx run first; then, for the software that they did not fix, the other
+   fixes.
 2. The commands that need administrator rights run in a Windows PowerShell for
    which Windows asks your permission, in a window that shows Microsoft as the
    verified publisher. eMudScan itself does not need them.

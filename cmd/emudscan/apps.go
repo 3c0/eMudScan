@@ -2526,14 +2526,25 @@ func condaFix(p string) string {
 // update first), or why eMudScan gives none.
 func pipFix(p, py, pkg string, bundled bool, o ownerInfo) string {
 	var command string
-	if env := pythonEnvFor(py); isUvTool(env) { // uv updates it, not pip
+	env := pythonEnvFor(py)
+	lock, locked := lockOf(env, pkg) // the project's lock file keeps that version
+	locked = locked && !bundled
+	if isUvTool(env) { // uv updates it, not pip
 		command = uvToolAdvice(env.home)
+	} else if isPipxApp(env) { // pipx runs pip in it, which it may not have
+		command = pipxAdvice(env.home, pkg)
 	} else if pipRefused(env) {
 		command = T("py.managed")
 	} else if !pipInstalled(env) {
+		if locked { // the project's update is the recommended action
+			return lockAdvice(lock, pkg, false)
+		}
 		command = Tf(map[bool]string{false: "py.noPip", true: "py.noPipEnv"}[env.venv], pkg)
 	} else if why := pipUnsafe(env); why != "" {
 		command = why
+		if locked {
+			return joinParas(why, lockAdvice(lock, pkg, false))
+		}
 	} else {
 		f := newFix(fixAction{Kind: fixPip, Admin: needsAdmin(p), Cmds: []string{pipLine(py, pkg, needsAdmin(p))}})
 		command = psHeader(p) + "\n" + f.lines()
@@ -2543,6 +2554,9 @@ func pipFix(p, py, pkg string, bundled bool, o ownerInfo) string {
 	}
 	if bundled {
 		return joinParas(bundledAdvice(o), command)
+	}
+	if locked {
+		return joinParas(command, lockAdvice(lock, pkg, true))
 	}
 	return command
 }

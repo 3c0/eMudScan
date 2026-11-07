@@ -63,9 +63,12 @@ func winAbs(p string) bool {
 }
 
 // uvOnPath: the uv command, which the fix runs, is in a folder of the PATH.
-func uvOnPath() bool {
+func uvOnPath() bool { return onPath("uv.exe") }
+
+// onPath: the command exe is in a folder of the PATH.
+func onPath(exe string) bool {
 	for _, d := range pathDirs() {
-		if exists(filepath.Join(d, "uv.exe")) {
+		if exists(filepath.Join(d, exe)) {
 			return true
 		}
 	}

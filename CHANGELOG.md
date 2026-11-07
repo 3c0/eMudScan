@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Checks the JetBrains IDEs and Gateway by their version, for their built-in browser, and names the Java runtime of an IDE or of the Toolbox App after it, with the version that fixes it.
 - Updates an outdated Python 3.14 or later installed with the Python Install Manager, with that manager, when it is installed.
 - Upgrades an outdated Python installed by uv with uv, then removes the old copy once a fixed version is installed, naming the virtual environments found that use that copy, also in the warning before the fix runs.
+- For the virtual environment of a Pipenv, Poetry or uv project whose lock file pins the outdated certifi, which the project’s next install would bring back, the details give the command that updates it in the project, which eMudScan never runs.
 
 ### Changed
 
@@ -24,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - No pip command where it cannot work: for a Python or virtual environment where pip is not installed, or for a Python marked as managed by the tool that installed it (EXTERNALLY-MANAGED, as uv does), which pip refuses to change.
 - No Scoop update command for a file in Scoop’s `persist` folder, which Scoop’s updates keep as it is.
 - The packages of a tool that uv installed are updated with `uv tool upgrade`, as uv asks, instead of pip, which uv does not put in its tools.
+- The packages of an application that pipx installed are updated with `pipx runpip`, which works whether or not its environment has pip of its own.
 
 ## [2.0.0] - 2026-11-05
 
