@@ -12,17 +12,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Checks the JetBrains IDEs and Gateway by their version, for their built-in browser, and names the Java runtime of an IDE or of the Toolbox App after it, with the version that fixes it.
 - Updates an outdated Python 3.14 or later installed with the Python Install Manager, with that manager, when it is installed.
 - Upgrades an outdated Python installed by uv with uv, after updating uv itself as it was installed (Scoop, WinGet, Chocolatey, its standalone installer or pipx), then removes the old copy once a fixed version is installed, naming the virtual environments found that use that copy, also in the warning before the fix runs.
+- Can replace the node.exe inside a program with the latest release of its Node.js release line from nodejs.org, once checked (its published SHA-256, its OpenJS Foundation signature and its version), after backing it up: a fix that is not ticked by default, since it changes a program that its publisher has not updated yet.
 - For the virtual environment of a Pipenv, Poetry or uv project whose lock file pins the outdated certifi, which the project’s next install would bring back, the details give the command that updates it in the project, which eMudScan never runs.
 
 ### Changed
 
 - Shorter details for Python: one sentence for the problem, then the recommended action, which names the program a bundled Python belongs to.
 - A finding in several places shows its explanation once, with the commands for each place.
+- “Back up the certificate files”, in the Fix window, is now “Back up the files to change”, since it also covers node.exe.
 - The details no longer suggest updating everything installed with a package manager (`scoop update -a`, `winget upgrade --all`, `choco upgrade all`): eMudScan stays targeted, with the update of the software it found only.
 
 ### Fixed
 
-- The Fix window no longer shows “Back up the certificate files” when no fix to run backs up a file, such as an update with pip.
+- The Fix window no longer shows “Back up the files to change” when no fix to run backs up a file, such as an update with pip.
 - No pip command where it cannot work: for a Python or virtual environment where pip is not installed, or for a Python marked as managed by the tool that installed it (EXTERNALLY-MANAGED, as uv does), which pip refuses to change.
 - No Scoop update command for a file in Scoop’s `persist` folder, which Scoop’s updates keep as it is.
 - The packages of a tool that uv installed are updated with `uv tool upgrade`, as uv asks, instead of pip, which uv does not put in its tools.

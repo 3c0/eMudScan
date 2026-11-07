@@ -35,7 +35,7 @@ func backupThenLine(file, cond, change string, admin bool) string {
 }
 
 // changeLine is the same change without the backup, when cond, if any, is true: what
-// the Fix function runs when "Back up the certificate files" is cleared.
+// the Fix function runs when "Back up the files to change" is cleared.
 func changeLine(cond, change string) string {
 	if cond == "" {
 		return change

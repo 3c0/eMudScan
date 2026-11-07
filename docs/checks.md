@@ -81,6 +81,16 @@ that updates it there (`pipenv update certifi`, `poetry update certifi`,
 `uv sync --upgrade-package certifi`). eMudScan never runs it, since it changes
 your project.
 
+Node.js 22.23.4, 24.22.1 and 26.12.1, and the later releases of these lines, no
+longer trust the compromised intermediates. A node.exe inside another program,
+of one of these release lines, can be replaced with the latest release of its
+line from nodejs.org, the same major version, so that the program’s native
+modules keep working. Before copying it, after backing up the original,
+PowerShell checks its SHA-256 against the `SHASUMS256.txt` that Node.js
+publishes, its signature by the OpenJS Foundation and its version. This fix is
+not ticked by default in the **Fix software** window, since it changes a program
+that its publisher has not updated yet; close that program first.
+
 Certificate bundles are not judged by their version: each one is tested against
 the 12 test chains, so the result shows whether that file would really accept a
 compromised certificate.

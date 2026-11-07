@@ -251,26 +251,32 @@ func ideGet(pi productInfo) string {
 // exeMachine is the processor of a Windows program, from its header: "amd64",
 // "arm64" or "".
 func exeMachine(p string) string {
-	f, err := os.Open(p)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-	var h [6]byte
-	if _, err := f.ReadAt(h[:4], 0x3c); err != nil {
-		return ""
-	}
-	off := int64(binary.LittleEndian.Uint32(h[:4]))
-	if _, err := f.ReadAt(h[:], off); err != nil || string(h[:4]) != "PE\x00\x00" {
-		return ""
-	}
-	switch binary.LittleEndian.Uint16(h[4:]) {
+	switch peMachine(p) {
 	case pe.IMAGE_FILE_MACHINE_AMD64:
 		return "amd64"
 	case pe.IMAGE_FILE_MACHINE_ARM64:
 		return "arm64"
 	}
 	return ""
+}
+
+// peMachine is the processor field of a Windows program's header, 0 when it is not
+// one.
+func peMachine(p string) uint16 {
+	f, err := os.Open(p)
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+	var h [6]byte
+	if _, err := f.ReadAt(h[:4], 0x3c); err != nil {
+		return 0
+	}
+	off := int64(binary.LittleEndian.Uint32(h[:4]))
+	if _, err := f.ReadAt(h[:], off); err != nil || string(h[:4]) != "PE\x00\x00" {
+		return 0
+	}
+	return binary.LittleEndian.Uint16(h[4:])
 }
 
 // downloadChoice is the file to choose on the Toolbox App's page, for the processor of

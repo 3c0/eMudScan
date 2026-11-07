@@ -1531,6 +1531,9 @@ func (tp *appsContext) nodeOne(it *Item, exe string) {
 		fixU = fix
 	}
 	st, fixed := fixStatus("node", v)
+	if bundled && st == FixOutdated && len(v) >= 3 { // until then: nodejs.org's node.exe of its release line
+		fix = joinParas(fix, nodeReplaceAdvice(exe, v[0], fixed, o.Name))
+	}
 	switch st {
 	case FixOK:
 		r.Status, r.Summary, r.Details = StOK, T("node.sumOK"), Tf("node.okDetails", r.Version, fixedVersionsList("node"))

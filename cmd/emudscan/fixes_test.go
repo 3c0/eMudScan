@@ -147,7 +147,7 @@ func TestCondaFix(t *testing.T) {
 	}
 }
 
-// "Back up the certificate files" is shown only for fixes that back up files: not for
+// "Back up the files to change" is shown only for fixes that back up files: not for
 // updates (pip, a package manager), which make no backup.
 func TestBacksUp(t *testing.T) {
 	pip := Item{Fixes: []fixAction{{Kind: fixPip, Cmds: []string{"python -m pip install --upgrade certifi"}}}}

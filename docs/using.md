@@ -136,7 +136,11 @@ and no others:
 - an outdated certificate bundle replaced with Mozilla’s current one, which
   PowerShell downloads from curl.se and checks against the SHA-256 checksum that
   curl publishes;
-- the compromised certificates added to a Java block list.
+- the compromised certificates added to a Java block list;
+- the node.exe inside a program replaced with the latest release of its Node.js
+  release line, which PowerShell downloads from nodejs.org and checks against
+  the SHA-256 checksum that Node.js publishes, the OpenJS Foundation’s signature
+  and its version; this fix is not ticked by default.
 
 The other commands of the details, such as removing a setting, are left for you
 to run; restoring a backup has its own button (see
@@ -160,8 +164,8 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   their comments, as in the details window; after the fixes, it copies their
   results. You can also select part of the text and copy it (Ctrl+C, or
   right-click).
-- **Back up the certificate files**, **Fix the selected software**, **Stop**
-  and **Close**.
+- **Back up the files to change**, **Fix the selected software**, **Stop** and
+  **Close**.
 
 <p align="center">
   <img src="images/fix-window.png" width="860" alt="The Fix software window: the software that eMudScan can fix, Inkscape ticked, and the PowerShell commands that replace its outdated certificate bundle">
@@ -170,11 +174,11 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
 **Fix this software**, in the details window, opens the same window for that
 software alone, without the list; its button is **Run the fix now**.
 
-**Back up the certificate files**, ticked by default, backs up each certificate
-bundle and Java block list before it is replaced or changed, next to the
-original, as the details window does (see above). It does not cover the updates
-made by package managers or pip, so it is shown only when a fix to run backs up a
-file.
+**Back up the files to change**, ticked by default, backs up each file before it
+is replaced or changed (a certificate bundle, a Java block list, a node.exe),
+next to the original, as the details window does (see above). It does not cover
+the updates made by package managers or pip, so it is shown only when a fix to
+run backs up a file.
 
 Nothing runs until you accept a warning, which says what the commands do: they
 update software and replace files; package managers will not ask you anything,

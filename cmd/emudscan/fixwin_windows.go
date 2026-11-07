@@ -3,7 +3,7 @@
 package main
 
 // The Fix window: the PowerShell commands that will run, in a console drawn as a
-// PowerShell window, "Back up the certificate files", and a button that runs them once the
+// PowerShell window, "Back up the files to change", and a button that runs them once the
 // user accepts a warning; the console then shows what they do.
 //
 // Opened from the details of a software ("Run the fix now"), it fixes that software
@@ -490,7 +490,7 @@ func (d *fixDlg) preview(a *ui) {
 	items := a.fixItems(d.targets())
 	d.titles = fixTitles(items)
 	lines := fixPreview(items, d.backup())
-	// "Back up the certificate files" only when a fix backs up files
+	// "Back up the files to change" only when a fix backs up files
 	show := uintptr(0) // SW_HIDE
 	if backsUp(items) {
 		show = 5 // SW_SHOW

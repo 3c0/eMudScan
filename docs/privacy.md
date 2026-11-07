@@ -16,9 +16,10 @@ Then:
   temporary folder (`%TEMP%\eMudScan-fix-…`), from which Windows PowerShell runs
   them; eMudScan deletes that folder once they have run;
 - the commands change only what they show: they update software through its
-  package manager, replace certificate bundles, and add the compromised
-  certificates to Java block lists, after backing up the files they replace,
-  next to them, unless you clear **Back up the certificate files**;
+  package manager, replace certificate bundles and the node.exe of programs, and
+  add the compromised certificates to Java block lists, after backing up the
+  files they replace, next to them, unless you clear **Back up the files to
+  change**;
 - **Restore the backup**, in the details window of a fixed software, moves these
   backups back in place of their files, once you accept its warning; a file that
   needs administrator rights is moved by the command of the details, in a Windows
@@ -41,7 +42,10 @@ Fixes connect to the internet once you accept the warning, whether or not
 - replacing a certificate bundle downloads Mozilla’s current bundle and its
   SHA-256 checksum from [curl.se](https://curl.se/docs/caextract.html), which
   sees your IP address and the User-Agent of Windows PowerShell, which names its
-  version, your Windows version and your language.
+  version, your Windows version and your language;
+- replacing a node.exe downloads the list of Node.js releases, the SHA-256
+  checksums of the chosen release and its node.exe from
+  [nodejs.org](https://nodejs.org/dist/), which sees the same.
 
 Adding the compromised certificates to a Java block list connects to nothing.
 

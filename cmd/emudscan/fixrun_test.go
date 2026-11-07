@@ -12,7 +12,7 @@ import (
 )
 
 // The script runs each command between markers in the log, in the order of the
-// fixes; the commands without backups when "Back up the certificate files" is cleared. It
+// fixes; the commands without backups when "Back up the files to change" is cleared. It
 // shows errors by their message. The
 // command that starts it holds its SHA-256, and PowerShell receives it in UTF-16.
 func TestFixScript(t *testing.T) {

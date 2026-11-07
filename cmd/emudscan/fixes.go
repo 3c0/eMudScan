@@ -26,6 +26,7 @@ const (
 	fixJava                   // adds the compromised certificates to a Java block list
 	fixRestore                // puts back files that eMudScan's commands backed up (restoreAdvice)
 	fixTool                   // updates with a tool, after the package managers' updates (uv's Python, after uv)
+	fixNode                   // replaces a node.exe inside a program with nodejs.org's of its release line
 )
 
 // fixAction is one fix: commands that run together, in Windows PowerShell.
@@ -67,7 +68,7 @@ func tickedFirst(items []Item) bool {
 }
 
 // backsUp tells whether a fix of these elements backs up files (fixAction.Plain), the
-// only ones that "Back up the certificate files" changes: the Fix window shows that
+// only ones that "Back up the files to change" changes: the Fix window shows that
 // box for them alone.
 func backsUp(items []Item) bool {
 	for _, it := range items {

@@ -65,9 +65,10 @@ The details window explains why, says what to update, and provides the commands 
 
 - an update through the package manager that installed the software: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx, pip or conda;
 - Mozilla’s current certificate bundle in place of an outdated one, downloaded from curl.se and checked against its SHA-256 checksum;
-- the compromised certificates added to a Java block list.
+- the compromised certificates added to a Java block list;
+- the node.exe inside a program replaced with the latest release of its Node.js release line, downloaded from nodejs.org and checked (SHA-256, OpenJS Foundation signature, version), not ticked by default.
 
-Nothing runs until you accept a warning, and for the commands that need administrator rights, such as replacing a file in Program Files, Windows also asks your permission. The certificate files are backed up before they are replaced, each software is then checked again, and a report is saved in your Downloads folder. Once a software is fixed, **Restore the backup**, in its details window, puts its files back as they were. See [Fixing software](docs/using.md#fixing-software).
+Nothing runs until you accept a warning, and for the commands that need administrator rights, such as replacing a file in Program Files, Windows also asks your permission. The files are backed up before they are replaced or changed, each software is then checked again, and a report is saved in your Downloads folder. Once a software is fixed, **Restore the backup**, in its details window, puts its files back as they were. See [Fixing software](docs/using.md#fixing-software).
 
 <p align="center">
   <img src="docs/images/fix-window.png" width="860" alt="The Fix software window: the software that eMudScan can fix, Inkscape ticked, and the PowerShell commands that replace its outdated certificate bundle">

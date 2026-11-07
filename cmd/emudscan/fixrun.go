@@ -125,7 +125,7 @@ type fixRunner struct {
 	out       func(fixLine)             // the console
 	fixed     func(id int)              // an element is fixed: the window unselects it
 	simulated func(id int)              // simulation only: shows an element as fixed, or restored
-	backup    bool                      // "Back up the certificate files"
+	backup    bool                      // "Back up the files to change"
 	titles    map[int]string            // the titles of the elements, for the console (fixTitles)
 	fixedAny  bool                      // a software is fixed, or restored: it is to be restarted if it was open
 	restoring bool                      // it restores backups (restore), instead of fixing
@@ -571,6 +571,8 @@ func fixIntro(f fixAction) string {
 		return Tf("fix.kindConda", admin)
 	case fixJava:
 		return Tf("fix.kindJava", admin)
+	case fixNode:
+		return Tf("fix.kindNode", admin)
 	}
 	return Tf("fix.kindBundle", admin)
 }
