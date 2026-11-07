@@ -7,8 +7,9 @@ package main
 // user accepts a warning; the console then shows what they do.
 //
 // Opened from the details of a software ("Run the fix now"), it fixes that software
-// (and its copies, when the details show several); it stays above the details, which
-// are shown again, checked anew, when it closes.
+// (and its copies, when the details show several), without Stop: its commands always
+// run to their end; it stays above the details, which are shown again, checked anew,
+// when it closes.
 //
 // Opened from the main window ("Fix the selected software"), it lists every software
 // that can be fixed, with its vulnerable component, each with a check box, ticked
@@ -496,10 +497,12 @@ func (a *ui) newFixWindow(d *fixDlg, w, h int) bool {
 	send(d.bBackup, bmSetCheck, 1, 0)
 	addTool(a.newTooltip(d.hwnd), d.hwnd, d.bBackup, nil, T("tip.fixBackup")) // what it backs up, and what not
 	d.bFix = a.iconButton(d.hwnd, d.runText, idFixRun, false, glyphFirstAid)
-	d.bStop = a.iconButton(d.hwnd, T("btn.stop"), idFixStop, false, glyphStop)
+	if d.ids == nil { // the Fix software window: Stop skips the software not reached yet
+		d.bStop = a.iconButton(d.hwnd, T("btn.stop"), idFixStop, false, glyphStop)
+		pEnableWindow.Call(d.bStop, 0)
+	}
 	// Close is the default: Enter never starts the fixes, only a click on the button
 	d.bClose = a.iconButton(d.hwnd, T("dlg.close"), idFixClose, true, glyphClose)
-	pEnableWindow.Call(d.bStop, 0)
 	return true
 }
 
@@ -691,6 +694,9 @@ func (d *fixDlg) layout(a *ui) {
 	a.move(d.bBackup, m, y, a.textWidth(a.fontUI, T("fix.backup"))+s(40), bh)
 	x := rc.Right - m
 	for _, b := range []uintptr{d.bClose, d.bStop, d.bFix} {
+		if b == 0 { // no Stop in the window of the details
+			continue
+		}
 		bw := max(s(120), a.textWidth(a.fontUI, getText(b))+s(16)+s(44))
 		x -= bw
 		a.move(b, x, y, bw, bh)
@@ -764,8 +770,12 @@ func (d *fixDlg) run(a *ui) {
 			pEnableWindow.Call(h, 0)
 		}
 	}
-	pEnableWindow.Call(d.bStop, 1)
-	pSetFocus.Call(d.bStop)
+	if d.bStop != 0 {
+		pEnableWindow.Call(d.bStop, 1)
+		pSetFocus.Call(d.bStop)
+	} else {
+		pSetFocus.Call(d.console.hwnd)
+	}
 	setText(d.title, T("fix.resultsTitle"))
 	d.clear()
 	d.results = true
@@ -834,7 +844,9 @@ func (a *ui) fixEvent(e uiEvent) {
 				pEnableWindow.Call(h, 1)
 			}
 		}
-		pEnableWindow.Call(d.bStop, 0)
+		if d.bStop != 0 {
+			pEnableWindow.Call(d.bStop, 0)
+		}
 		pEnableWindow.Call(d.bFix, boolArg(len(d.selected(a)) > 0)) // what is left to fix
 		pSetFocus.Call(d.bClose)
 		if d.list != 0 {
@@ -1141,9 +1153,11 @@ func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			}
 			return 0
 		case wmClose:
-			if d.running { // Stop first: the window closes once the fixes have stopped
-				d.stop.Store(true)
-				pEnableWindow.Call(d.bStop, 0)
+			if d.running { // the Fix software window stops first; that of the details waits for the end of its commands
+				if d.bStop != 0 {
+					d.stop.Store(true)
+					pEnableWindow.Call(d.bStop, 0)
+				}
 				return 0
 			}
 			a.closeFix()

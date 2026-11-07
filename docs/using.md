@@ -179,7 +179,8 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
 </p>
 
 **Fix this software**, in the details window, opens the same window for that
-software alone, without the list; its button is **Run the fix now**.
+software alone, without the list and without **Stop**, since the commands of a
+software always run to their end; its button is **Run the fix now**.
 
 **Back up the files to change**, ticked by default, backs up each file before it
 is replaced or changed (a certificate bundle, a Java block list, a node.exe, the
