@@ -25,7 +25,7 @@ const (
 // d, then restores them in the background; the details are disabled until it ends
 // (restoreEvent).
 func (a *ui) restoreBackups(d *detailsDlg) {
-	if a.restoring || a.fix != nil || a.current == nil || a.running {
+	if a.restoring || a.fixBusy() || a.current == nil || a.running {
 		return
 	}
 	ids := d.item.memberIDs()

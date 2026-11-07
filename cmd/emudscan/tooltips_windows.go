@@ -143,7 +143,7 @@ func (a *ui) cellTipText(list uintptr, row, col int32) (string, rect) {
 		case 2:
 			full = it.Summary
 		}
-	} else if d := a.fix; d != nil && list == d.list { // the list of the Fix window
+	} else if d := a.fixDlgOfList(list); d != nil { // the list of the Fix window
 		full, isPath = d.cellTip(int(row), int(col))
 	} else {
 		full = appCell(it, int(col))

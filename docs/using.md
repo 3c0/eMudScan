@@ -164,8 +164,10 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   files of its Python), a heavier change: tick them yourself, or click
   **Select All**. A software that has such a fix and others has a row for
   each, so that the others stay ticked. A software found in several places has
-  a row for each. Click a location to show it in File Explorer. Drag the bar
-  below the list to make it taller or shorter, down to a single row.
+  a row for each. Click a location to show it in File Explorer. Double-click a
+  software to open its details, where you can also fix it, or restore its
+  backup: the list is updated when they close. Drag the bar below the list to
+  make it taller or shorter, down to a single row.
 - The PowerShell commands that will run for the ticked software, or for the
   software you click. The button in their top right corner copies them, with
   their comments, as in the details window; after the fixes, it copies their

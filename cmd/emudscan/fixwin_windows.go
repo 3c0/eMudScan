@@ -156,16 +156,99 @@ func (a *ui) updateFixButton() {
 	}
 }
 
-// openFix opens the Fix window for the element it (with its copies), above owner.
+// openFix opens the Fix window for the element it (with its copies), above owner: the
+// details, opened from the main window or from the Fix software window, which then
+// waits under them (fixUnder).
 func (a *ui) openFix(owner uintptr, it Item) {
-	if a.fix != nil || a.current == nil {
+	if a.fixBusy() || a.current == nil {
 		return
 	}
 	d := &fixDlg{owner: owner, ids: it.memberIDs(), label: Tf("fix.title", itemTitle(it)), runText: T("fix.run"), question: T("fix.confirm")}
-	if len(a.fixItems(d.ids)) == 0 || !a.newFixWindow(d, 860, 600) {
+	if len(a.fixItems(d.ids)) == 0 {
+		return
+	}
+	a.fixUnder = a.fix
+	if !a.newFixWindow(d, 860, 600) {
+		a.fix, a.fixUnder = a.fixUnder, nil
 		return
 	}
 	a.showFix(d)
+}
+
+// fixBusy: a Fix window is open, other than the Fix software window under the details
+// it opened, from which the software can be fixed, or restored, as from the main window.
+func (a *ui) fixBusy() bool {
+	return a.fix != nil && (a.dlgOwner == 0 || a.fix.hwnd != a.dlgOwner || a.fix.running || a.fixUnder != nil)
+}
+
+// fixDlgOf is the Fix window hwnd, in front or under the details (fixUnder).
+func (a *ui) fixDlgOf(hwnd uintptr) *fixDlg {
+	for _, d := range []*fixDlg{a.fix, a.fixUnder} {
+		if d != nil && d.hwnd == hwnd {
+			return d
+		}
+	}
+	return nil
+}
+
+// fixDlgOfList is the Fix software window whose list is list.
+func (a *ui) fixDlgOfList(list uintptr) *fixDlg {
+	for _, d := range []*fixDlg{a.fix, a.fixUnder} {
+		if d != nil && list != 0 && d.list == list {
+			return d
+		}
+	}
+	return nil
+}
+
+// openFixDetails opens the details of the software of a row of the list, above the Fix
+// software window, which waits under them: the software can be fixed there too, and
+// the list follows once they close (rowsAgain).
+func (a *ui) openFixDetails(d *fixDlg, row int) {
+	if row < 0 || row >= len(d.rows) || a.dlg != nil || d.running || d.asking {
+		return
+	}
+	it, ok := a.itemFor(d.rows[row].ID)
+	if !ok {
+		return
+	}
+	a.dlgOwner = d.hwnd
+	a.openDetails(it)
+	if a.dlg == nil {
+		a.dlgOwner = 0
+	}
+}
+
+// rowsAgain shows each row of the list as its software is now, once the details that
+// the list opened are closed: fixed there, it loses its check box, as after a run;
+// restored there, it gets it back, unticked; its fixes, and the commands, follow.
+func (d *fixDlg) rowsAgain(a *ui) {
+	d.updating = true
+	setCell := func(row, col int, text string) {
+		sub := lvItem{SubItem: int32(col), Text: u16(text)}
+		send(d.list, lvmSetItemTextW, uintptr(row), uintptr(unsafe.Pointer(&sub)))
+	}
+	for i, row := range d.rows {
+		it, ok := a.items[row.ID]
+		if !ok {
+			continue
+		}
+		items := d.rowItems(a, i)
+		switch {
+		case len(items) == 0 && d.hasBox(i):
+			d.done(i)
+			setCell(i, 4, T("fix.resultFixed"))
+		case len(items) > 0 && !d.hasBox(i):
+			d.check(i, false)
+			setCell(i, 4, "")
+		}
+		if len(items) > 0 {
+			setCell(i, 2, fixSummary(items))
+		}
+		a.setRow(d.list, i, it, []string{fixSoftware(it)}, false) // its status icon
+	}
+	d.updating = false
+	d.preview(a)
 }
 
 // openFixAll opens the Fix window for all the software that can be fixed.
@@ -336,8 +419,8 @@ func (a *ui) fixListDraw(d *fixDlg, cd *nmLVCustomDraw) uintptr {
 // have (listSubclass): a click on a Location shows the file in File Explorer, and the
 // cells have tooltips.
 func fixListSubclass(hwnd uintptr, msg uint32, wParam, lParam, id, ref uintptr) uintptr {
-	a, d := g, g.fix
-	if d != nil && d.list == hwnd {
+	a, d := g, g.fixDlgOfList(hwnd)
+	if d != nil {
 		switch msg {
 		case wmMouseMove:
 			a.updateCellTip(hwnd, point{xParam(lParam), yParam(lParam)})
@@ -1035,7 +1118,7 @@ func (a *ui) closeFix() {
 	delete(cellTips, d.list) // its tooltip goes with it
 	pDestroyWindow.Call(d.hwnd)
 	pDeleteObject.Call(d.font)
-	a.fix = nil
+	a.fix, a.fixUnder = a.fixUnder, nil // back to the Fix software window, when the details opened from it opened this one
 	if d.ran {
 		a.refreshDetails() // the details as the fixes left the software
 	}
@@ -1044,8 +1127,7 @@ func (a *ui) closeFix() {
 
 func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	a := g
-	d := a.fix
-	if d != nil && d.hwnd == hwnd {
+	if d := a.fixDlgOf(hwnd); d != nil {
 		switch msg {
 		case wmSize:
 			d.layout(a)
@@ -1109,6 +1191,15 @@ func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 				return a.fixListDraw(d, (*nmLVCustomDraw)(ptr(lParam)))
 			}
 			nm := (*nmListViewState)(ptr(lParam))
+			// a double-click on a software, except on its Location (a link) or its check box: its details
+			if nm.Hdr.HwndFrom == d.list && nm.Hdr.Code == -3 /* NM_DBLCLK, NMITEMACTIVATE */ && !d.running && !d.asking {
+				ht := lvHitTestInfo{Pt: nm.Pt}
+				if int32(send(d.list, lvmSubItemHitTest, 0, uintptr(unsafe.Pointer(&ht)))) >= 0 && ht.Item >= 0 &&
+					ht.SubItem != fixColPlace && ht.Flags&0x8 /* LVHT_ONITEMSTATEICON */ == 0 {
+					a.openFixDetails(d, int(ht.Item))
+				}
+				return 0
+			}
 			if nm.Hdr.HwndFrom == d.list && nm.Hdr.Code == -100 /* LVN_ITEMCHANGING */ && nm.Flags&0x8 /* LVIF_STATE */ != 0 &&
 				nm.OldState&0xF000 == 0 && nm.NewState&0xF000 != 0 && !d.updating {
 				return 1 // a fixed row, which has no check box: it cannot be ticked again

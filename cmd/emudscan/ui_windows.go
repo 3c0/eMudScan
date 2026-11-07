@@ -112,6 +112,8 @@ type ui struct {
 	detailQueue []Item
 	dlg         *detailsDlg
 	fix         *fixDlg       // the Fix window, above the details
+	fixUnder    *fixDlg       // the Fix software window, under the details it opened, while their own Fix window is open
+	dlgOwner    uintptr       // the window under the details, disabled while they are open: the Fix software window, or 0 for the main window
 	restoring   bool          // a restore of backups runs, from the details (restoreBackups)
 	dlgFocus    uintptr       // the control that had the focus before the details: it gets it back
 	detailBack  []detailsBack // details left through a link, shown again when closed
@@ -1974,13 +1976,13 @@ func (a *ui) openDetails(it Item) {
 	w := min(a.scale(850), wa.Right-wa.Left-a.scale(40)) // lines short enough to read
 	h := min(a.scale(900), wa.Bottom-wa.Top-a.scale(40))
 	var mr rect
-	pGetWindowRect.Call(a.hwnd, uintptr(unsafe.Pointer(&mr)))
+	pGetWindowRect.Call(a.detailsOwner(), uintptr(unsafe.Pointer(&mr)))
 	x := max(wa.Left, min(mr.Left+(mr.Right-mr.Left-w)/2, wa.Right-w))
 	y := max(wa.Top, min(mr.Top+(mr.Bottom-mr.Top-h)/2, wa.Bottom-h))
 	title := itemTitle(it)
 	inst, _, _ := pGetModuleHandleW.Call(0)
 	d.hwnd, _, _ = pCreateWindowExW.Call(wsExControlParent, up("eMudScanDetails"), up(title+" · "+appName),
-		uintptr(wsOverlappedWindow&^wsMinimizeBox), uintptr(x), uintptr(y), uintptr(w), uintptr(h), a.hwnd, 0, inst, 0)
+		uintptr(wsOverlappedWindow&^wsMinimizeBox), uintptr(x), uintptr(y), uintptr(w), uintptr(h), a.detailsOwner(), 0, inst, 0)
 	if d.hwnd == 0 {
 		a.dlg = nil
 		return
@@ -2008,7 +2010,7 @@ func (a *ui) openDetails(it Item) {
 		pEnableWindow.Call(d.bFolder, 0)
 	}
 	d.layout(a)
-	pEnableWindow.Call(a.hwnd, 0)
+	pEnableWindow.Call(a.detailsOwner(), 0)
 	pShowWindow.Call(d.hwnd, 1)
 	pSetForegroundWindow.Call(d.hwnd) // also when it replaces other details (keys go to it)
 	pSetFocus.Call(d.view.hwnd)
@@ -2097,17 +2099,27 @@ func (d *detailsDlg) layout(a *ui) {
 	pInvalidateRect.Call(d.hwnd, 0, 1)
 }
 
+// detailsOwner is the window under the details: the main window, or the Fix software
+// window that opened them (openFixDetails).
+func (a *ui) detailsOwner() uintptr {
+	if a.dlgOwner != 0 {
+		return a.dlgOwner
+	}
+	return a.hwnd
+}
+
 func (a *ui) closeDetails() {
 	d := a.dlg
 	if d == nil || a.restoring { // the details show how the restore ends
 		return
 	}
-	pEnableWindow.Call(a.hwnd, 1)
-	// the main window comes back to the front, not the window that was active before
-	// it (another program, used while the details were open), and its control gets the
-	// focus back once no other details open
+	owner := a.detailsOwner()
+	pEnableWindow.Call(owner, 1)
+	// the window under the details comes back to the front, not the window that was
+	// active before it (another program, used while the details were open), and its
+	// control gets the focus back once no other details open
 	if fg, _, _ := pGetForegroundWindow.Call(); fg == d.hwnd {
-		pSetForegroundWindow.Call(a.hwnd)
+		pSetForegroundWindow.Call(owner)
 	}
 	defer func() {
 		if a.dlg != nil {
@@ -2115,7 +2127,7 @@ func (a *ui) closeDetails() {
 		}
 		if f := a.dlgFocus; f != 0 {
 			fg, _, _ := pGetForegroundWindow.Call()
-			if ok, _, _ := pIsWindow.Call(f); ok != 0 && fg == a.hwnd {
+			if ok, _, _ := pIsWindow.Call(f); ok != 0 && fg == owner {
 				pSetFocus.Call(f)
 			}
 		}
@@ -2139,6 +2151,12 @@ func (a *ui) closeDetails() {
 		return
 	}
 	a.nextDetails()
+	if a.dlg == nil && !a.navigating && a.dlgOwner != 0 { // back to the Fix software window
+		a.dlgOwner = 0
+		if f := a.fix; f != nil && f.hwnd == owner {
+			f.rowsAgain(a)
+		}
+	}
 }
 
 // detailsBack is a details window to show again.
