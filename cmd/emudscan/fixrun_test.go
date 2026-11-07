@@ -31,7 +31,11 @@ func TestFixScript(t *testing.T) {
 			want = "if ($a) { write }"
 		}
 		for _, w := range []string{"##emudscan-0123 cmd 0 0", "\nscoop update app\n", "##emudscan-0123 cmd 1 1", "\n" + want + "\n", "##emudscan-0123 end 1 1 ",
-			psQuote(`C:\Users\me\AppData\Local\Temp\x’y\fix.log`), "ErrorRecord]) { $_.ToString() }", "catch { $emudscanOut = $_.ToString() }"} {
+			psQuote(`C:\Users\me\AppData\Local\Temp\x’y\fix.log`), "ErrorRecord]) { $_.ToString() }",
+			// the errors (but a program's error output) and the warnings, marked for the console
+			"-notlike 'NativeCommandError*') { (($_.ToString()) -split \"`r?`n\" | ForEach-Object { '##emudscan-0123! ' + $_ }) -join \"`n\" }",
+			"WarningRecord]) { (($_.Message) -split \"`r?`n\" | ForEach-Object { '##emudscan-0123? ' + $_ }) -join \"`n\" }",
+			"catch { $emudscanOut = (($_.ToString()) -split \"`r?`n\" | ForEach-Object { '##emudscan-0123! ' + $_ }) -join \"`n\" }"} {
 			if !strings.Contains(s, w) {
 				t.Errorf("backup %v: no %q in\n%s", backup, w, s)
 			}
@@ -60,8 +64,9 @@ func TestFixScript(t *testing.T) {
 }
 
 // The console shows each command, its result, then what it wrote (which the script
-// writes once the command has ended), as the log grows, even when a line arrives in
-// pieces. Only the markers of this run count: an output
+// writes once the command has ended), its warnings and its errors, then its exit code
+// when it failed, as the log grows, even when a line arrives in pieces. Only the
+// markers of this run count: an output
 // that looks like one is shown as it is. As administrator, where the commands of
 // several software run together, each software is named before its commands (all
 // those of a fix that they share), after a blank line below those of the one before.
@@ -69,8 +74,8 @@ func TestFixLog(t *testing.T) {
 	Lang = 0
 	units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, cmds: []string{"$a = 1", "write"}}, {ids: []int{2, 4}, titles: []string{"B", "B › D"}, cmds: []string{"scoop update app"}},
 		{ids: []int{3}, titles: []string{"C"}, cmds: []string{"never"}}}
-	log := "##m cmd 0 0\n\n##m end 0 0 0 0\n##m cmd 0 1\nwritten\n##m end 0 1 0 0\n" +
-		"##m cmd 1 0\nUpdating app\n##other cmd 2 0\n##m end 1 0 1 2\n##m cmd 9 0\n##m end 1"
+	log := "##m cmd 0 0\n\n##m end 0 0 0 0\n##m cmd 0 1\nwritten\n##m? careful\n##m end 0 1 0 0\n" +
+		"##m cmd 1 0\nUpdating app\n##other cmd 2 0\n##m! It broke\n##m end 1 0 1 2\n##m cmd 9 0\n##m end 1"
 	for _, titles := range []bool{false, true} {
 		var console []fixLine
 		l := newFixLog(units, "##m", func(s fixLine) { console = append(console, s) }, titles)
@@ -78,14 +83,14 @@ func TestFixLog(t *testing.T) {
 			l.write(log[i:min(i+7, len(log))])
 		}
 		l.close()
-		done, failed := "✓ Done", "✗ Failed (exit code 2)"
+		done, exit := "", "Exit code 2"
 		if fixSimulation {
-			done, failed = "✓ Done (simulated)", "✗ Failed (simulated)"
+			done, exit = "Done (simulated)", "Failed (simulated)"
 		}
-		want := []fixLine{{lineCommand, "$a = 1"}, {lineOK, done}, {lineCommand, "write"}, {lineOK, done}, {lineOutput, "written"},
-			{lineCommand, "scoop update app"}, {lineFailed, failed}, {lineOutput, "Updating app"}, {lineOutput, "##other cmd 2 0"}}
+		want := []fixLine{{lineCommand, "$a = 1"}, {lineOK, done}, {lineCommand, "write"}, {lineOK, done}, {lineOutput, "written"}, {lineWarning, "WARNING: careful"},
+			{lineCommand, "scoop update app"}, {lineFailed, ""}, {lineOutput, "Updating app"}, {lineOutput, "##other cmd 2 0"}, {lineCmdError, "It broke"}, {lineCmdError, exit}}
 		if titles {
-			want = append(append([]fixLine{{lineSoftware, "A"}}, want[:5]...), append([]fixLine{{lineNote, ""}, {lineSoftware, "B"}, {lineSoftware, "B › D"}}, want[5:]...)...)
+			want = append(append([]fixLine{{lineSoftware, "A"}}, want[:6]...), append([]fixLine{{lineNote, ""}, {lineSoftware, "B"}, {lineSoftware, "B › D"}}, want[6:]...)...)
 		}
 		if fmt.Sprint(console) != fmt.Sprint(want) {
 			t.Errorf("titles %v, console:\n%s", titles, strings.Join(plainLines(console), "\n"))
@@ -308,13 +313,13 @@ func TestFixRestore(t *testing.T) {
 // went wrong, and what the failed commands showed, not what the others did.
 func TestRestoreOutcome(t *testing.T) {
 	Lang = 0
-	done := []fixLine{{lineSoftware, "A"}, {lineCommand, "move a"}, {lineOK, "✓ Done"}, {lineOutput, "moved"}, {lineNote, ""},
+	done := []fixLine{{lineSoftware, "A"}, {lineCommand, "move a"}, {lineOK, ""}, {lineOutput, "moved"}, {lineNote, ""},
 		{lineNote, T("fix.checking")}, {lineFixed, Tf("restore.done", "A")}, {lineNote, T("restore.restart")}}
 	if msg, ok := restoreOutcome(done); !ok || msg != Tf("restore.done", "A")+"\n\n"+T("restore.restart") {
 		t.Errorf("done (%v):\n%s", ok, msg)
 	}
-	failed := []fixLine{{lineSoftware, "A"}, {lineCommand, "move a"}, {lineOK, "✓ Done"}, {lineOutput, "moved"},
-		{lineCommand, "move b"}, {lineFailed, "✗ Failed"}, {lineOutput, "Access to the path is denied."}, {lineNote, ""},
+	failed := []fixLine{{lineSoftware, "A"}, {lineCommand, "move a"}, {lineOK, ""}, {lineOutput, "moved"},
+		{lineCommand, "move b"}, {lineFailed, ""}, {lineOutput, "Access to the path is denied."}, {lineNote, ""},
 		{lineNote, T("fix.checking")}, {lineNotFixed, Tf("restore.notDone", "A")}}
 	if msg, ok := restoreOutcome(failed); ok || msg != Tf("restore.notDone", "A")+"\n\nAccess to the path is denied." {
 		t.Errorf("failed (%v):\n%s", ok, msg)
@@ -372,17 +377,17 @@ func TestFixPreview(t *testing.T) {
 — tool › Certificate bundle —
 # C:\t\cacert.pem
 # Update with Scoop:
-  scoop update app
+    scoop update app
 # Then, if the update does not fix tool › Certificate bundle:
 # Replace the certificate bundle with Mozilla’s current one (as administrator):
-  $a = 1
-  backup; write
+    $a = 1
+    backup; write
 
 — Other —
 # C:\o\cacert.pem
 # Replace the certificate bundle with Mozilla’s current one (as administrator):
-  $a = 1
-  backup; write
+    $a = 1
+    backup; write
 `
 	if got != want {
 		t.Errorf("shared update:\n%s", got)
@@ -424,12 +429,13 @@ func TestFixReport(t *testing.T) {
 	if rep := buildReport(c, ""); strings.Contains(rep, "\r\nFixes\r\n") {
 		t.Errorf("a report without fixes has a Fixes section:\n%s", rep)
 	}
-	for _, l := range []fixLine{{lineNote, "2026-11-04 11:05 · Fix A"}, {lineSoftware, "A"}, {lineCommand, "scoop update a"}, {lineOK, "✓ Done"},
-		{lineOutput, "Updating a"}, {lineCommand, "scoop update b"}, {lineFailed, "✗ Failed"}, {lineNote, T("fix.checking")}, {lineFixed, Tf("fix.fixed", "A")}, {lineNote, T("fix.end")}} {
+	for _, l := range []fixLine{{lineNote, "2026-11-04 11:05 · Fix A"}, {lineSoftware, "A"}, {lineCommand, "scoop update a"}, {lineOK, ""},
+		{lineOutput, "Updating a"}, {lineCommand, "scoop update b"}, {lineFailed, ""}, {lineCmdError, "Exit code 1"}, {lineCommand, "never"},
+		{lineNote, T("fix.checking")}, {lineFixed, Tf("fix.fixed", "A")}, {lineNote, T("fix.end")}} {
 		c.recordFix(l)
 	}
 	rep := strings.ReplaceAll(buildReport(c, "log"), "\r\n", "\n")
-	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  scoop update a  ✓ Done\n      Updating a\n  scoop update b  ✗ Failed\nChecking again…\nA: fixed.\nEnd of the fixes.\n\nLog\n"
+	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✓ scoop update a\n      Updating a\n  ✗ scoop update b\n      Exit code 1\n    never\nChecking again…\nA: fixed.\nEnd of the fixes.\n\nLog\n"
 	if !strings.Contains(rep, want) {
 		t.Errorf("report without\n%s\nin\n%s", want, rep)
 	}

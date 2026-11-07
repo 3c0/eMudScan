@@ -149,11 +149,11 @@ Both run the checks and the tests, then write `dist/eMudScan.exe`.
 To test the Fix function without changing anything, `.\scripts\build.ps1 -Simulate`
 (or `./scripts/build.sh --simulate`) writes `dist/eMudScan-simulation.exe`
 instead. It runs Windows PowerShell and asks for administrator rights as usual,
-but runs nothing in place of each command, which then shows “✓ Done
+but runs nothing in place of each command, which then shows ✓ and “Done
 (simulated)”, after a second for each software, as its commands would take some
 time; a software whose commands all succeeded is then shown as fixed. A command
 that contains the text of the environment variable `EMUDSCAN_SIMULATE_FAIL` shows
-“✗ Failed (simulated)” instead. Its window title and
+✗ and “Failed (simulated)” instead. Its window title and
 its report say SIMULATION. The normal build contains none of this: the
 simulation is compiled only with the `simulate` build tag, which the GitHub build
 never sets.

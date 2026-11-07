@@ -210,8 +210,10 @@ Once you accept:
 2. The commands that need administrator rights run in a Windows PowerShell for
    which Windows asks your permission, in a window that shows Microsoft as the
    verified publisher. eMudScan itself does not need them.
-3. The console shows each command with its result at the end of its line
-   (“✓ Done”), then what it showed, and a blank line after the commands of each
+3. The console shows each command in the colors of PowerShell 7, with its
+   result in the column on its left: “…” while it runs, then a green ✓ or a red
+   ✗. Below come what it showed, its warnings in yellow, its errors in red, then
+   its exit code when it failed, and a blank line after the commands of each
    software. **Stop** never stops a command in the middle: Windows PowerShell
    first ends the commands it was given (those of one software, or all those
    that need administrator rights), then a red line says “Fix interrupted!”, and

@@ -249,8 +249,8 @@ func TestMoveBackups(t *testing.T) {
 	if len(res) != 1 || !res[0].ran || res[0].ok {
 		t.Errorf("results: %v", res)
 	}
-	want := "  " + Tf("restore.move", missing+".emudscan-20261031-011500.bak", missing) + "  ✗ " + T("fix.cmdFailed")
-	if !strings.HasPrefix(text, want+"\n") || !strings.Contains(text, "  "+Tf("restore.move", bak, file)+"  ✓ "+T("fix.cmdOK")) {
+	want := "  ✗ " + Tf("restore.move", missing+".emudscan-20261031-011500.bak", missing) + "\n      " // then the error
+	if !strings.HasPrefix(text, want) || !strings.Contains(text, "\n  ✓ "+Tf("restore.move", bak, file)) {
 		t.Errorf("console:\n%s", text)
 	}
 }

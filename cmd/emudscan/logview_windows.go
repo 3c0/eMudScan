@@ -57,6 +57,9 @@ type logLine struct {
 	spans []logSpan
 	rows  [][]logFrag
 	done  bool // ended by a line break
+	// in the left column (marks), on its first row: the result of a command
+	mark      string
+	markColor uint32
 }
 
 type logRowRef struct{ line, row int }
@@ -78,6 +81,7 @@ type logView struct {
 	downPt     point
 	wheel      int32
 	console    bool    // the console of the Fix window: dark
+	marks      bool    // a left column for the results of the commands (setMark)
 	bg         uintptr // its background brush
 	// the copy button of the console, in its top right corner, as the commands of the
 	// details page have: copyText is what it copies, copyTip its tooltip
@@ -138,6 +142,23 @@ func (v *logView) padX() int32 {
 
 func (v *logView) padY() int32 { return g.scale(4) }
 
+// gutter is the width of the left column of marks, if any.
+func (v *logView) gutter() int32 {
+	if v.marks {
+		return g.scale(18)
+	}
+	return 0
+}
+
+// setMark shows mark in color in the left column of a line: ✓ or ✗ once its command
+// has ended, … while it runs, nothing.
+func (v *logView) setMark(line int, mark string, color uint32) {
+	if line >= 0 && line < len(v.lines) {
+		v.lines[line].mark, v.lines[line].markColor = mark, color
+		pInvalidateRect.Call(v.hwnd, 0, 0)
+	}
+}
+
 // logViews are the logs shown, by window: the main window's, and the console of the
 // Fix window.
 var logViews = map[uintptr]*logView{}
@@ -157,7 +178,7 @@ func (a *ui) newLogView(parent uintptr, id int) *logView {
 func (a *ui) newConsoleView(parent uintptr, id int) *logView {
 	h, _, _ := pCreateWindowExW.Call(0, up("eMudScanLog"), 0,
 		uintptr(wsChild|wsVisible|wsVScroll), 0, 0, 10, 10, parent, uintptr(id), 0, 0)
-	v := &logView{hwnd: h, console: true}
+	v := &logView{hwnd: h, console: true, marks: true}
 	v.bg, _, _ = pCreateSolidBrush.Call(consoleBg)
 	logViews[h] = v
 	pSetWindowTheme.Call(h, up("DarkMode_Explorer"), 0) // a dark scroll bar, where Windows has one
@@ -293,7 +314,7 @@ func (v *logView) visibleRows() int {
 // relayout cuts every line again when the width changed.
 func (v *logView) relayout() {
 	w, _ := v.clientSize()
-	w -= 2 * v.padX()
+	w -= 2*v.padX() + v.gutter()
 	if v.copyText != nil { // the lines end before the copy button
 		w -= g.scale(6) + g.scale(28)
 	}
@@ -497,7 +518,7 @@ func (v *logView) offsetAt(pt point) int {
 	if len(row) == 0 {
 		return ln.off
 	}
-	x := pt.X - v.padX()
+	x := pt.X - v.padX() - v.gutter()
 	if x <= row[0].x {
 		return row[0].off
 	}
@@ -573,10 +594,20 @@ func (v *logView) paint() {
 		hlColor, hlText = 15, 18 // COLOR_BTNFACE, COLOR_BTNTEXT: selection of an inactive control
 	}
 	hl, _, _ := pGetSysColorBrush.Call(uintptr(hlColor))
-	px, py := v.padX(), v.padY()
+	px, py := v.padX()+v.gutter(), v.padY()
 	for i := 0; i < v.visibleRows() && v.top+i < len(v.rows); i++ {
 		ref := v.rows[v.top+i]
 		y := py + int32(i)*v.pitch
+		if ln := &v.lines[ref.line]; ref.row == 0 && ln.mark != "" { // the result of its command
+			font := logSymbol + logBold
+			if ln.mark == "…" {
+				font = logMono
+			}
+			s := utf16.Encode([]rune(ln.mark))
+			pSelectObject.Call(dc, v.fonts[font])
+			pSetTextColor.Call(dc, uintptr(ln.markColor))
+			pExtTextOutW.Call(dc, uintptr(v.padX()), uintptr(y+v.ascent-v.ascents[font]), 0, 0, uintptr(unsafe.Pointer(&s[0])), uintptr(len(s)), 0)
+		}
 		for _, f := range v.lines[ref.line].rows[ref.row] {
 			if f.n == 0 {
 				continue

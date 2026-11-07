@@ -56,7 +56,7 @@ type fixDlg struct {
 	console                      *logView
 	lines                        []fixLine      // what the console shows
 	lineAt                       []int          // the line of the console where each starts
-	open                         bool           // the line of a command waits for its result
+	cmdLine                      int            // the line of the console of the command running, or -1
 	results                      bool           // the console shows the results of the commands
 	titles                       map[int]string // the titles of the elements in the console (fixTitles)
 	frame                        rect           // the black frame around the console
@@ -163,7 +163,7 @@ func (a *ui) openFix(owner uintptr, it Item) {
 	if a.fixBusy() || a.current == nil {
 		return
 	}
-	d := &fixDlg{owner: owner, ids: it.memberIDs(), label: Tf("fix.title", itemTitle(it)), runText: T("fix.run"), question: T("fix.confirm")}
+	d := &fixDlg{owner: owner, ids: it.memberIDs(), label: Tf("fix.title", itemTitle(it)), runText: T("fix.run"), question: T("fix.confirm"), cmdLine: -1}
 	if len(a.fixItems(d.ids)) == 0 {
 		return
 	}
@@ -256,7 +256,7 @@ func (a *ui) openFixAll() {
 	if a.fix != nil || a.current == nil || a.running {
 		return
 	}
-	d := &fixDlg{owner: a.hwnd, label: T("fix.allTitle"), runText: T("fix.runAll"), rows: a.fixRows()}
+	d := &fixDlg{owner: a.hwnd, label: T("fix.allTitle"), runText: T("fix.runAll"), rows: a.fixRows(), cmdLine: -1}
 	if len(d.rows) == 0 || !a.newFixWindow(d, 1100, 860) {
 		return
 	}
@@ -635,33 +635,46 @@ func (d *fixDlg) preview(a *ui) {
 // clear empties the console.
 func (d *fixDlg) clear() {
 	d.console.clear()
-	d.lines, d.lineAt, d.open = nil, nil, false
+	d.lines, d.lineAt, d.cmdLine = nil, nil, -1
 }
 
-// show adds a line to the console. While the fixes run, the line of a command stays
-// open until its result, which ends it: "scoop update app  ✓ Done".
+// show adds a line to the console. While the fixes run, the command running has … in
+// the left column, then its result: ✓ or ✗.
 func (d *fixDlg) show(l fixLine) {
-	if d.open {
-		d.open = false
-		if l.kind == lineOK || l.kind == lineFailed {
-			d.lineAt = append(d.lineAt, d.lineAt[len(d.lineAt)-1])
-			d.lines = append(d.lines, l)
-			runs := consoleRuns(l)
-			runs[0].text = "  " + runs[0].text
-			d.console.append(runs, false)
-			return
+	if (l.kind == lineOK || l.kind == lineFailed) && d.cmdLine >= 0 {
+		mark, color := markOK, consoleOK
+		if l.kind == lineFailed {
+			mark, color = markFailed, consoleFailed
 		}
-		d.console.append([]logRun{{text: "\n"}}, false) // no result came: the command's line ends
+		d.console.setMark(d.cmdLine, mark, color)
+		d.lineAt = append(d.lineAt, d.cmdLine)
+		d.lines = append(d.lines, l)
+		d.cmdLine = -1
+		if l.text != "" { // what the simulation did
+			d.lineAt[len(d.lineAt)-1] = d.console.nextLine()
+			d.console.append(consoleRuns(l), false)
+		}
+		return
+	}
+	if d.cmdLine >= 0 { // no result came
+		d.console.setMark(d.cmdLine, "", 0)
+		d.cmdLine = -1
 	}
 	d.lineAt = append(d.lineAt, d.console.nextLine())
 	d.lines = append(d.lines, l)
-	runs := consoleRuns(l)
+	d.console.append(consoleRuns(l), false)
 	if l.kind == lineCommand && d.running {
-		runs[len(runs)-1].text = strings.TrimSuffix(runs[len(runs)-1].text, "\n")
-		d.open = true
+		d.cmdLine = d.lineAt[len(d.lineAt)-1]
+		d.console.setMark(d.cmdLine, "…", rgb(0x76, 0x76, 0x76))
 	}
-	d.console.append(runs, false)
 }
+
+// The colors of the results: those of Monokai, brighter than the green and the red
+// of PowerShell's palette that the commands use.
+var (
+	consoleOK     = rgb(0xA6, 0xE2, 0x2E)
+	consoleFailed = rgb(0xF9, 0x26, 0x72)
+)
 
 // showRow scrolls the console to the commands of a row of the list, or to what they
 // did; it reports whether the console shows them.
@@ -704,8 +717,8 @@ func (d *fixDlg) showNear(row int) {
 
 // consoleRuns is how the console shows a line, in the colors of a PowerShell window:
 // the commands in those of PowerShell 7 (psTokens), what they do as comments, in
-// green; then what the commands show in gray, their results in green or red,
-// eMudScan's messages in cyan. The last run ends the line.
+// green; then what the commands show in gray, their warnings in dark yellow, their
+// errors in red, eMudScan's messages in cyan. The last run ends the line.
 func consoleRuns(l fixLine) []logRun {
 	text, color, bold := l.text, rgb(220, 220, 220), false
 	switch l.kind {
@@ -727,16 +740,16 @@ func consoleRuns(l fixLine) []logRun {
 		text, color, bold = "# "+l.text, rgb(106, 153, 85), true
 	case lineComment:
 		text, color = "# "+l.text, rgb(106, 153, 85)
-	case lineOutput:
+	case lineOutput, lineOK:
 		color = rgb(150, 150, 150)
-	case lineOK:
-		color = rgb(22, 198, 12)
-	case lineFailed, lineError:
-		color = rgb(231, 72, 86)
+	case lineWarning:
+		color = rgb(0xC1, 0x9C, 0x00) // DarkYellow
+	case lineFailed, lineError, lineCmdError:
+		color = consoleFailed
 	case lineFixed:
-		color, bold = rgb(22, 198, 12), true
+		color, bold = consoleOK, true
 	case lineNotFixed:
-		color, bold = rgb(231, 72, 86), true
+		color, bold = consoleFailed, true
 	case lineNote:
 		color = rgb(97, 214, 214)
 	}

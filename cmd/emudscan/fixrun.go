@@ -62,6 +62,8 @@ const (
 	lineError                       // the commands could not run
 	lineFixed                       // a software is fixed
 	lineNotFixed                    // a software is still not fixed
+	lineCmdError                    // an error of a command, or its exit code
+	lineWarning                     // a warning of a command
 )
 
 // fixLine is a line of the console.
@@ -70,30 +72,44 @@ type fixLine struct {
 	text string
 }
 
-// plain is the line as text, for the report: the commands and their results
-// indented under their software, what the commands showed further.
+// The results of a command, in the left column of the console, and before it in the
+// report.
+const (
+	markOK     = "✓"
+	markFailed = "✗"
+)
+
+// plain is the line as text, for the report: the commands indented under their
+// software, what the commands showed further.
 func (l fixLine) plain() string {
 	switch l.kind {
 	case lineSoftware:
 		return Tf("fix.software", l.text)
 	case lineComment:
 		return "# " + l.text
-	case lineCommand, lineOK, lineFailed:
-		return "  " + l.text
-	case lineOutput:
+	case lineCommand:
+		return "    " + l.text
+	case lineOK, lineFailed, lineOutput, lineCmdError, lineWarning:
 		return "      " + l.text
 	}
 	return l.text
 }
 
-// reportLines is lines as text, for the report: the result of a command at the end
-// of its line, as in the console ("  scoop update app  ✓ Done").
+// reportLines is lines as text, for the report: the result of a command before it,
+// as in the console ("  ✓ scoop update app"), then what it showed.
 func reportLines(lines []fixLine) []string {
 	var out []string
 	for i, l := range lines {
-		if (l.kind == lineOK || l.kind == lineFailed) && i > 0 && lines[i-1].kind == lineCommand {
-			out[len(out)-1] += "  " + l.text
+		if l.kind == lineCommand && i+1 < len(lines) && (lines[i+1].kind == lineOK || lines[i+1].kind == lineFailed) {
+			mark := markOK
+			if lines[i+1].kind == lineFailed {
+				mark = markFailed
+			}
+			out = append(out, "  "+mark+" "+l.text)
 			continue
+		}
+		if (l.kind == lineOK || l.kind == lineFailed) && l.text == "" {
+			continue // in the mark before the command
 		}
 		out = append(out, strings.TrimRight(l.plain(), " "))
 	}
@@ -240,7 +256,7 @@ func restoreOutcome(lines []fixLine) (msg string, ok bool) {
 			failed = false
 		case lineFailed:
 			failed = true
-		case lineOutput:
+		case lineOutput, lineCmdError, lineWarning:
 			if failed {
 				why = append(why, l.text)
 			}
@@ -595,7 +611,9 @@ func fixMarker() string {
 }
 
 // fixScript is the PowerShell script that runs units, writing into logPath, for each
-// command, a marker, what it shows, and a marker with its result: failed when it
+// command, a marker, what it shows (its errors after the marker and "!", its warnings
+// after the marker and "?", but the lines that a program writes to its error output,
+// which are part of what it shows), and a marker with its result: failed when it
 // raised an error, other than the lines that a program writes to its error output
 // (which pip, WinGet or Chocolatey do for information), or exited with a code other
 // than 0. An error shows as its message only: PowerShell would show it with the line
@@ -638,7 +656,7 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 			}
 			fmt.Fprintf(&b, "Write-EmudscanLog '%s cmd %d %d'\n", marker, u, c)
 			b.WriteString("$Error.Clear(); $global:LASTEXITCODE = 0\n")
-			fmt.Fprintf(&b, "try { $emudscanOut = . {\n%s\n} *>&1 | ForEach-Object { if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { $_ } } | Out-String -Width 4096 } catch { $emudscanOut = $_.ToString() }\n", command)
+			fmt.Fprintf(&b, "try { $emudscanOut = . {\n%s\n} *>&1 | ForEach-Object { %s } | Out-String -Width 4096 } catch { $emudscanOut = %s }\n", command, fixOutputSort(marker), fixMarkLines(marker+"!", "$_.ToString()"))
 			b.WriteString("$emudscanCode = $global:LASTEXITCODE; if ($null -eq $emudscanCode) { $emudscanCode = 0 }\n")
 			b.WriteString("$emudscanFailed = $emudscanCode -ne 0 -or @($Error | Where-Object { \"$($_.FullyQualifiedErrorId)\" -notlike 'NativeCommandError*' }).Count -gt 0\n")
 			b.WriteString("Write-EmudscanLog (\"$emudscanOut\".TrimEnd())\n")
@@ -647,6 +665,20 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 	}
 	b.WriteString("exit 0\n")
 	return b.String()
+}
+
+// fixOutputSort sorts what a command shows ($_): its errors (as their message), then
+// its warnings, marked for the console; what a program writes to its error output
+// (NativeCommandError) and the rest, as they are.
+func fixOutputSort(marker string) string {
+	return "if ($_ -is [System.Management.Automation.ErrorRecord] -and \"$($_.FullyQualifiedErrorId)\" -notlike 'NativeCommandError*') { " + fixMarkLines(marker+"!", "$_.ToString()") + " } " +
+		"elseif ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } " +
+		"elseif ($_ -is [System.Management.Automation.WarningRecord]) { " + fixMarkLines(marker+"?", "$_.Message") + " } else { $_ }"
+}
+
+// fixMarkLines is the lines of text, each after mark.
+func fixMarkLines(mark, text string) string {
+	return "((" + text + ") -split \"`r?`n\" | ForEach-Object { '" + mark + " ' + $_ }) -join \"`n\""
 }
 
 // fixBootstrap is the command that starts the script: it reads it, and runs it only
@@ -701,8 +733,9 @@ type fixLog struct {
 	titles  bool
 	last    int // the first element of the fix named last, plus 1
 	results []unitResult
-	partial string   // a line not complete yet
-	shown   []string // what the command running showed, given after its result
+	partial string    // a line not complete yet
+	shown   []fixLine // what the command running showed, given after its result
+	errors  bool      // the command running showed an error
 }
 
 func newFixLog(units []fixUnit, marker string, out func(fixLine), titles bool) *fixLog {
@@ -731,19 +764,29 @@ func (l *fixLog) close() {
 // flush gives what the last command showed.
 func (l *fixLog) flush() {
 	for _, s := range l.shown {
-		l.out(fixLine{lineOutput, s})
+		l.out(s)
 	}
 	l.shown = nil
 }
 
 // line takes a line of the log. The script writes what a command showed once it has
-// ended, just before its result: the console gives the result first, at the end of
-// the command's line, then what it showed ("scoop update app  ✓ Done").
+// ended, just before its result: the console gives the result first, in the left
+// column of the command's line, then what it showed, its errors in red, then its exit
+// code, when it is not 0.
 func (l *fixLog) line(s string) {
+	if e, ok := strings.CutPrefix(s, l.marker+"! "); ok {
+		l.shown = append(l.shown, fixLine{lineCmdError, e})
+		l.errors = l.errors || strings.TrimSpace(e) != ""
+		return
+	}
+	if w, ok := strings.CutPrefix(s, l.marker+"? "); ok {
+		l.shown = append(l.shown, fixLine{lineWarning, Tf("fix.warningLine", w)})
+		return
+	}
 	rest, ok := strings.CutPrefix(s, l.marker+" ")
 	if !ok {
 		if strings.TrimSpace(s) != "" {
-			l.shown = append(l.shown, s)
+			l.shown = append(l.shown, fixLine{lineOutput, s})
 		}
 		return
 	}
@@ -773,6 +816,7 @@ func (l *fixLog) line(s string) {
 			}
 		}
 		l.out(fixLine{lineCommand, l.units[u].cmds[c]})
+		l.errors = false
 		if c == 0 {
 			l.results[u] = unitResult{ran: true, ok: true}
 		}
@@ -780,17 +824,22 @@ func (l *fixLog) line(s string) {
 		failed, code := num(3) != 0, num(4)
 		switch {
 		case fixSimulation && !failed:
-			l.out(fixLine{lineOK, "✓ " + simulatedResult(false)})
-		case fixSimulation:
-			l.out(fixLine{lineFailed, "✗ " + simulatedResult(true)})
+			l.out(fixLine{lineOK, simulatedResult(false)})
 		case !failed:
-			l.out(fixLine{lineOK, "✓ " + T("fix.cmdOK")})
-		case code != 0:
-			l.out(fixLine{lineFailed, "✗ " + Tf("fix.cmdFailedCode", code)})
+			l.out(fixLine{lineOK, ""})
 		default:
-			l.out(fixLine{lineFailed, "✗ " + T("fix.cmdFailed")})
+			l.out(fixLine{lineFailed, ""})
 		}
 		l.flush()
+		switch {
+		case !failed:
+		case fixSimulation:
+			l.out(fixLine{lineCmdError, simulatedResult(true)})
+		case code != 0:
+			l.out(fixLine{lineCmdError, Tf("fix.exitCode", code)})
+		case !l.errors: // failed, with nothing to say why
+			l.out(fixLine{lineCmdError, T("fix.cmdFailed")})
+		}
 		l.results[u].ok = l.results[u].ok && !failed
 	}
 }

@@ -118,7 +118,7 @@ func moveBackups(units []fixUnit, out func(fixLine)) []unitResult {
 				out(fixLine{lineCommand, Tf("restore.move", shownPath(u.fix.From[j]), shownPath(file))})
 			}
 			if fixSimulation {
-				out(fixLine{lineOK, "✓ " + simulatedResult(false)})
+				out(fixLine{lineOK, simulatedResult(false)})
 				continue
 			}
 			if removing { // a file that the fix added, and its mark
@@ -127,21 +127,21 @@ func moveBackups(units []fixUnit, out func(fixLine)) []unitResult {
 					err = os.Remove(u.fix.From[j])
 				}
 				if err != nil {
-					out(fixLine{lineFailed, "✗ " + T("fix.cmdFailed")})
-					out(fixLine{lineOutput, err.Error()})
+					out(fixLine{lineFailed, ""})
+					out(fixLine{lineCmdError, err.Error()})
 					res[i].ok = false
 					continue
 				}
-				out(fixLine{lineOK, "✓ " + T("fix.cmdOK")})
+				out(fixLine{lineOK, ""})
 				continue
 			}
 			if err := os.Rename(u.fix.From[j], file); err != nil { // MoveFileEx, replacing the file
-				out(fixLine{lineFailed, "✗ " + T("fix.cmdFailed")})
-				out(fixLine{lineOutput, err.Error()})
+				out(fixLine{lineFailed, ""})
+				out(fixLine{lineCmdError, err.Error()})
 				res[i].ok = false
 				continue
 			}
-			out(fixLine{lineOK, "✓ " + T("fix.cmdOK")})
+			out(fixLine{lineOK, ""})
 		}
 	}
 	return res
