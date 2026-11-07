@@ -65,8 +65,13 @@ Anyone can verify a copy with
 Download `eMudScan.exe` from the draft and scan it with
 [Jotti’s malware scan](https://virusscan.jotti.org/en-US). In the draft, replace
 the comment under the first paragraph with the line that it gives, completed
-with the number of antivirus engines and the link to the results, so that the
-release page shows that the exe was tested clean on the release date.
+with the date of the scan, the number of antivirus engines and the link to the
+results, so that the release page shows that the exe was tested clean.
+
+Antivirus engines update their detections all the time: scan the exe again a day
+or more after the release, then edit the notes of the published release with the
+new date and link. GitHub allows editing the notes of a published release, even
+an immutable one.
 
 Check the draft, then click **Publish release**. GitHub adds the source code to
 the release, as the GPL requires. Publish only a draft that is right: releases
