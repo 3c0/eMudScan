@@ -5,7 +5,7 @@
 <h1 align="center">eMudScan</h1>
 
 <p align="center">
-  In October 2026, the private keys of eight eMudhra intermediate certificate authorities turned out to be compromised: they had been generated incorrectly, so anyone can derive them and impersonate any website or service to software that still trusts them. Windows, browsers and many programs have since stopped trusting them, but not all, and not on every PC: see <a href="https://emudhra.we-have-a-problem.com/">this advisory</a>.
+  In October 2026, the private keys of eight eMudhra intermediate certificate authorities were found to be compromised. With them, anyone can impersonate any website to software that still trusts them. Windows, browsers and many programs no longer trust them, but not all, and not on every PC. Details: <a href="https://emudhra.we-have-a-problem.com/">we-have-a-problem.com</a>.
 </p>
 
 <p align="center">
@@ -94,7 +94,7 @@ A scan connects to the internet only when **Allow the online test** is checked: 
 
 - [Using eMudScan](docs/using.md): the window, the statuses, the details, fixes and the report
 - [What eMudScan checks](docs/checks.md)
-- [Software listed by the advisory](docs/coverage.md): how eMudScan checks each one
+- [Software listed by we-have-a-problem.com](docs/coverage.md): how eMudScan checks each one
 - [Privacy](docs/privacy.md)
 - [Building and releasing](docs/building.md)
 - [Contributing](.github/CONTRIBUTING.md): issues, pull requests, and the rules eMudScan follows

@@ -120,11 +120,11 @@ belong to administrators, SYSTEM, TrustedInstaller or you, and gives no pip
 command for a Python whose folders other users can add files to: Python would
 load what they put there.
 
-For a browser that may not be protected, links open the advisory’s test pages in
-that browser, so that you can check for yourself. eMudScan starts only a browser
-registered in Windows or kept in a folder that only administrators or you can
-change (Program Files, Windows, your user folder): for another one, the details
-give the pages’ addresses to open in it.
+For a browser that may not be protected, links open the test pages of
+we-have-a-problem.com in that browser, so that you can check for yourself.
+eMudScan starts only a browser registered in Windows or kept in a folder that
+only administrators or you can change (Program Files, Windows, your user
+folder): for another one, the details give the pages’ addresses to open in it.
 
 ## Fixing software
 

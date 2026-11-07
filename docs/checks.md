@@ -1,7 +1,7 @@
 # What eMudScan checks
 
-For how eMudScan checks each program that the advisory lists as fixed, see
-[Software listed by the advisory](coverage.md).
+For how eMudScan checks each program that we-have-a-problem.com lists as fixed,
+see [Software listed by we-have-a-problem.com](coverage.md).
 
 ## Windows certificate system
 
@@ -10,12 +10,12 @@ For how eMudScan checks each program that the advisory lists as fixed, see
   off.
 - How Windows judges each of the 16 compromised certificates: the 8 eMudhra
   intermediates and their 8 copies cross-signed by Sectigo.
-- **Windows TLS test (offline)**, always: the advisory’s 12 test chains go
-  through the checks Windows applies to a secure connection, without any network
-  access. Each chain must be rejected.
+- **Windows TLS test (offline)**, always: the 12 test chains of
+  we-have-a-problem.com go through the checks Windows applies to a secure
+  connection, without any network access. Each chain must be rejected.
 - **Windows TLS test (online)**, when the online test is allowed: 3 HTTPS
-  requests through Windows (WinHTTP) to the advisory’s test sites. If the sites
-  cannot be reached, the result is *inconclusive*.
+  requests through Windows (WinHTTP) to the test sites of we-have-a-problem.com.
+  If the sites cannot be reached, the result is *inconclusive*.
 - **HTTPS inspection**: antivirus software and company proxies that inspect
   secure connections (Kaspersky, ESET, Zscaler…) are recognized by the root
   certificate they install. They validate certificates instead of Windows: only

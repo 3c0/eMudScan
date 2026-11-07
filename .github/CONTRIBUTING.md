@@ -46,8 +46,9 @@ them is not merged:
 - **Standard library only**, no cgo, a single self-contained `.exe`: adding a
   dependency is discussed in an issue first.
 - **A verdict is checked, not assumed**: a certificate bundle is tested against
-  the advisory’s chains, a block list is looked for in the file, and a version is
-  compared with the publisher’s fixed versions (`fixRules`, `model.go`).
+  the chains of we-have-a-problem.com, a block list is looked for in the file,
+  and a version is compared with the publisher’s fixed versions (`fixRules`,
+  `model.go`).
 
 ## Code
 
@@ -81,8 +82,8 @@ them is not merged:
   `test`, `docs`, `build` or `chore` for the rest, such as
   `perf(scan): read 8 folders at a time when scanning the drives`. Pull request
   titles follow the same format.
-- The reference data (`data/`) comes from the advisory and is checked against
-  the SHA-256 it publishes: do not edit it by hand.
+- The reference data (`data/`) comes from we-have-a-problem.com and is checked
+  against the SHA-256 it publishes: do not edit it by hand.
 
 ## License
 

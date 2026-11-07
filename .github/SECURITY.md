@@ -11,7 +11,7 @@ For example:
 - a connection made by eMudScan other than the online test, or one made while the online test is not allowed;
 - a release file that does not match its SHA-256 or its build attestation.
 
-Report problems with the advisory’s data or test sites to [we-have-a-problem.com](https://github.com/galadran/we-have-a-problem.com).
+Report problems with the data or test sites of we-have-a-problem.com to [its repository](https://github.com/galadran/we-have-a-problem.com).
 
 ## How to report
 

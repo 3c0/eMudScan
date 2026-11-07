@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The Fix window opened from the details no longer has a **Stop** button: it fixes one software, whose commands always run to their end.
 - The About box, like the README, says that eMudScan is intended for administrators, developers and advanced users.
 - The About box shows the link to the source code beside its title, and the sites that the fixes connect to as a list.
+- The texts name we-have-a-problem.com, a third-party site, instead of “the advisory”.
 
 ### Fixed
 

@@ -67,7 +67,7 @@ Adding the compromised certificates to a Java block list connects to nothing.
 ## The online test is the only connection of a scan
 
 When **Allow the online test** is checked (it is by default), each scan makes up
-to 3 HTTPS requests through Windows (WinHTTP) to the advisory’s test sites at
+to 3 HTTPS requests through Windows (WinHTTP) to the test sites at
 [emudhra.we-have-a-problem.com](https://emudhra.we-have-a-problem.com), to check
 that Windows rejects the compromised certificates on a real connection:
 

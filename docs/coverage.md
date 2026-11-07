@@ -1,9 +1,9 @@
-# Software listed by the advisory
+# Software listed by we-have-a-problem.com
 
-The advisory lists, under
+The site we-have-a-problem.com lists, under
 [Who has patched?](https://emudhra.we-have-a-problem.com/#developers), the
 software whose publishers have released a fix. This page says how eMudScan
-handles each entry on Windows. It follows the advisory as of 31 October 2026.
+handles each entry on Windows. It follows that list as of 31 October 2026.
 
 - **By version:** eMudScan recognizes the software and compares its version
   with the fixed one.
@@ -101,7 +101,7 @@ updates them.
 
 ## Keeping this page up to date
 
-The advisory’s list changes as publishers release fixes (see its
+That list changes as publishers release fixes (see its
 [history](https://github.com/galadran/we-have-a-problem.com/commits/main/)).
 When an entry is added or a fixed version changes, update this page with the
 fixed versions in `cmd/emudscan/model.go` (`fixRules`), in the same commit.
