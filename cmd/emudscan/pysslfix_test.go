@@ -119,7 +119,7 @@ func TestPySSLFix(t *testing.T) {
 			t.Errorf("no %q in\n%s", want, all)
 		}
 	}
-	if f.Kind != fixPySSL || !f.Optional || f.Needs != "pycheck" || len(f.Files) != 4 || !backsUp([]Item{{Fixes: []fixAction{f}}}) {
+	if f.Kind != fixPySSL || !f.Optional || f.Needs != "pycheck" || len(f.Files) != 4 || !backsUp([]Item{{Fixes: []fixAction{f}}}) || !fetchesRight(f) {
 		t.Errorf("%+v", f)
 	}
 	// without "Back up the files to change": the same, then the backups and marks deleted once the checks pass

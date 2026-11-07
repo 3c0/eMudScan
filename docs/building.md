@@ -153,10 +153,12 @@ but runs nothing in place of each command, which then shows ✓ and “Done
 (simulated)”, after a second for each software, as its commands would take some
 time; a software whose commands all succeeded is then shown as fixed. A command
 that contains the text of the environment variable `EMUDSCAN_SIMULATE_FAIL` shows
-✗ and “Failed (simulated)” instead. Its window title and
-its report say SIMULATION. The normal build contains none of this: the
-simulation is compiled only with the `simulate` build tag, which the GitHub build
-never sets.
+✗ and “Failed (simulated)” instead; a download that fails stops the fixes, and an
+update that fails stops them too when `EMUDSCAN_SIMULATE_OFFLINE` is set, as when
+the servers of its package manager cannot be reached (the simulation connects to
+none). Its window title and its report say SIMULATION. The normal build contains
+none of this: the simulation is compiled only with the `simulate` build tag,
+which the GitHub build never sets.
 
 `scripts/build.sh` and the GitHub build also regenerate the Windows resources
 (`rsrc_windows_amd64.syso`), so that the file’s properties show the version set

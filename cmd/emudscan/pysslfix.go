@@ -173,7 +173,7 @@ func pySSLFix(exe string, plan pySSLPlan) fixAction {
 	}
 	plain := append(append([]string(nil), cmds...),
 		`if ($pyGood) { foreach ($n in $pyFiles) { Remove-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -Force }; foreach ($n in $pyAdded) { Remove-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.added") -Force } }`)
-	return fixAction{Kind: fixPySSL, Admin: admin, Optional: true, Needs: "pycheck", Files: plan.files(), Cmds: cmds, Plain: plain}
+	return fixAction{Kind: fixPySSL, Admin: admin, Optional: true, Needs: "pycheck", Files: plan.files(), Cmds: cmds, Plain: plain, Fetch: []int{3}}
 }
 
 func prefixAll(prefix string, names []string) []string {

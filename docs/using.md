@@ -181,8 +181,9 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
 </p>
 
 **Fix this software**, in the details window, opens the same window for that
-software alone, without the list and without **Stop**, since the commands of a
-software always run to their end; its button is **Run the fix now**.
+software alone, without the list and without **Stop**, since a fix that has
+started to change files always runs to its end; its button is **Run the fix
+now**.
 
 **Back up the files to change**, ticked by default, backs up each file before it
 is replaced or changed (a certificate bundle, a Java block list, a node.exe, the
@@ -217,7 +218,11 @@ Once you accept:
    software. **Stop** never stops a command in the middle: Windows PowerShell
    first ends the commands it was given (those of one software, or all those
    that need administrator rights), then a red line says “Fix interrupted!”, and
-   the software not reached is left as it was.
+   the software not reached is left as it was. A failed connection stops the
+   fixes in the same way, since the next ones would most likely fail too: a
+   download that fails, before its fix has changed anything, or an update that
+   fails when the servers of its package manager cannot be reached (see
+   [Privacy](privacy.md#what-a-fix-connects-to)). A red line says why.
 4. Each software is checked again: the console and the **Result** column say
    whether it is fixed, and the lists show its new status. A fixed software
    loses its check box, so that it is not fixed twice: **Select All** leaves it

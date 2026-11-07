@@ -256,7 +256,7 @@ func (tp *appsContext) packageAdvice(it *Item) {
 			if p.Manager == "Chocolatey" {
 				one = Tf("fix.pkgAdmin", p.Manager)
 			}
-			f := newFix(fixAction{Kind: fixPackage, Admin: p.Manager == "Chocolatey", Cmds: []string{p.Update}, Manager: p.Manager})
+			f := newFix(fixAction{Kind: fixPackage, Admin: p.Manager == "Chocolatey", Cmds: []string{p.Update}, Manager: p.Manager, Servers: managerServers[p.Manager]})
 			advice, given = one+"\n"+f.lines(), f.lines()
 		}
 		if strings.Contains(it.Details, given) {

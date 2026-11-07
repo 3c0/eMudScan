@@ -11,6 +11,7 @@ package main
 // a setting.
 
 import (
+	"slices"
 	"strings"
 	"sync"
 )
@@ -45,7 +46,37 @@ type fixAction struct {
 	// files of its Python), a heavier change than the others, which the Fix window does
 	// not tick: the user ticks it, or clicks Select All.
 	Optional bool
+	// Fetch are the commands that download what the fix needs, before it changes
+	// anything, by their place (the same in Cmds and Plain): when one fails, the fix has
+	// changed nothing, and the run stops there (fixScript).
+	Fetch []int
+	// Cleanup: the last command removes what the fix downloaded; it runs even when a
+	// download fails and the run stops.
+	Cleanup bool
+	// Servers are, for an update, the servers that its package manager needs: when the
+	// update fails and none of them can be reached, the run stops there (fixScript).
+	Servers []string
 }
+
+// fetches: the command c of the fix downloads what it needs (Fetch).
+func (f fixAction) fetches(c int) bool { return slices.Contains(f.Fetch, c) }
+
+// The servers of the updates (fixAction.Servers): those of their package managers'
+// default sources.
+var (
+	serversGitHub = []string{"github.com"} // Scoop and its buckets; uv's own update, and the Pythons it installs
+	serversPyPI   = []string{"pypi.org"}   // pip, pipx, uv's tools
+	serversConda  = []string{"repo.anaconda.com", "conda.anaconda.org"}
+	// managerServers are those of the package managers whose name is enough to know them.
+	managerServers = map[string][]string{
+		"Scoop":                  serversGitHub,
+		"WinGet":                 {"cdn.winget.microsoft.com"},
+		"Chocolatey":             {"community.chocolatey.org"},
+		"pipx":                   serversPyPI,
+		"Python Install Manager": {"www.python.org"},
+		"Deno":                   {"dl.deno.land"},
+	}
+)
 
 // lines are the commands of the fix as the details page shows them.
 func (f fixAction) lines() string {

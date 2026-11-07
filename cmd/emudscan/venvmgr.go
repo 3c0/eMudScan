@@ -64,7 +64,7 @@ func pipxAdvice(home, pkg string) string {
 	if !onPath("pipx.exe") {
 		return text + "\n" + cmd(run)
 	}
-	return text + "\n" + newFix(fixAction{Kind: fixPackage, Manager: "pipx", Cmds: []string{run}}).lines()
+	return text + "\n" + newFix(fixAction{Kind: fixPackage, Manager: "pipx", Cmds: []string{run}, Servers: managerServers["pipx"]}).lines()
 }
 
 // projectLock is the lock file of the project of a virtual environment, which names

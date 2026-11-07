@@ -1394,7 +1394,7 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 			return joinParas(lead, why)
 		}
 		admin := needsAdmin(exe)
-		f := newFix(fixAction{Kind: fixPip, Admin: admin, Cmds: []string{pipLine(exe, strings.Join(lists.badPkgs, " "), admin)}})
+		f := newFix(fixAction{Kind: fixPip, Admin: admin, Cmds: []string{pipLine(exe, strings.Join(lists.badPkgs, " "), admin)}, Servers: serversPyPI})
 		// the lead on its own line: a warning for a copy inside a program goes between it
 		// and the commands
 		if lead != "" {
@@ -2548,7 +2548,7 @@ func condaFix(p string) string {
 	for _, c := range []string{filepath.Join(base, "Scripts", "conda.exe"), filepath.Join(base, "condabin", "conda.bat")} {
 		if exists(c) {
 			admin := needsAdmin(env)
-			f := newFix(fixAction{Kind: fixConda, Admin: admin,
+			f := newFix(fixAction{Kind: fixConda, Admin: admin, Servers: serversConda,
 				Cmds: []string{fmt.Sprintf(`& %s update -y -p %s ca-certificates certifi`, psPath(c, admin), psPath(env, admin))}})
 			return T("conda.fix") + "\n" + psHeader(env) + "\n" + f.lines()
 		}
@@ -2581,7 +2581,7 @@ func pipFix(p, py, pkg string, bundled bool, o ownerInfo) string {
 			return joinParas(why, lockAdvice(lock, pkg, false))
 		}
 	} else {
-		f := newFix(fixAction{Kind: fixPip, Admin: needsAdmin(p), Cmds: []string{pipLine(py, pkg, needsAdmin(p))}})
+		f := newFix(fixAction{Kind: fixPip, Admin: needsAdmin(p), Cmds: []string{pipLine(py, pkg, needsAdmin(p))}, Servers: serversPyPI})
 		command = psHeader(p) + "\n" + f.lines()
 		if bundled {
 			command = T("py.ifYouManage") + "\n" + f.lines()
@@ -2660,7 +2660,7 @@ func replaceBundleFix(files ...string) string {
 			`$ok = $cacert -and $sha256 -and (Get-FileHash -InputStream ([IO.MemoryStream]::new($cacert))).Hash -eq $sha256`,
 			fmt.Sprintf(`if (-not $ok) { Write-Warning %s }`, psQuote(T("fix.downloadFailed")))}
 	}
-	f := fixAction{Kind: fixBundle, Admin: anyNeedsAdmin(files...), Cmds: download(), Plain: download(), Files: files}
+	f := fixAction{Kind: fixBundle, Admin: anyNeedsAdmin(files...), Cmds: download(), Plain: download(), Files: files, Fetch: []int{1, 2}}
 	for _, file := range files {
 		write := fmt.Sprintf(`[IO.File]::WriteAllBytes(%s, $cacert)`, psPath(file, f.Admin))
 		f.Cmds = append(f.Cmds, backupThenLine(file, "$ok", write, f.Admin))

@@ -48,7 +48,7 @@ func TestPipx(t *testing.T) {
 	t.Setenv("PATH", bin)
 	env := filepath.Join(home, "venvs", "httpie")
 	got := venvBundle(t, env, base, false, app(env))
-	if f := fixesIn(got.Details); len(f) != 1 || f[0].Manager != "pipx" || f[0].key() != "pipx runpip httpie install --upgrade certifi" ||
+	if f := fixesIn(got.Details); len(f) != 1 || f[0].Manager != "pipx" || f[0].key() != "pipx runpip httpie install --upgrade certifi" || strings.Join(f[0].Servers, " ") != "pypi.org" ||
 		strings.Contains(got.Details, "-m pip") || strings.Contains(got.Details, T("py.noPipEnv")[:20]) {
 		t.Errorf("pipx: %+v\n%s", f, got.Details)
 	}

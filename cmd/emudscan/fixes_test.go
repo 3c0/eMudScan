@@ -21,7 +21,7 @@ func TestFixBundle(t *testing.T) {
 		t.Fatalf("fixes: %+v", f)
 	}
 	fx := f[0]
-	if fx.Kind != fixBundle || !fx.Admin || len(fx.Files) != 2 || len(fx.Cmds) != 7 || len(fx.Plain) != 7 || !strings.HasSuffix(text, fx.lines()) {
+	if fx.Kind != fixBundle || !fx.Admin || len(fx.Files) != 2 || len(fx.Cmds) != 7 || len(fx.Plain) != 7 || !strings.HasSuffix(text, fx.lines()) || !fetchesRight(fx) {
 		t.Errorf("fix: %+v", fx)
 	}
 	for i := range fx.Cmds {
@@ -137,7 +137,8 @@ func TestCondaFix(t *testing.T) {
 		{env, "& " + conda + " update -y -p " + psQuote(env) + " ca-certificates certifi"},
 	} {
 		text := condaFix(filepath.Join(c.env, "Library", "ssl", "cacert.pem"))
-		if f := fixesIn(text); len(f) != 1 || f[0].Kind != fixConda || f[0].key() != c.want || !strings.HasPrefix(text, T("conda.fix")+"\n"+T("fix.ps")+"\n") {
+		if f := fixesIn(text); len(f) != 1 || f[0].Kind != fixConda || f[0].key() != c.want || !strings.HasPrefix(text, T("conda.fix")+"\n"+T("fix.ps")+"\n") ||
+			strings.Join(f[0].Servers, " ") != "repo.anaconda.com conda.anaconda.org" {
 			t.Errorf("%s: %q %+v", c.env, text, f)
 		}
 	}
@@ -166,4 +167,19 @@ func TestBacksUp(t *testing.T) {
 			t.Errorf("case %d: %v, want %v", i, got, x.want)
 		}
 	}
+}
+
+// fetchesRight: the commands of f that download (fixAction.Fetch) are those that call
+// Invoke-WebRequest or Invoke-RestMethod, the same with and without the backups, and
+// none comes after a command that changes a file (a backup, a copy, a write).
+func fetchesRight(f fixAction) bool {
+	changed := false
+	for i, c := range f.Cmds {
+		downloads := strings.Contains(c, "Invoke-WebRequest") || strings.Contains(c, "Invoke-RestMethod")
+		if downloads != f.fetches(i) || downloads && (changed || i >= len(f.Plain) || f.Plain[i] != c) {
+			return false
+		}
+		changed = changed || strings.Contains(c, "Copy-Item") || strings.Contains(c, "WriteAllBytes") || strings.Contains(c, "Move-Item")
+	}
+	return len(f.Fetch) > 0
 }

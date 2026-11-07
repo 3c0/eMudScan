@@ -71,7 +71,7 @@ func TestNodeReplaceFix(t *testing.T) {
 		if strings.Count(all, "Remove-Item -LiteralPath $nodeNew -Force -ErrorAction Ignore") != 2 || strings.Contains(all, "SilentlyContinue") {
 			t.Errorf("%s: the removals of the temporary file:\n%s", c.arch, all)
 		}
-		if f.Kind != fixNode || !f.Optional || len(f.Files) != 1 || f.Files[0] != exe || len(f.Plain) != len(f.Cmds) ||
+		if f.Kind != fixNode || !f.Optional || len(f.Files) != 1 || f.Files[0] != exe || len(f.Plain) != len(f.Cmds) || !fetchesRight(f) || !f.Cleanup ||
 			strings.Contains(strings.Join(f.Plain, "\n"), ".emudscan-") {
 			t.Errorf("%s: %+v", c.arch, f)
 		}

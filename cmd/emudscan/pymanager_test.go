@@ -79,7 +79,7 @@ func TestPymanagerAdvice(t *testing.T) {
 		})
 		hasFix := false
 		for _, f := range got.Fixes {
-			hasFix = hasFix || (f.Kind == fixPackage && f.Manager == "Python Install Manager" && !f.Admin)
+			hasFix = hasFix || (f.Kind == fixPackage && f.Manager == "Python Install Manager" && !f.Admin && strings.Join(f.Servers, " ") == "www.python.org")
 		}
 		mentions := strings.Contains(got.Details, "Python Install Manager")
 		if hasFix != c.fix || (c.want == "" && mentions) || (c.want != "" && !strings.Contains(got.Details, c.want)) {

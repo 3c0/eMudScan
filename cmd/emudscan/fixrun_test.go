@@ -44,6 +44,32 @@ func TestFixScript(t *testing.T) {
 			t.Errorf("order:\n%s", s)
 		}
 	}
+	// a failed download ends the script; a failed update too, when none of its servers
+	// can be reached; Test-EmudscanServers is defined once, and only for updates
+	fetch := fixAction{Kind: fixBundle, Cmds: []string{"tls", "download", "check"}, Fetch: []int{1}}
+	update := fixAction{Kind: fixPackage, Cmds: []string{"conda update"}, Servers: []string{"repo.anaconda.com", "conda.anaconda.org"}}
+	s := fixScript([]fixUnit{{fix: fetch, cmds: fetch.Cmds}, {fix: update, cmds: update.Cmds}, {fix: pkg, cmds: pkg.Cmds}}, `C:\Temp\fix.log`, "##m", nil)
+	for _, w := range []string{"##m end 0 1 ' + [int]$emudscanFailed + ' ' + $emudscanCode)\nif ($emudscanFailed) { Write-EmudscanLog '##m halt 0 1'; exit 0 }\n",
+		"##m end 1 0 ' + [int]$emudscanFailed + ' ' + $emudscanCode)\nif ($emudscanFailed -and -not (Test-EmudscanServers 'repo.anaconda.com', 'conda.anaconda.org')) { Write-EmudscanLog '##m halt 1 0'; exit 0 }\n"} {
+		if !strings.Contains(s, w) {
+			t.Errorf("halts: no %q in\n%s", w, s)
+		}
+	}
+	if strings.Count(s, "halt") != 2 || strings.Count(s, "function Test-EmudscanServers") != 1 ||
+		strings.Contains(fixScript([]fixUnit{{fix: fetch, cmds: fetch.Cmds}, {fix: pkg, cmds: pkg.Cmds}}, `C:\Temp\fix.log`, "##m", nil), "Test-EmudscanServers") {
+		t.Errorf("halts:\n%s", s)
+	}
+	if !fixSimulation && !strings.Contains(s, "-notin 'NameResolutionFailure', 'ProxyNameResolutionFailure', 'ConnectFailure', 'Timeout') { return $true }") {
+		t.Errorf("the test of the servers:\n%s", s)
+	}
+	// a fix that cleans up: its last command runs before the script ends
+	fetch.Cleanup, fetch.Cmds, fetch.Fetch = true, []string{"tls", "download", "check", "remove the download"}, []int{1}
+	s = fixScript([]fixUnit{{fix: fetch, cmds: fetch.Cmds}}, `C:\Temp\fix.log`, "##m", nil)
+	if halt := strings.Index(s, "if ($emudscanFailed) {\nWrite-EmudscanLog '##m halt 0 1'\nWrite-EmudscanLog '##m cmd 0 3'\n"); !fixSimulation &&
+		(halt < 0 || !strings.Contains(s[halt:], "##m end 0 3 ") || !strings.Contains(s[halt:], "exit 0\n}\nWrite-EmudscanLog '##m cmd 0 2'") ||
+			strings.Count(s, "\nremove the download\n") != 2) {
+		t.Errorf("cleanup:\n%s", s)
+	}
 	script := []byte("Write-Output 1\n")
 	boot := fixBootstrap(`C:\Temp\fix.ps1`, script)
 	sum := sha256.Sum256(script)
@@ -95,9 +121,16 @@ func TestFixLog(t *testing.T) {
 		if fmt.Sprint(console) != fmt.Sprint(want) {
 			t.Errorf("titles %v, console:\n%s", titles, strings.Join(plainLines(console), "\n"))
 		}
-		if r := l.results; !r[0].ran || !r[0].ok || !r[1].ran || r[1].ok || r[2].ran {
+		if r := l.results; !r[0].ran || !r[0].ok || !r[1].ran || r[1].ok || r[2].ran || r[0].halted || r[1].halted {
 			t.Errorf("results: %+v", r)
 		}
+	}
+	// the run stops after a fix: its result says so
+	l := newFixLog(units, "##m", func(fixLine) {}, false)
+	l.write("##m cmd 1 0\n##m end 1 0 1 1\n##m halt 1 0\n")
+	l.close()
+	if r := l.results; !r[1].ran || r[1].ok || !r[1].halted || r[0].ran || r[2].ran {
+		t.Errorf("halted: %+v", l.results)
 	}
 }
 
@@ -126,6 +159,7 @@ func TestFixRunner(t *testing.T) {
 			5: {Item{ID: 5, Name: "E", Status: StOK, Fixes: []fixAction{pkg("scoop update e", false)}}, ""},
 		}
 	}
+	halts := map[string]bool{} // the commands after which the run stops (unitResult.halted)
 	run := func(items map[int]*state, backup bool, stopAfter int, ids ...int) (calls []string, fixed []int, console []string, stopped bool) {
 		if ids == nil {
 			ids = []int{1, 2, 3, 4, 5}
@@ -141,6 +175,10 @@ func TestFixRunner(t *testing.T) {
 				res := make([]unitResult, len(units))
 				for i, u := range units {
 					cmds = append(cmds, u.cmds...)
+					if halts[u.cmds[0]] { // it changed nothing, and the script ends there
+						res[i] = unitResult{ran: true, halted: true}
+						break
+					}
 					for _, c := range u.cmds {
 						ranCmds[strings.TrimSuffix(c, " with backup")] = true
 					}
@@ -234,6 +272,30 @@ func TestFixRunner(t *testing.T) {
 	if !stopped || strings.Join(calls, " | ") != "false:scoop update a | recheck[1]" ||
 		!strings.Contains(strings.Join(console, "\n"), Tf("fix.software", "A")+"\n\n"+T("fix.interrupted")+"\n\n"+T("fix.checking")) {
 		t.Errorf("stop: %v %v\n%s", stopped, calls, strings.Join(console, "\n"))
+	}
+	// a failed connection stops the run as Stop does, saying why right below the commands:
+	// an update whose servers cannot be reached...
+	servers := setup()
+	servers[1].it.Fixes[0].Servers = []string{"github.com"}
+	halts["scoop update a"] = true
+	calls, _, console, stopped = run(servers, true, 0)
+	if !stopped || strings.Join(calls, " | ") != "false:scoop update a | recheck[1]" ||
+		!strings.Contains(strings.Join(console, "\n"), Tf("fix.software", "A")+"\n"+Tf("fix.stoppedServer", "github.com")+"\n\n"+T("fix.checking")) {
+		t.Errorf("halt after an update: %v %v\n%s", stopped, calls, strings.Join(console, "\n"))
+	}
+	delete(halts, "scoop update a")
+	// ... or a download, among the commands run as administrator: the fixes after it in
+	// that PowerShell did not run, and are not checked again
+	download := setup()
+	download[1].it.Fixes[1].Fetch = []int{0}
+	halts["replace a with backup"] = true
+	calls, _, console, stopped = run(download, true, 0)
+	if !stopped || strings.Join(calls, " | ") != "false:scoop update a | false:winget upgrade b | true:choco upgrade d -y | recheck[1 2 4] | true:replace a with backup | recheck[1]" ||
+		!strings.HasSuffix(strings.Join(console, "\n"), T("fix.adminPrompt")+"\n"+T("fix.stoppedDownload")+"\n\n"+T("fix.checking")+"\n"+Tf("fix.notFixed", "A")+"\n"+T("fix.restart")) {
+		t.Errorf("halt after a download: %v %v\n%s", stopped, calls, strings.Join(console, "\n"))
+	}
+	if r := haltReason(fixUnit{fix: fixAction{Servers: []string{"repo.anaconda.com", "conda.anaconda.org"}}}); r != Tf("fix.stoppedServer", "repo.anaconda.com or conda.anaconda.org") {
+		t.Errorf("reason: %s", r)
 	}
 }
 

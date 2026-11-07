@@ -87,7 +87,7 @@ func TestPipCommandsAndOwners(t *testing.T) {
 			t.Errorf("%s:\n%s", c.name, d)
 		}
 		// the Fix function runs exactly the commands shown, as administrator
-		if f := items[0].Fixes; c.want == "" && (len(f) != 1 || f[0].Kind != fixPip || !f[0].Admin || f[0].key() != pipLine(exe, "certifi", true)) || c.want != "" && len(f) != 0 {
+		if f := items[0].Fixes; c.want == "" && (len(f) != 1 || f[0].Kind != fixPip || !f[0].Admin || f[0].key() != pipLine(exe, "certifi", true) || strings.Join(f[0].Servers, " ") != "pypi.org") || c.want != "" && len(f) != 0 {
 			t.Errorf("%s: fixes %+v", c.name, f)
 		}
 	}

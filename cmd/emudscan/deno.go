@@ -28,6 +28,6 @@ func denoOwnInstall(exe string) bool {
 // denoUpgradeAdvice is the update of the Deno exe with its own updater, run on that
 // copy, whatever deno.exe the PATH finds first.
 func denoUpgradeAdvice(exe string) string {
-	f := newFix(fixAction{Kind: fixPackage, Manager: "Deno", Admin: needsAdmin(exe), Cmds: []string{"& " + psPath(exe, needsAdmin(exe)) + " upgrade"}})
+	f := newFix(fixAction{Kind: fixPackage, Manager: "Deno", Admin: needsAdmin(exe), Cmds: []string{"& " + psPath(exe, needsAdmin(exe)) + " upgrade"}, Servers: managerServers["Deno"]})
 	return T("deno.upgrade") + "\n" + f.lines()
 }

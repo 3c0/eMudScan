@@ -53,7 +53,7 @@ func nodeReplaceFix(file string, major int, fixed string) (fixAction, bool) {
 	// Ignore, not SilentlyContinue: the temporary file is usually not there, and an error
 	// that SilentlyContinue hides is still recorded, which marks the command as failed
 	cleanup := `Remove-Item -LiteralPath $nodeNew -Force -ErrorAction Ignore`
-	f := fixAction{Kind: fixNode, Admin: admin, Optional: true, Files: []string{file},
+	f := fixAction{Kind: fixNode, Admin: admin, Optional: true, Files: []string{file}, Fetch: []int{1, 2, 3}, Cleanup: true,
 		Cmds:  append(check(), backupThenLine(file, "$nodeOK", replace, admin), cleanup),
 		Plain: append(check(), changeLine("$nodeOK", replace), cleanup)}
 	return f, true

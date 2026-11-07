@@ -193,7 +193,8 @@ func TestPackages(t *testing.T) {
 		t.Errorf("duplicate command:\n%s", it.Details)
 	}
 	// the Fix function runs the update of this package, not that of all packages
-	if f := fixesIn(it.Details); len(f) != 1 || f[0].Kind != fixPackage || f[0].Admin || f[0].key() != "scoop update example-app-14" || f[0].Manager != "Scoop" {
+	if f := fixesIn(it.Details); len(f) != 1 || f[0].Kind != fixPackage || f[0].Admin || f[0].key() != "scoop update example-app-14" || f[0].Manager != "Scoop" ||
+		strings.Join(f[0].Servers, " ") != "github.com" {
 		t.Errorf("fixes: %+v", f)
 	}
 	if got := itemTitle(it); got != "example-app-14 14.1.0 [Scoop]" {
@@ -223,7 +224,7 @@ func TestPackages(t *testing.T) {
 	if len(choco.Packages) != 1 || choco.Packages[0].Manager != "Chocolatey" || !strings.Contains(choco.Details, "$ choco upgrade example-app-15 -y") || strings.Contains(choco.Details, "choco upgrade all") {
 		t.Errorf("chocolatey: %+v %q", choco.Packages, choco.Details)
 	}
-	if f := fixesIn(choco.Details); len(f) != 1 || !f[0].Admin || f[0].key() != "choco upgrade example-app-15 -y" {
+	if f := fixesIn(choco.Details); len(f) != 1 || !f[0].Admin || f[0].key() != "choco upgrade example-app-15 -y" || strings.Join(f[0].Servers, " ") != "community.chocolatey.org" {
 		t.Errorf("chocolatey fixes: %+v", f)
 	}
 }

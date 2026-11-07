@@ -109,7 +109,7 @@ func TestUvPythonAdvice(t *testing.T) {
 		"uv python upgrade 3.12",
 		fmt.Sprintf(`if (uv python find --system --managed-python '>=3.12.16,<3.13' 2>$null) { uv python uninstall cpython-3.12.9-windows-x86_64-none } else { Write-Warning %s }`, psQuote(Tf("py.uvKept", "3.12"))),
 	}
-	if len(got.Fixes) != 1 || got.Fixes[0].Kind != fixTool || got.Fixes[0].Manager != "uv" || got.Fixes[0].Optional ||
+	if len(got.Fixes) != 1 || got.Fixes[0].Kind != fixTool || got.Fixes[0].Manager != "uv" || got.Fixes[0].Optional || strings.Join(got.Fixes[0].Servers, " ") != "github.com" ||
 		strings.Join(got.Fixes[0].Cmds, "\n") != strings.Join(want, "\n") {
 		t.Errorf("the fix: %+v", got.Fixes)
 	}
@@ -239,7 +239,8 @@ func TestUvUpdate(t *testing.T) {
 		tp := testApps(t)
 		tp.chocoRoot = choco
 		f, ok := tp.uvUpdate()
-		if ok != (c.manager != "") || ok && (f.Kind != fixPackage || f.Manager != c.manager || f.Admin != c.admin || f.Cmds[0] != c.command) {
+		servers := map[string]string{"Scoop": "github.com", "WinGet": "cdn.winget.microsoft.com", "Chocolatey": "community.chocolatey.org", "uv": "github.com", "pipx": "pypi.org"}
+		if ok != (c.manager != "") || ok && (f.Kind != fixPackage || f.Manager != c.manager || f.Admin != c.admin || f.Cmds[0] != c.command || strings.Join(f.Servers, " ") != servers[c.manager]) {
 			t.Errorf("%s: %v %+v", c.name, ok, f)
 		}
 	}

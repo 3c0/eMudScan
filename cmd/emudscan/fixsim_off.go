@@ -10,9 +10,11 @@ const fixSimulation = false
 // simulationMark is added to the window title and the report of a simulation build.
 const simulationMark = ""
 
-// simulatedCommand, simulatedResult, simulatedPause, simulateFixed and
-// simulateRestored are used only by the simulation build.
+// simulatedCommand, simulatedResult, simulatedPause, simulatedServers, simulateFixed
+// and simulateRestored are used only by the simulation build.
 func simulatedCommand(c string) string { return c }
+
+func simulatedServers() string { return "" }
 
 func simulatedResult(bool) string { return "" }
 

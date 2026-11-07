@@ -25,10 +25,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A finding in several places shows its explanation once, with the commands for each place.
 - “Back up the certificate files”, in the Fix window, is now “Back up the files to change”, since it also covers node.exe and the ssl files of a Python.
 - The details no longer suggest updating everything installed with a package manager (`scoop update -a`, `winget upgrade --all`, `choco upgrade all`): eMudScan stays targeted, with the update of the software it found only.
-- The Fix window opened from the details no longer has a **Stop** button: it fixes one software, whose commands always run to their end.
+- The Fix window opened from the details no longer has a **Stop** button: it fixes one software, and a fix that has started to change files always runs to its end.
 - The About box, like the README, says that eMudScan is intended for administrators, developers and advanced users.
 - The About box shows the link to the source code beside its title, and the sites that the fixes connect to as a list.
 - The texts name we-have-a-problem.com, a third-party site, instead of “the advisory”.
+- The fixes stop at the first download that fails, before its fix changes anything, and after an update that fails when the servers of its package manager cannot be reached (eMudScan then checks them): the next fixes would most likely fail too. A red line says why.
 - The console of the Fix window shows the result of each command in a column on its left (a green ✔ or a red ✘), its warnings in yellow and its errors in red below it, and its exit code when it failed; the report puts the ✓ or ✗ before each command.
 
 ### Fixed

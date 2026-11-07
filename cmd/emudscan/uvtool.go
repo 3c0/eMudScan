@@ -33,7 +33,7 @@ func uvToolAdvice(home string) string {
 	if !uvOnPath() {
 		return T("py.uvTool") + "\n" + cmd(upgrade)
 	}
-	return T("py.uvTool") + "\n" + newFix(fixAction{Kind: fixPackage, Manager: "uv", Cmds: []string{upgrade}}).lines()
+	return T("py.uvTool") + "\n" + newFix(fixAction{Kind: fixPackage, Manager: "uv", Cmds: []string{upgrade}, Servers: serversPyPI}).lines()
 }
 
 // uvDir is a folder of the uv of this user, as uv chooses it: the one that variable

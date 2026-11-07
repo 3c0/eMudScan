@@ -6,10 +6,12 @@ package main
 // the Fix function as usual, Windows PowerShell and the administrator prompt
 // included, but each command only says that it was not run. A command that contains
 // the text of the environment variable EMUDSCAN_SIMULATE_FAIL fails instead, to show
-// what eMudScan does then. A second passes before the commands of each software, as
-// they would take some time. Since nothing changes, a software whose commands all
-// "succeeded" is then shown as fixed. The window title and the report say
-// SIMULATION. The GitHub build never sets this tag.
+// what eMudScan does then: a download that fails stops the run; an update that fails
+// stops it too when EMUDSCAN_SIMULATE_OFFLINE is set, as when its package manager's
+// servers cannot be reached (it connects to none). A second passes before the
+// commands of each software, as they would take some time. Since nothing changes, a
+// software whose commands all "succeeded" is then shown as fixed. The window title
+// and the report say SIMULATION. The GitHub build never sets this tag.
 
 import (
 	"os"
@@ -80,6 +82,16 @@ func simulatedResult(failed bool) string {
 		return T("fix.simulatedFailed")
 	}
 	return T("fix.simulatedDone")
+}
+
+// simulatedServers defines Test-EmudscanServers (serversTest) without a connection:
+// the servers cannot be reached when EMUDSCAN_SIMULATE_OFFLINE is set.
+func simulatedServers() string {
+	reached := "$true"
+	if os.Getenv("EMUDSCAN_SIMULATE_OFFLINE") != "" {
+		reached = "$false"
+	}
+	return "function Test-EmudscanServers([string[]]$servers) { " + reached + " }\n"
 }
 
 // simulatedCommand runs in place of the command c: nothing, or, when c contains

@@ -60,7 +60,14 @@ Fixes connect to the internet once you accept the warning, whether or not
   [python-build-standalone](https://github.com/astral-sh/python-build-standalone/releases)),
   which see the same; its tests connect to nothing;
 - Deno’s own updater (`deno upgrade`) downloads Deno’s latest release, as when
-  you run it yourself.
+  you run it yourself;
+- when an update fails, Windows PowerShell checks whether the servers of its
+  package manager can be reached, with one HEAD request to each, until one
+  answers: github.com (Scoop, uv), cdn.winget.microsoft.com (WinGet),
+  community.chocolatey.org (Chocolatey), www.python.org (the Python Install
+  Manager), pypi.org (pip, pipx, uv’s tools), repo.anaconda.com and
+  conda.anaconda.org (conda), dl.deno.land (Deno); if none answers, the fixes
+  stop.
 
 Adding the compromised certificates to a Java block list connects to nothing.
 

@@ -10,7 +10,10 @@ package main
 // installed the software, which may bring the fix; then, for the software still not
 // fixed, the fixes of its files. After each round, the software that ran something is
 // checked again: it counts as fixed only when its check finds nothing left to fix.
-// Stop takes effect before the next software, so that none is left half fixed.
+// Stop takes effect before the next software, so that none is left half fixed. A
+// connection that fails stops the run too, as the fixes that follow would most likely
+// fail as well: a failed download, before its fix changed anything, or a failed update
+// whose package manager's servers cannot be reached (fixScript).
 //
 // The commands of one software run in one PowerShell, as they would when pasted
 // together. Those that need administrator rights run, for all the software of a
@@ -125,8 +128,9 @@ func plainLines(lines []fixLine) []string {
 	return out
 }
 
-// unitResult is what came of a fix: whether its commands ran, and all succeeded.
-type unitResult struct{ ran, ok bool }
+// unitResult is what came of a fix: whether its commands ran, and all succeeded; halted:
+// the run stopped after it, as a connection failed (fixScript).
+type unitResult struct{ ran, ok, halted bool }
 
 // fixExecutor runs fixes in Windows PowerShell: all of them in one PowerShell
 // started as administrator when admin is true (one Windows prompt), else in one
@@ -342,13 +346,28 @@ func unitTitles(units []fixUnit) []string {
 // that ran something, with whether all their commands succeeded.
 func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int, ok map[int]bool, stopped bool) {
 	ok = map[int]bool{}
-	note := func(units []fixUnit, res []unitResult, err error) {
+	// note records what came of units, and returns the one after which the run stopped
+	// (unitResult.halted), or nil
+	note := func(units []fixUnit, res []unitResult, err error) (halt *fixUnit) {
 		if err != nil {
 			r.out(fixLine{lineError, err.Error()})
 		} else if !anyRan(res) {
 			r.out(fixLine{lineError, T("fix.notRun")}) // PowerShell started, but ran nothing (blocked by a policy?)
 		}
+		for i := range res {
+			if res[i].halted && i < len(units) {
+				halt = &units[i]
+			}
+		}
 		for i, u := range units {
+			if halt != nil && (i >= len(res) || !res[i].ran) { // not reached: as after Stop
+				for _, id := range u.ids {
+					if _, seen := ok[id]; seen {
+						ok[id] = false
+					}
+				}
+				continue
+			}
 			for _, id := range u.ids {
 				if _, seen := ok[id]; !seen {
 					ok[id] = true
@@ -357,6 +376,7 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 				ok[id] = ok[id] && err == nil && i < len(res) && res[i].ran && res[i].ok
 			}
 		}
+		return halt
 	}
 	var jobs [][]*fixUnit // for each element, its fixes that run without administrator rights
 	var elevated []*fixUnit
@@ -393,10 +413,10 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 		}
 		return out
 	}
-	// Stop: an element that has a fix that ran, and others that did not, is not fixed;
-	// the console says so in red below the commands that ran
-	notRun := func(left ...[]*fixUnit) {
-		r.out(fixLine{lineError, T("fix.interrupted")})
+	// Stop, or a failed connection: an element that has a fix that ran, and others that
+	// did not, is not fixed; the console says why in red below the commands that ran
+	notRun := func(why string, left ...[]*fixUnit) {
+		r.out(fixLine{lineError, why})
 		r.out(fixLine{lineNote, ""})
 		for _, us := range left {
 			for _, u := range us {
@@ -410,7 +430,7 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 	}
 	for i, job := range jobs {
 		if r.stopped() {
-			notRun(append(jobs[i:], elevated)...)
+			notRun(T("fix.interrupted"), append(jobs[i:], elevated)...)
 			return ran, ok, true
 		}
 		units := values(job)
@@ -418,21 +438,36 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 			r.out(fixLine{lineSoftware, t})
 		}
 		res, err := r.exec(units, false, r.out)
-		note(units, res, err)
+		if halt := note(units, res, err); halt != nil {
+			notRun(haltReason(*halt), append(jobs[i+1:], elevated)...)
+			return ran, ok, true
+		}
 		r.out(fixLine{lineNote, ""}) // a blank line after the commands of each software
 	}
 	if len(elevated) > 0 {
 		if r.stopped() {
-			notRun(elevated)
+			notRun(T("fix.interrupted"), elevated)
 			return ran, ok, true
 		}
 		r.out(fixLine{lineNote, T("fix.adminPrompt")}) // the log names each software as its commands run
 		units := values(elevated)
 		res, err := r.exec(units, true, r.out)
-		note(units, res, err)
+		if halt := note(units, res, err); halt != nil {
+			notRun(haltReason(*halt))
+			return ran, ok, true
+		}
 		r.out(fixLine{lineNote, ""})
 	}
 	return ran, ok, false
+}
+
+// haltReason says why the run stopped after the fix u (unitResult.halted): one of its
+// downloads failed, or it is an update that failed, and its servers cannot be reached.
+func haltReason(u fixUnit) string {
+	if len(u.fix.Fetch) > 0 {
+		return T("fix.stoppedDownload")
+	}
+	return Tf("fix.stoppedServer", strings.Join(u.fix.Servers, T("fix.serversOr")))
 }
 
 // checkAgain checks again the elements that ran something, and reports each one:
@@ -623,6 +658,14 @@ func fixMarker() string {
 //
 // The helper files of the fixes (fixFiles) are next to the script, in $emudscanFiles:
 // the script exits with code 97, as when it changed, if one of them did.
+//
+// A failed connection ends the script, after a "halt" line in the log, so that the run
+// stops (unitResult.halted): a download of a fix that failed (fixAction.Fetch), before
+// the fix changed anything (its cleanup still runs: fixAction.Cleanup); an update that
+// failed, when none of the servers its package manager needs can be reached
+// (fixAction.Servers, Test-EmudscanServers). A failed update does not say why it failed
+// (its exit code is the same for a program in use), so the test decides; a failed
+// download stops the run in any case: its fix cannot go on.
 func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte) string {
 	var b strings.Builder
 	b.WriteString("$ErrorActionPreference = 'Continue'\n")
@@ -640,6 +683,12 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 			psQuote(n), strings.ToUpper(hex.EncodeToString(sum[:])), fixTampered)
 	}
 	b.WriteString("function Write-EmudscanLog([string]$s) { [IO.File]::AppendAllText($emudscanLog, $s + \"`n\", [Text.UTF8Encoding]::new($false)) }\n")
+	for _, u := range units {
+		if len(u.fix.Servers) > 0 {
+			b.WriteString(serversTest())
+			break
+		}
+	}
 	prev := 0 // the first element of the previous fix
 	for u, unit := range units {
 		first := -1 - u // a fix without elements (in the tests): one of its own
@@ -650,7 +699,8 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 			b.WriteString(simulatedPause)
 		}
 		prev = first
-		for c, command := range unit.cmds {
+		run := func(c int) {
+			command := unit.cmds[c]
 			if fixSimulation {
 				command = simulatedCommand(command)
 			}
@@ -662,9 +712,54 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 			b.WriteString("Write-EmudscanLog (\"$emudscanOut\".TrimEnd())\n")
 			fmt.Fprintf(&b, "Write-EmudscanLog ('%s end %d %d ' + [int]$emudscanFailed + ' ' + $emudscanCode)\n", marker, u, c)
 		}
+		for c := range unit.cmds {
+			run(c)
+			halt := fmt.Sprintf("{ Write-EmudscanLog '%s halt %d %d'; exit 0 }\n", marker, u, c)
+			switch {
+			case unit.fix.fetches(c) && unit.fix.Cleanup && c < len(unit.cmds)-1:
+				// the last command removes what the fix downloaded: it runs before the end
+				fmt.Fprintf(&b, "if ($emudscanFailed) {\nWrite-EmudscanLog '%s halt %d %d'\n", marker, u, c)
+				run(len(unit.cmds) - 1)
+				b.WriteString("exit 0\n}\n")
+			case unit.fix.fetches(c):
+				b.WriteString("if ($emudscanFailed) " + halt)
+			case len(unit.fix.Servers) > 0:
+				q := make([]string, len(unit.fix.Servers))
+				for i, s := range unit.fix.Servers {
+					q[i] = psQuote(s)
+				}
+				b.WriteString("if ($emudscanFailed -and -not (Test-EmudscanServers " + strings.Join(q, ", ") + ")) " + halt)
+			}
+		}
 	}
 	b.WriteString("exit 0\n")
 	return b.String()
+}
+
+// serversTest defines Test-EmudscanServers, which tells whether one of the servers it
+// is given can be reached, as Invoke-WebRequest reaches them (through the proxy of
+// Windows): true once one of them answers, whatever its answer, even an error page;
+// false when none can be, for lack of a connection: a name that does not resolve (nor
+// the proxy's), a connection refused or that does not answer (no route, server down),
+// a timeout. Any other error counts as reached (TLS, a connection cut later): the run
+// goes on, as it should when the cause is not certain. The simulation reaches them or
+// not as it is told (simulatedServers).
+func serversTest() string {
+	if s := simulatedServers(); s != "" {
+		return s
+	}
+	return `function Test-EmudscanServers([string[]]$servers) {
+  [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+  foreach ($s in $servers) {
+    try { $null = Invoke-WebRequest -UseBasicParsing -Method Head -Uri "https://$s/" -TimeoutSec 10; return $true }
+    catch {
+      $x = $_.Exception; while ($x -and $x -isnot [Net.WebException]) { $x = $x.InnerException }
+      if (-not $x -or "$($x.Status)" -notin 'NameResolutionFailure', 'ProxyNameResolutionFailure', 'ConnectFailure', 'Timeout') { return $true }
+    }
+  }
+  return $false
+}
+`
 }
 
 // fixOutputSort sorts what a command shows ($_): its errors (as their message), then
@@ -841,5 +936,7 @@ func (l *fixLog) line(s string) {
 			l.out(fixLine{lineCmdError, T("fix.cmdFailed")})
 		}
 		l.results[u].ok = l.results[u].ok && !failed
+	case "halt":
+		l.results[u].halted = true
 	}
 }

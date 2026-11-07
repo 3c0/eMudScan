@@ -90,7 +90,7 @@ func (tp *appsContext) uvAdvice(rt uvRuntime, fx pyFix, home string) string {
 	if hasUp { // each fix after its label, as in the Fix window, so that they stay apart
 		kept, text, lines = Tf("py.uvKeptAfter", rt.line), T("py.uvFixUpdate"), fixIntro(up)+"\n"+newFix(up).lines()+"\n"
 	}
-	f := fixAction{Kind: fixTool, Manager: "uv", Cmds: []string{upgrade,
+	f := fixAction{Kind: fixTool, Manager: "uv", Servers: serversGitHub, Cmds: []string{upgrade,
 		fmt.Sprintf("if (uv python find --system --managed-python '>=%s,<%s' 2>$null) { uv python uninstall %s } else { Write-Warning %s }",
 			fx.fixed, next, rt.key, psQuote(kept))}}
 	pinned := ""
@@ -118,7 +118,11 @@ var shimPathRe = regexp.MustCompile(`(?m)^path\s*=\s*"?([^"\r\n]+)"?`)
 // application). false when it is not known.
 func (tp *appsContext) uvUpdate() (fixAction, bool) {
 	update := func(manager, command string, admin bool) (fixAction, bool) {
-		return fixAction{Kind: fixPackage, Manager: manager, Admin: admin, Cmds: []string{command}}, true
+		servers := managerServers[manager]
+		if manager == "uv" { // uv self update
+			servers = serversGitHub
+		}
+		return fixAction{Kind: fixPackage, Manager: manager, Admin: admin, Cmds: []string{command}, Servers: servers}, true
 	}
 	exe := ""
 	for _, d := range pathDirs() {
