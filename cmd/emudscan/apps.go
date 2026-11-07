@@ -2299,6 +2299,9 @@ func (tp *appsContext) toolsOne(it *Item, exes []string) {
 			return
 		case FixOutdated:
 			r.Status, r.Summary, r.Details = StWarn, Tf("app.sumOutdated", fixed), details+"\n\n"+Tf("app.fix", toolName(first), fixed)
+			if product == "deno" && denoOwnInstall(first) { // Deno's own updater
+				r.Details = joinParas(r.Details, denoUpgradeAdvice(first))
+			}
 			tp.c.finish(it, r)
 			return
 		}

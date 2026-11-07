@@ -45,7 +45,9 @@ Fixes connect to the internet once you accept the warning, whether or not
   version, your Windows version and your language;
 - replacing a node.exe downloads the list of Node.js releases, the SHA-256
   checksums of the chosen release and its node.exe from
-  [nodejs.org](https://nodejs.org/dist/), which sees the same.
+  [nodejs.org](https://nodejs.org/dist/), which sees the same;
+- Deno’s own updater (`deno upgrade`) downloads Deno’s latest release, as when
+  you run it yourself.
 
 Adding the compromised certificates to a Java block list connects to nothing.
 

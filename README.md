@@ -63,7 +63,7 @@ The details window explains why, says what to update, and provides the commands 
 
 **Fix**, beside **Scan**, lists the software that eMudScan can fix, with the PowerShell commands that will run:
 
-- an update through the package manager that installed the software: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx, pip or conda;
+- an update through the package manager that installed the software: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx, pip or conda, or Deno’s own updater;
 - Mozilla’s current certificate bundle in place of an outdated one, downloaded from curl.se and checked against its SHA-256 checksum;
 - the compromised certificates added to a Java block list;
 - the node.exe inside a program replaced with the latest release of its Node.js release line, downloaded from nodejs.org and checked (SHA-256, OpenJS Foundation signature, version), not ticked by default.

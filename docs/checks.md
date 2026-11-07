@@ -89,7 +89,9 @@ modules keep working. Before copying it, after backing up the original,
 PowerShell checks its SHA-256 against the `SHASUMS256.txt` that Node.js
 publishes, its signature by the OpenJS Foundation and its version. This fix is
 not ticked by default in the **Fix software** window, since it changes a program
-that its publisher has not updated yet; close that program first.
+that its publisher has not updated yet; close that program first. Deno 2.9.8 is
+fixed: a Deno installed with its own installer is updated with `deno upgrade`,
+one installed with a package manager with that package manager.
 
 Certificate bundles are not judged by their version: each one is tested against
 the 12 test chains, so the result shows whether that file would really accept a

@@ -132,7 +132,7 @@ and no others:
 
 - an update through the package manager that installed the software or its
   component: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx,
-  pip or conda;
+  pip or conda, or Deno’s own updater;
 - an outdated certificate bundle replaced with Mozilla’s current one, which
   PowerShell downloads from curl.se and checks against the SHA-256 checksum that
   curl publishes;
@@ -192,8 +192,8 @@ software to fix and save your work first.
 
 Once you accept:
 
-1. The updates through Scoop, WinGet, Chocolatey, the Python Install Manager, uv
-   and pipx run first; then, for the software that they did not fix, the other
+1. The updates through Scoop, WinGet, Chocolatey, the Python Install Manager,
+   uv, pipx and Deno’s updater run first; then, for the software that they did not fix, the other
    fixes (such as the upgrade of a Python with uv, once uv itself is updated).
 2. The commands that need administrator rights run in a Windows PowerShell for
    which Windows asks your permission, in a window that shows Microsoft as the

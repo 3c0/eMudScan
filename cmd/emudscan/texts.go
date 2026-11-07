@@ -512,6 +512,8 @@ var tr = map[string][2]string{
 		"En attendant, eMudScan peut remplacer ce node.exe par le dernier Node.js %d de nodejs.org (la même branche, pour que ses modules continuent de fonctionner), une fois vérifié\u00a0: son SHA-256 publié, sa signature de l’OpenJS Foundation et sa version. Fermez d’abord %s."},
 	"node.checkFailed": {"The download failed or could not be checked: node.exe was not changed.",
 		"Le téléchargement a échoué ou n’a pas pu être vérifié\u00a0: node.exe n’a pas été modifié."},
+	"deno.upgrade": {"It was installed with Deno’s own installer: update it with Deno’s own updater:",
+		"Il a été installé avec l’installateur de Deno\u00a0: mettez-le à jour avec l’outil de mise à jour de Deno\u00a0:"},
 	"fix.kindNode": {"Replace node.exe with nodejs.org’s, once checked%s:",
 		"Remplacement de node.exe par celui de nodejs.org, une fois vérifié%s\u00a0:"},
 	"py.uvTool": {"Recommended action: update this tool and its packages with uv, which installed it:",
