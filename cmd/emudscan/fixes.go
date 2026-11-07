@@ -36,6 +36,7 @@ type fixAction struct {
 	Files   []string // the files the commands change, backed up first
 	From    []string // for a restore: the backup of each file, which is put back in its place
 	Manager string   // for an update: the package manager (Scoop, WinGet, Chocolatey)
+	Warn    string   // what the fix breaks, which the warning before it runs adds
 	// Optional: the fix replaces a component inside a program (its node.exe, the ssl
 	// files of its Python), a heavier change than the others, which the Fix window does
 	// not tick: the user ticks it, or clicks Select All.
@@ -76,6 +77,22 @@ func backsUp(items []Item) bool {
 		}
 	}
 	return false
+}
+
+// fixWarnings is what the fixes of these elements break (fixAction.Warn), each once,
+// for the warning before they run.
+func fixWarnings(items []Item) string {
+	var out []string
+	seen := map[string]bool{}
+	for _, it := range items {
+		for _, f := range it.Fixes {
+			if f.Warn != "" && !seen[f.Warn] {
+				seen[f.Warn] = true
+				out = append(out, f.Warn)
+			}
+		}
+	}
+	return strings.Join(out, "\n\n")
 }
 
 // key identifies a fix by its commands.

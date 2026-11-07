@@ -1348,8 +1348,13 @@ func (l pyLists) trust() string {
 func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	exe := env.exe
 	r := result{Version: env.version, Folder: env.home, File: exe, Exe: exe, ProductURL: "https://www.python.org/downloads/windows/"}
+	if !exists(exe) { // removed since the scan, by a fix that updated it (uv)
+		tp.c.finish(it, result{Status: StOK, Summary: T("py.sumGone"), Details: T("py.goneDetails"), Folder: env.home})
+		return
+	}
 	o := tp.withOwner(&r, env.home)
-	bundled := bundledIn(o.Name, kwPython...)
+	uvRT, byUV := uvRuntimeOf(env.home)
+	bundled := bundledIn(o.Name, kwPython...) && !byUV // uv updates its Pythons, whatever owns its folder
 	r.Bundled = bundled
 	r.Search = searchFor(o.Name, "Python "+env.version, bundled)
 	fx := tp.pythonFix(env)
@@ -1445,6 +1450,11 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	}
 	if rt, ok := pymanagerRuntimeOf(env.home); ok && update != "" && !bundled && pymanagerInstalled() {
 		if a := pymanagerAdvice(rt, fx); a != "" {
+			update = a
+		}
+	}
+	if byUV && update != "" {
+		if a := tp.uvAdvice(uvRT, fx, env.home); a != "" {
 			update = a
 		}
 	}

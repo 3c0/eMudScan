@@ -178,8 +178,20 @@ by the `__install__.json` in its folder. When the manager is installed, an
 outdated Python 3.14 or later is updated with it
 (`pymanager install --update -y 3.14-64`), which keeps its installed packages.
 python.org publishes no Windows build of the fixed 3.11, 3.12 and 3.13, so for
-these the details suggest installing Python 3.14 beside it. Pythons installed
-otherwise are left to their own updates.
+these the details suggest installing Python 3.14 beside it.
+
+A Python installed by uv is recognized by its folder
+(`cpython-3.12.9-windows-x86_64-none`, beside uv’s `.lock`). When it is
+outdated, it is in the folder where uv installs its Pythons (the one that
+`UV_PYTHON_INSTALL_DIR` names, as Scoop sets it, else `%APPDATA%\uv\python`) and
+uv is on the PATH, it is upgraded with uv (`uv python upgrade 3.12`; uv 0.13.6
+or later knows the fixed versions), then removed (`uv python uninstall`), only
+once a fixed version of its release line is installed. The virtual environments
+that uv created for its release line follow the upgrade; those found that use
+the removed copy itself are named, in the details and in the warning before the
+fix runs, so that you can recreate them.
+
+Pythons installed otherwise are left to their own updates.
 
 ## Not covered
 

@@ -707,7 +707,9 @@ func (d *fixDlg) run(a *ui) {
 		}
 	}
 	d.asking = true
-	accepted := askWarning(d.hwnd, question, T("fix.warning"), T("fix.accept"), T("fix.decline"))
+	// what the fixes break (the virtual environments of a Python they remove), first
+	text := joinParas(fixWarnings(a.fixItems(d.targets())), T("fix.warning"))
+	accepted := askWarning(d.hwnd, question, text, T("fix.accept"), T("fix.decline"))
 	d.asking = false
 	if !accepted {
 		return
