@@ -125,7 +125,7 @@ var aboutDlg *aboutBox
 func (a *ui) about() {
 	aboutDlg = &aboutBox{title: Tf("about.title", appVersionDate())}
 	if !modalBox(a.hwnd, T("about.caption"), false, aboutDlgProc) {
-		msgBox(a.hwnd, aboutDlg.title+"\n\n"+linkTagRe.ReplaceAllString(Tf("about.text", userAgent()), ""), 0x40)
+		msgBox(a.hwnd, aboutDlg.title+"\n"+appURL+"\n\n"+linkTagRe.ReplaceAllString(Tf("about.text", userAgent()), ""), 0x40)
 	}
 	if f := aboutDlg.textFont; f != 0 {
 		pDeleteObject.Call(f) // fails harmlessly if a link control already did it
@@ -197,8 +197,8 @@ func (b *aboutBox) build(hwnd uintptr) {
 	b.textFont = createFont(9, a.dpi, 400, false, "Segoe UI")
 	b.textX = left + isz + s(9)
 	textW, right := s(460), left+inset+s(4) // text looks closer to an edge than the solid shield
-	lineH := a.fontMetrics(b.textFont).Height
-	titleH := a.fontMetrics(b.titleFont).Height
+	textM, titleM := a.fontMetrics(b.textFont), a.fontMetrics(b.titleFont)
+	lineH, titleH := textM.Height, titleM.Height
 	b.titleY = top + (isz-titleH)/2
 	y := max(top+isz, b.titleY+titleH) + s(14)
 
@@ -221,17 +221,27 @@ func (b *aboutBox) build(hwnd uintptr) {
 	var paras [][]string
 	used := int32(0)
 	for _, para := range strings.Split(Tf("about.text", userAgent()), "\n\n") {
-		lines := wrapMarkup(para, textW, measure)
+		var lines []string
+		for _, l := range strings.Split(para, "\n") { // a line break within a paragraph: a list
+			lines = append(lines, wrapMarkup(l, textW, measure)...)
+		}
 		for _, l := range lines {
 			used = max(used, measure(linkTagRe.ReplaceAllString(l, "")))
 		}
 		paras = append(paras, lines)
 	}
-	w := b.textX + used + right
+	// on the title's line, on the right: the link to the source code and new versions
+	pSelectObject.Call(dc, b.titleFont)
+	titleW := measure(b.title)
+	pSelectObject.Call(dc, b.textFont)
+	repoW := measure(appURL)
+	w := max(b.textX+used, b.textX+titleW+s(24)+repoW) + right
 	// one control per line (up to the right side, so that it never cuts the line
 	// again), an empty line after each paragraph, the last one included; each link
 	// has a tooltip saying where it leads
 	tip := a.newTooltip(hwnd)
+	repo := link(`<a href="`+appURL+`">`+appURL+`</a>`, w-right-repoW, b.titleY+titleM.Ascent-textM.Ascent, repoW+s(8)) // on the title's baseline
+	addTool(tip, repo, 1, &rect{0, 0, repoW, lineH}, linkTip(appURL))
 	for _, lines := range paras {
 		for _, line := range lines {
 			h := link(line, b.textX, y, w-b.textX)
