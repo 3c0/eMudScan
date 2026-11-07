@@ -5,8 +5,13 @@
 <h1 align="center">eMudScan</h1>
 
 <p align="center">
+  In October 2026, the private keys of eight eMudhra intermediate certificate authorities turned out to be compromised: they had been generated incorrectly, so anyone can derive them and impersonate any website or service to software that still trusts them. Windows, browsers and many programs have since stopped trusting them, but not all, and not on every PC: see <a href="https://emudhra.we-have-a-problem.com/">this advisory</a>.
+</p>
+
+<p align="center">
   <b>Does your PC still trust the compromised eMudhra certificates?</b><br>
-  eMudScan checks Windows and the software installed on your PC, tells you what to do about each one, and fixes what it can, once you confirm.
+  eMudScan checks Windows and the software installed on your PC, tells you what to do about each one, and fixes what it can, once you confirm.<br>
+  Intended for administrators, developers and advanced users.
 </p>
 
 <p align="center">
@@ -20,8 +25,6 @@
 <p align="center">
   <img src="docs/images/main-window.png" width="860" alt="eMudScan’s main window after a scan: Windows is protected, and some programs need an update">
 </p>
-
-In October 2026, the private keys of eight eMudhra intermediate certificate authorities were compromised. Windows, browsers and many programs have since been updated to stop trusting them, but not all of them, and not on every PC. eMudScan shows where yours stands.
 
 - 📦 **A single `.exe`:** nothing to install, no administrator rights needed to scan.
 - 🔒 **You stay in control:** it changes nothing on your PC until you confirm a fix.
