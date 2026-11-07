@@ -67,7 +67,7 @@ func TestLabels(t *testing.T) {
 	if r := parseLine("Recommended action: update it."); len(r) == 0 || r[0].kind != runBold {
 		t.Errorf("label: %+v", r)
 	}
-	if r := parseLine(Tf("fix.pkgAll", "Scoop")); len(r) == 0 || r[0].kind == runBold {
+	if r := parseLine(Tf("fix.pkg", "Scoop")); len(r) == 0 || r[0].kind == runBold {
 		t.Errorf("a sentence is not a label: %+v", r)
 	}
 }

@@ -20,8 +20,7 @@ type pkgRef struct {
 	ID        string // package name or identifier
 	Page      string // page of the package
 	Installed bool   // installed with this manager
-	Update    string // command that updates it
-	UpdateAll string // command that updates everything installed with this manager
+	Update    string // command that updates it (that one only: eMudScan stays targeted)
 }
 
 func scoopPage(app string) string { return "https://scoop.sh/#/apps?q=" + url.QueryEscape(app) }
@@ -198,7 +197,7 @@ var packageIDRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._+-]*$`)
 // a semicolon) would end up as part of the command.
 func withCommands(p pkgRef) pkgRef {
 	if !packageIDRe.MatchString(p.ID) {
-		p.Update, p.UpdateAll = "", ""
+		p.Update = ""
 	}
 	return p
 }
@@ -215,9 +214,9 @@ func (tp *appsContext) packagesOf(it *Item) []pkgRef {
 		return []pkgRef{{Manager: storeManager, ID: name, Page: storePage(s.name), Installed: true}}
 	}
 	if m := scoopRe.FindStringSubmatch(path); m != nil {
-		ref := withCommands(pkgRef{"Scoop", m[2], scoopPage(m[2]), true, "scoop update " + m[2], "scoop update -a"})
+		ref := withCommands(pkgRef{"Scoop", m[2], scoopPage(m[2]), true, "scoop update " + m[2]})
 		if scoopPersistRe.MatchString(path) { // Scoop's updates keep it as it is: no update fixes it
-			ref.Update, ref.UpdateAll = "", ""
+			ref.Update = ""
 		}
 		return []pkgRef{ref}
 	}
@@ -226,13 +225,13 @@ func (tp *appsContext) packagesOf(it *Item) []pkgRef {
 		if i := strings.Index(id, "_Microsoft.Winget"); i > 0 {
 			id = id[:i]
 		}
-		return []pkgRef{withCommands(pkgRef{"WinGet", id, wingetPage(id), true, wingetUpdate(id), "winget upgrade --all"})}
+		return []pkgRef{withCommands(pkgRef{"WinGet", id, wingetPage(id), true, wingetUpdate(id)})}
 	}
 	key := alnum(it.Program)
 	for _, c := range tp.choco {
 		inLib := path != "" && tp.chocoRoot != "" && hasPathPrefix(path, filepath.Join(tp.chocoRoot, "lib", c.ID))
 		if inLib || (key != "" && (alnum(c.ID) == key || alnum(c.Title) == key)) {
-			return []pkgRef{withCommands(pkgRef{"Chocolatey", c.ID, chocoPage(c.ID), true, "choco upgrade " + c.ID + " -y", "choco upgrade all"})}
+			return []pkgRef{withCommands(pkgRef{"Chocolatey", c.ID, chocoPage(c.ID), true, "choco upgrade " + c.ID + " -y"})}
 		}
 	}
 	return nil
@@ -253,12 +252,12 @@ func (tp *appsContext) packageAdvice(it *Item) {
 		}
 		advice, given := T("fix.store"), T("fix.store") // the Store: no command
 		if p.Update != "" {
-			one, all := Tf("fix.pkg", p.Manager), Tf("fix.pkgAll", p.Manager)
+			one := Tf("fix.pkg", p.Manager)
 			if p.Manager == "Chocolatey" {
-				one, all = Tf("fix.pkgAdmin", p.Manager), Tf("fix.pkgAllAdmin", p.Manager)
+				one = Tf("fix.pkgAdmin", p.Manager)
 			}
 			f := newFix(fixAction{Kind: fixPackage, Admin: p.Manager == "Chocolatey", Cmds: []string{p.Update}, Manager: p.Manager})
-			advice, given = one+"\n"+f.lines()+"\n\n"+all+"\n"+cmd(p.UpdateAll), f.lines()
+			advice, given = one+"\n"+f.lines(), f.lines()
 		}
 		if strings.Contains(it.Details, given) {
 			continue

@@ -61,7 +61,7 @@ func TestFixesOfElement(t *testing.T) {
 	Lang = 0
 	file := filepath.Join(t.TempDir(), "cacert.pem")
 	pkg := newFix(fixAction{Kind: fixPackage, Cmds: []string{"scoop update app"}, Manager: "Scoop"})
-	details := "Outdated.\n\n" + Tf("fix.pkg", "Scoop") + "\n" + pkg.lines() + "\n\n" + Tf("fix.pkgAll", "Scoop") + "\n$ scoop update -a\n\n" +
+	details := "Outdated.\n\n" + Tf("fix.pkg", "Scoop") + "\n" + pkg.lines() + "\n\n" +
 		T("fix.orDirectly") + "\n" + replaceBundleFix(file) + "\n\n" + T("set.remove") + "\n" + T("fix.ps") + "\n$ git config --global --unset http.sslCAInfo\n\n" +
 		T("fix.ps") + "\n$ Move-Item -LiteralPath a -Destination b -Force"
 	c := newChecker(nopReporter{}, nil)

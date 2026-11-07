@@ -183,12 +183,13 @@ func TestPackages(t *testing.T) {
 	if len(it.Packages) != 1 || it.Packages[0].Manager != "Scoop" || !strings.Contains(it.Details, "$ scoop update example-app-14") {
 		t.Errorf("scoop package: %+v\n%s", it.Packages, it.Details)
 	}
-	one, all, direct := strings.Index(it.Details, "$ scoop update example-app-14"), strings.Index(it.Details, "$ scoop update -a"), strings.Index(it.Details, fixFile)
-	if !(one > 0 && all > one && direct > all) || !strings.Contains(it.Details, Tf("fix.pkgAll", "Scoop")) {
+	// that software only: eMudScan stays targeted, with no command that updates everything
+	one, direct := strings.Index(it.Details, "$ scoop update example-app-14"), strings.Index(it.Details, fixFile)
+	if !(one > 0 && direct > one) || strings.Contains(it.Details, "scoop update -a") {
 		t.Errorf("order of the advice:\n%s", it.Details)
 	}
 	tp.packageAdvice(&it) // run again: no second command
-	if strings.Count(it.Details, "scoop update") != 2 {
+	if strings.Count(it.Details, "scoop update") != 1 {
 		t.Errorf("duplicate command:\n%s", it.Details)
 	}
 	// the Fix function runs the update of this package, not that of all packages
@@ -219,7 +220,7 @@ func TestPackages(t *testing.T) {
 	choco := Item{Group: GroupApps, Kind: "bundle", Name: "Certificate bundle", Owner: "Example App 15", Status: StWarn}
 	choco.fillDisplay("")
 	tp.packageAdvice(&choco)
-	if len(choco.Packages) != 1 || choco.Packages[0].Manager != "Chocolatey" || !strings.Contains(choco.Details, "$ choco upgrade example-app-15 -y") || !strings.Contains(choco.Details, "$ choco upgrade all") {
+	if len(choco.Packages) != 1 || choco.Packages[0].Manager != "Chocolatey" || !strings.Contains(choco.Details, "$ choco upgrade example-app-15 -y") || strings.Contains(choco.Details, "choco upgrade all") {
 		t.Errorf("chocolatey: %+v %q", choco.Packages, choco.Details)
 	}
 	if f := fixesIn(choco.Details); len(f) != 1 || !f[0].Admin || f[0].key() != "choco upgrade example-app-15 -y" {

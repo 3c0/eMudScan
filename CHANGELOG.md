@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Shorter details for Python: one sentence for the problem, then the recommended action, which names the program a bundled Python belongs to.
 - A finding in several places shows its explanation once, with the commands for each place.
+- The details no longer suggest updating everything installed with a package manager (`scoop update -a`, `winget upgrade --all`, `choco upgrade all`): eMudScan stays targeted, with the update of the software it found only.
 
 ### Fixed
 

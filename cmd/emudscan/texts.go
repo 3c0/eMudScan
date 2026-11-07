@@ -692,8 +692,6 @@ var tr = map[string][2]string{
 	"fix.pkgAdmin":      {"It was installed with %s. Once a fixed version is available, update it in PowerShell (**Run as administrator**) with:", "Il a été installé avec %s. Dès qu’une version corrigée est disponible, mettez-le à jour dans PowerShell (**Exécuter en tant qu’administrateur**) avec\u00a0:"},
 	"fix.store":         {"It was installed from the Microsoft Store, which updates it automatically once a fixed version is available.\n\nTo update it sooner, open the Microsoft Store, go to Library, then select Get updates.", "Il a été installé depuis le Microsoft Store, qui le met à jour automatiquement dès qu’une version corrigée est disponible.\n\nPour le mettre à jour plus tôt, ouvrez le Microsoft Store, puis Bibliothèque, puis Obtenir les mises à jour."},
 	"fix.storeLocked":   {"Its files cannot be fixed manually: Windows protects Store app folders.", "Ses fichiers ne peuvent pas être corrigés à la main\u00a0: Windows protège les dossiers des applications du Store."},
-	"fix.pkgAll":        {"Alternatively, update all the software installed with %s:", "Vous pouvez aussi mettre à jour tous les logiciels installés avec %s\u00a0:"},
-	"fix.pkgAllAdmin":   {"Alternatively, update all the software installed with %s, in PowerShell (**Run as administrator**):", "Vous pouvez aussi mettre à jour tous les logiciels installés avec %s, dans PowerShell (**Exécuter en tant qu’administrateur**)\u00a0:"},
 	"dlg.package":       {"Package page", "Page du paquet"},
 	"node.bundledNeeds": {"The software must include a fixed Node.js release: %s or later.", "Le logiciel doit embarquer une version corrigée de Node.js\u00a0: %s ou plus."},
 

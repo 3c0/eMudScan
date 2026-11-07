@@ -145,8 +145,8 @@ func TestPackageNamesInCommands(t *testing.T) {
 		"yt-dlp": true, "Git.Git": true, "python3_x64": true, "Example++.App++": true, "1app.1app": true,
 		"": false, "a b": false, "x;calc": false, "$(calc)": false, "’x": false, "-x": false, ".x": false, "x|y": false,
 	} {
-		p := withCommands(pkgRef{"Scoop", id, "", true, "scoop update " + id, "scoop update -a"})
-		if (p.Update != "") != ok || (p.UpdateAll != "") != ok || p.ID != id {
+		p := withCommands(pkgRef{"Scoop", id, "", true, "scoop update " + id})
+		if (p.Update != "") != ok || p.ID != id {
 			t.Errorf("%q: %+v", id, p)
 		}
 	}
@@ -166,7 +166,7 @@ func TestPackageNamesInCommands(t *testing.T) {
 		if len(it.Packages) != 1 || it.Packages[0].Manager != c.manager {
 			t.Errorf("%s: packages %+v", c.file, it.Packages)
 		}
-		if c.cmd == "" && (strings.Contains(it.Details, "$ ") || it.Details != "Outdated.") || c.cmd != "" && !strings.Contains(it.Details, c.cmd) {
+		if c.cmd == "" && (strings.Contains(it.Details, "$ ") || it.Details != "Outdated.") || c.cmd != "" && !strings.Contains(it.Details+"\n", c.cmd) {
 			t.Errorf("%s: details\n%s", c.file, it.Details)
 		}
 	}
