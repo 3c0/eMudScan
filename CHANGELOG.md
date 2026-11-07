@@ -29,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The About box, like the README, says that eMudScan is intended for administrators, developers and advanced users.
 - The About box shows the link to the source code beside its title, and the sites that the fixes connect to as a list.
 - The texts name we-have-a-problem.com, a third-party site, instead of “the advisory”.
-- The console of the Fix window shows the result of each command in a column on its left (a green ✓ or a red ✗), its warnings in yellow and its errors in red below it, and its exit code when it failed; the report puts the ✓ or ✗ before each command.
+- The console of the Fix window shows the result of each command in a column on its left (a green ✔ or a red ✘), its warnings in yellow and its errors in red below it, and its exit code when it failed; the report puts the ✓ or ✗ before each command.
 
 ### Fixed
 

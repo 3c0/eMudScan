@@ -642,9 +642,9 @@ func (d *fixDlg) clear() {
 // the left column, then its result: ✓ or ✗.
 func (d *fixDlg) show(l fixLine) {
 	if (l.kind == lineOK || l.kind == lineFailed) && d.cmdLine >= 0 {
-		mark, color := markOK, consoleOK
+		mark, color := "✔", consoleOK // heavier than ✓ and ✗ of the report
 		if l.kind == lineFailed {
-			mark, color = markFailed, consoleFailed
+			mark, color = "✘", consoleFailed
 		}
 		d.console.setMark(d.cmdLine, mark, color)
 		d.lineAt = append(d.lineAt, d.cmdLine)

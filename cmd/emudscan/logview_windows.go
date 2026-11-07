@@ -82,7 +82,10 @@ type logView struct {
 	wheel      int32
 	console    bool    // the console of the Fix window: dark
 	marks      bool    // a left column for the results of the commands (setMark)
-	bg         uintptr // its background brush
+	markFont   uintptr // the font of ✔ and ✘, larger than the text
+	markAscent int32
+	markTops   map[string]int32 // where each mark is drawn in its row (markTop)
+	bg         uintptr          // its background brush
 	// the copy button of the console, in its top right corner, as the commands of the
 	// details page have: copyText is what it copies, copyTip its tooltip
 	copyText            func() string
@@ -204,6 +207,54 @@ func (v *logView) destroyFonts() {
 			v.fonts[i] = 0
 		}
 	}
+	if v.markFont != 0 {
+		pDeleteObject.Call(v.markFont)
+		v.markFont = 0
+	}
+}
+
+// glyphMetrics is GLYPHMETRICS: the box of a glyph's ink, from its origin on the
+// baseline.
+type glyphMetrics struct {
+	BlackBoxX, BlackBoxY uint32
+	Origin               point
+	CellIncX, CellIncY   int16
+}
+
+// inkBox is the height of the ink of the character c in the font selected into dc,
+// and how far above the baseline it starts; false if Windows cannot say.
+func inkBox(dc uintptr, c rune) (height, top int32, ok bool) {
+	var gm glyphMetrics
+	mat := [4]uint32{1 << 16, 0, 0, 1 << 16} // MAT2: the identity, in 16.16 fixed point
+	r, _, _ := pGetGlyphOutlineW.Call(dc, uintptr(c), 0 /* GGO_METRICS */, uintptr(unsafe.Pointer(&gm)), 0, 0, uintptr(unsafe.Pointer(&mat)))
+	if r == 0xFFFFFFFF || gm.BlackBoxY == 0 {
+		return 0, 0, false
+	}
+	return int32(gm.BlackBoxY), gm.Origin.Y, true
+}
+
+// markTop is where a mark is drawn in its row, from the top of the row: its ink
+// centered on the capital letters of the text, so that it is neither higher nor lower
+// than the command beside it.
+func (v *logView) markTop(dc uintptr, mark string) int32 {
+	font, ascent := v.markFont, v.markAscent
+	if y, ok := v.markTops[mark]; ok {
+		return y
+	}
+	y := v.ascent - ascent // on the baseline of the text, if Windows cannot say
+	pSelectObject.Call(dc, v.fonts[logMono])
+	capH, _, ok1 := inkBox(dc, 'H')
+	pSelectObject.Call(dc, font)
+	h, top, ok2 := inkBox(dc, []rune(mark)[0])
+	if ok1 && ok2 {
+		center := v.ascent - capH/2 // below the top of the row
+		y = center - h/2 + top - ascent
+	}
+	if v.markTops == nil {
+		v.markTops = map[string]int32{}
+	}
+	v.markTops[mark] = y
+	return y
 }
 
 // setFonts makes the fonts for a DPI; every row is as high as the tallest of them.
@@ -223,6 +274,11 @@ func (v *logView) setFonts(dpi int) {
 		desc = max(desc, tm.Height-tm.Ascent)
 	}
 	v.pitch = v.ascent + desc
+	if v.marks { // ✔ and ✘, heavier and one size up, to be seen at a glance
+		v.markFont = createFont(10, dpi, 700, false, "Segoe UI Symbol")
+		v.markAscent = g.fontMetrics(v.markFont).Ascent
+	}
+	v.markTops = nil
 	v.width = -1 // cut again
 	v.relayout()
 }
@@ -599,14 +655,14 @@ func (v *logView) paint() {
 		ref := v.rows[v.top+i]
 		y := py + int32(i)*v.pitch
 		if ln := &v.lines[ref.line]; ref.row == 0 && ln.mark != "" { // the result of its command
-			font := logSymbol + logBold
-			if ln.mark == "…" {
-				font = logMono
+			font, top := v.fonts[logMono], v.ascent-v.ascents[logMono] // …: on the baseline of the text
+			if ln.mark != "…" && v.markFont != 0 {
+				font, top = v.markFont, v.markTop(dc, ln.mark)
 			}
 			s := utf16.Encode([]rune(ln.mark))
-			pSelectObject.Call(dc, v.fonts[font])
+			pSelectObject.Call(dc, font)
 			pSetTextColor.Call(dc, uintptr(ln.markColor))
-			pExtTextOutW.Call(dc, uintptr(v.padX()), uintptr(y+v.ascent-v.ascents[font]), 0, 0, uintptr(unsafe.Pointer(&s[0])), uintptr(len(s)), 0)
+			pExtTextOutW.Call(dc, uintptr(v.padX()), uintptr(y+top), 0, 0, uintptr(unsafe.Pointer(&s[0])), uintptr(len(s)), 0)
 		}
 		for _, f := range v.lines[ref.line].rows[ref.row] {
 			if f.n == 0 {

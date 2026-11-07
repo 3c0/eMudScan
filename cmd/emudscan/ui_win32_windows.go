@@ -109,6 +109,7 @@ var (
 	pGetTextExtentPoint32 = modgdi32.NewProc("GetTextExtentPoint32W")
 	pGetTextExtentExPoint = modgdi32.NewProc("GetTextExtentExPointW")
 	pGetTextMetricsW      = modgdi32.NewProc("GetTextMetricsW")
+	pGetGlyphOutlineW     = modgdi32.NewProc("GetGlyphOutlineW")
 	pCreateCompatibleDC   = modgdi32.NewProc("CreateCompatibleDC")
 	pCreateCompatibleBmp  = modgdi32.NewProc("CreateCompatibleBitmap")
 	pBitBlt               = modgdi32.NewProc("BitBlt")
