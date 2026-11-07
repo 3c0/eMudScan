@@ -25,10 +25,10 @@ func sslLibWith(blocklist bool) []byte {
 	return append(b, bytes.Repeat([]byte{0x90}, 3000)...)
 }
 
-// fakePython lays out a Python installation: python.exe, DLLs\_ssl.pyd, Lib\site-packages.
+// fakePython lays out a Python installation: python.exe, DLLs\_ssl.pyd, Lib\site-packages\pip.
 func fakePython(t *testing.T, dir string, blocklist bool) {
 	t.Helper()
-	for _, d := range []string{"DLLs", filepath.Join("Lib", "site-packages")} {
+	for _, d := range []string{"DLLs", filepath.Join("Lib", "site-packages", "pip")} {
 		if err := os.MkdirAll(filepath.Join(dir, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -41,10 +41,10 @@ func fakePython(t *testing.T, dir string, blocklist bool) {
 	}
 }
 
-// fakeVenv lays out a virtual environment of base: Scripts\python.exe and pyvenv.cfg.
+// fakeVenv lays out a virtual environment of base: Scripts\python.exe, pyvenv.cfg and pip.
 func fakeVenv(t *testing.T, dir, base, version string) {
 	t.Helper()
-	for _, d := range []string{"Scripts", filepath.Join("Lib", "site-packages")} {
+	for _, d := range []string{"Scripts", filepath.Join("Lib", "site-packages", "pip")} {
 		if err := os.MkdirAll(filepath.Join(dir, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -217,6 +217,111 @@ func TestVenvBundleWithFixedPython(t *testing.T) {
 		}
 		if c.blocklist && !strings.Contains(it.Details, "pip install --upgrade certifi") {
 			t.Errorf("%s: the certifi update should stay as good practice:\n%s", c.name, it.Details)
+		}
+	}
+}
+
+// pip refuses to change a Python that the tool which installed it manages (uv marks
+// its Pythons so): no pip command for it, but for its virtual environments.
+func TestExternallyManagedPython(t *testing.T) {
+	Lang = 0
+	badBundle := outdatedBundle(t)
+	root := t.TempDir()
+	for _, c := range []struct {
+		name, version string
+		blocklist     bool
+		says          string // what the details say instead of the pip command
+	}{
+		{"outdated", "3.13.17", false, "update Python to 3.13.18"},
+		{"version unknown", "", false, T("py.managed")},
+		{"fixed", "3.13.18", true, T("py.managed")},
+	} {
+		home := filepath.Join(root, c.name)
+		fakePython(t, home, c.blocklist)
+		sp := filepath.Join(home, "Lib", "site-packages")
+		os.MkdirAll(filepath.Join(sp, "certifi"), 0o755)
+		os.WriteFile(filepath.Join(sp, "certifi", "cacert.pem"), badBundle, 0o644)
+		os.WriteFile(filepath.Join(home, "Lib", "EXTERNALLY-MANAGED"), []byte("[externally-managed]\nError=managed by uv\n"), 0o644)
+		tp := testApps(t)
+		exe := filepath.Join(home, "python.exe")
+		got := tp.c.begin(GroupApps, "python", "Python", home, func(it *Item) {
+			env := pythonEnvFor(exe)
+			env.version = c.version
+			tp.pythonOneEnv(it, env)
+		})
+		if strings.Contains(got.Details, "pip install") || !strings.Contains(got.Details, c.says) {
+			t.Errorf("%s: no pip command, and %q:\n%s", c.name, c.says, got.Details)
+		}
+		if c.name == "outdated" && strings.Contains(got.Details, T("py.managed")) {
+			t.Errorf("%s: the Python update is enough:\n%s", c.name, got.Details)
+		}
+		// its virtual environment: pip works there
+		venv := filepath.Join(root, c.name+"-venv")
+		fakeVenv(t, venv, home, "3.13.17")
+		vp := filepath.Join(venv, "Lib", "site-packages", "certifi", "cacert.pem")
+		os.MkdirAll(filepath.Dir(vp), 0o755)
+		os.WriteFile(vp, badBundle, 0o644)
+		v := tp.c.begin(GroupApps, "bundle", "certifi", filepath.Dir(vp), func(it *Item) { tp.bundleOne(it, vp) })
+		if !strings.Contains(v.Details, "pip install --upgrade certifi") {
+			t.Errorf("%s: its virtual environment keeps its pip command:\n%s", c.name, v.Details)
+		}
+	}
+	// the bundle of the managed Python itself, when it is checked as a bundle
+	p := filepath.Join(root, "outdated", "Lib", "site-packages", "certifi", "cacert.pem")
+	tp := testApps(t)
+	b := tp.c.begin(GroupApps, "bundle", "certifi", filepath.Dir(p), func(it *Item) { tp.bundleOne(it, p) })
+	if strings.Contains(b.Details, "pip install") {
+		t.Errorf("bundle of a managed Python: no pip command:\n%s", b.Details)
+	}
+}
+
+// Where pip is not installed (a uv environment, some embedded Pythons), "python -m
+// pip" fails: no pip command, but for an environment that sees the packages of its
+// base Python, which has pip.
+func TestNoPip(t *testing.T) {
+	Lang = 0
+	badBundle := outdatedBundle(t)
+	root := t.TempDir()
+	home := filepath.Join(root, "Python")
+	fakePython(t, home, false)
+	os.RemoveAll(filepath.Join(home, "Lib", "site-packages", "pip"))
+	pem := filepath.Join(home, "Lib", "site-packages", "certifi", "cacert.pem")
+	os.MkdirAll(filepath.Dir(pem), 0o755)
+	os.WriteFile(pem, badBundle, 0o644)
+	tp := testApps(t)
+	exe := filepath.Join(home, "python.exe")
+	got := tp.c.begin(GroupApps, "python", "Python", home, func(it *Item) {
+		env := pythonEnvFor(exe)
+		env.version = ""
+		tp.pythonOneEnv(it, env)
+	})
+	if strings.Contains(got.Details, "pip install") || !strings.Contains(got.Details, Tf("py.noPip", "certifi")) {
+		t.Errorf("Python without pip:\n%s", got.Details)
+	}
+	for _, c := range []struct {
+		name   string
+		system bool // sees the packages of its base Python
+		want   string
+	}{
+		{"own packages only", false, Tf("py.noPipEnv", "certifi")},
+		{"sees its base's", true, "pip install --upgrade certifi"},
+	} {
+		base := filepath.Join(root, "Base")
+		fakePython(t, base, false)
+		venv := filepath.Join(root, c.name)
+		fakeVenv(t, venv, base, "3.13.17")
+		os.RemoveAll(filepath.Join(venv, "Lib", "site-packages", "pip"))
+		if c.system {
+			cfg := filepath.Join(venv, "pyvenv.cfg")
+			data, _ := os.ReadFile(cfg)
+			os.WriteFile(cfg, []byte(strings.Replace(string(data), "include-system-site-packages = false", "include-system-site-packages = true", 1)), 0o644)
+		}
+		vp := filepath.Join(venv, "Lib", "site-packages", "certifi", "cacert.pem")
+		os.MkdirAll(filepath.Dir(vp), 0o755)
+		os.WriteFile(vp, badBundle, 0o644)
+		v := tp.c.begin(GroupApps, "bundle", "certifi", filepath.Dir(vp), func(it *Item) { tp.bundleOne(it, vp) })
+		if !strings.Contains(v.Details, c.want) || (!c.system && strings.Contains(v.Details, "pip install")) {
+			t.Errorf("%s: want %q:\n%s", c.name, c.want, v.Details)
 		}
 	}
 }

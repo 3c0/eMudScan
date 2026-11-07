@@ -210,7 +210,11 @@ func (tp *appsContext) packagesOf(it *Item) []pkgRef {
 		return []pkgRef{{Manager: storeManager, ID: name, Page: storePage(s.name), Installed: true}}
 	}
 	if m := scoopRe.FindStringSubmatch(path); m != nil {
-		return []pkgRef{withCommands(pkgRef{"Scoop", m[2], scoopPage(m[2]), true, "scoop update " + m[2], "scoop update -a"})}
+		ref := withCommands(pkgRef{"Scoop", m[2], scoopPage(m[2]), true, "scoop update " + m[2], "scoop update -a"})
+		if scoopPersistRe.MatchString(path) { // Scoop's updates keep it as it is: no update fixes it
+			ref.Update, ref.UpdateAll = "", ""
+		}
+		return []pkgRef{ref}
 	}
 	if m := wingetRe.FindStringSubmatch(path); m != nil {
 		id := m[1]

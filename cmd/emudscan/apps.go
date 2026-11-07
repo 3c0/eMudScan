@@ -464,6 +464,10 @@ var (
 	wingetRe = regexp.MustCompile(`(?i)[\\/]Microsoft[\\/]WinGet[\\/]Packages[\\/]([^\\/]+)`)
 )
 
+// scoopPersistRe: what Scoop keeps for an app through its updates (its settings, its
+// data), in its persist folder.
+var scoopPersistRe = regexp.MustCompile(`(?i)^.*?[\\/]scoop[\\/]persist[\\/]`)
+
 var genericFolderNames = map[string]bool{"microsoft": true, "common files": true, "programs": true, "temp": true,
 	"packages": true, "windowsapps": true, "scoop": true, "microsoft shared": true}
 
@@ -1367,10 +1371,18 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	if m, _ := filepath.Glob(filepath.Join(env.home, "Lib", "ensurepip", "_bundled", "pip-*.whl")); len(m) > 0 {
 		ensurepip = plain(strings.SplitN(strings.TrimPrefix(filepath.Base(m[len(m)-1]), "pip-"), "-", 2)[0])
 	}
+	// why pip cannot update the bundles of this Python: then no pip command
+	noPip := ""
+	switch {
+	case pipRefused(env):
+		noPip = T("py.managed")
+	case !pipInstalled(env):
+		noPip = Tf("py.noPip", andList(lists.badPkgs))
+	}
 	// the command that updates the outdated bundles, after the sentence that introduces
 	// it (or why there is none)
 	listsFix := func(lead string) string {
-		if len(lists.bad) == 0 {
+		if len(lists.bad) == 0 || noPip != "" {
 			return ""
 		}
 		if why := pipUnsafe(env); why != "" {
@@ -1394,6 +1406,8 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 		case len(lists.bad) > 0 && bundled:
 			r.Details = joinParas(r.Details, Tf("py.listsOldSafe."+n(lists.bad), andList(lists.bad)), bundledAdvice(o),
 				listsFix(Tf("py.untilThen", andList(lists.badPkgs))))
+		case len(lists.bad) > 0 && noPip != "":
+			r.Details = joinParas(r.Details, Tf("py.listsOldSafe."+n(lists.bad), andList(lists.bad)), noPip)
 		case len(lists.bad) > 0:
 			r.Details = joinParas(r.Details, listsFix(Tf("py.listsOldSafe."+n(lists.bad), andList(lists.bad))))
 		case len(lists.ok) > 0:
@@ -1445,7 +1459,11 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	if ensureOld && fx.state != FixOutdated && !(bundled && update != "") {
 		ensureText = Tf("py.ensurepip", ensurepip)
 	}
-	details := joinParas(what, update, listsFix(lead), ensureText)
+	fixText := listsFix(lead)
+	if noPip != "" && len(lists.bad) > 0 && update == "" {
+		fixText = noPip
+	}
+	details := joinParas(what, update, fixText, ensureText)
 	switch {
 	case len(lists.bad) > 0:
 		r.Status, r.Summary, r.Details = StWarn, T("py.sumBad"), details
@@ -2498,7 +2516,13 @@ func condaFix(p string) string {
 // update first), or why eMudScan gives none.
 func pipFix(p, py, pkg string, bundled bool, o ownerInfo) string {
 	var command string
-	if why := pipUnsafe(pythonEnvFor(py)); why != "" {
+	if env := pythonEnvFor(py); isUvTool(env) { // uv updates it, not pip
+		command = uvToolAdvice(env.home)
+	} else if pipRefused(env) {
+		command = T("py.managed")
+	} else if !pipInstalled(env) {
+		command = Tf(map[bool]string{false: "py.noPip", true: "py.noPipEnv"}[env.venv], pkg)
+	} else if why := pipUnsafe(env); why != "" {
 		command = why
 	} else {
 		f := newFix(fixAction{Kind: fixPip, Admin: needsAdmin(p), Cmds: []string{pipLine(py, pkg, needsAdmin(p))}})

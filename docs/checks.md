@@ -59,6 +59,16 @@ older Python is amber, even with pip and certifi up to date, because the
 connections of its standard library remain exposed through its copy of the
 Windows roots.
 
+pip refuses to change a Python that the tool which installed it manages, which
+it marks with an `EXTERNALLY-MANAGED` file (uv does so for its Pythons):
+eMudScan gives no pip command for such a Python, but still does for its virtual
+environments. It gives none either where pip is not installed. A tool that uv
+installed (`uv tool install`) has its own virtual environment, without pip,
+which uv says never to change with pip: its packages are updated with
+`uv tool upgrade <tool>`, which eMudScan runs when the tool is in the tool
+folder of your uv (the one that `UV_TOOL_DIR` names, as Scoop sets it, else
+`%APPDATA%\uv\tools`) and uv is on the PATH.
+
 Certificate bundles are not judged by their version: each one is tested against
 the 12 test chains, so the result shows whether that file would really accept a
 compromised certificate.
@@ -158,7 +168,8 @@ Software installed with Scoop, WinGet or Chocolatey is recognized from its files
 Scoop’s `current` folder is a link to the folder of the installed version: what
 is found through it is shown once, under the version’s folder. When an update is
 needed, the details give the command (`scoop update …`, `winget upgrade --id …`,
-`choco upgrade …`). The Microsoft Store updates its apps automatically; the
+`choco upgrade …`), except for what Scoop keeps through its updates (its
+`persist` folder), which they do not change. The Microsoft Store updates its apps automatically; the
 details explain how to get the update sooner. Windows protects the folders of
 Store apps, so no manual fix is offered for them.
 

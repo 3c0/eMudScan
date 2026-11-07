@@ -117,6 +117,31 @@ func othersCanChange(dirs ...string) (path, who string, found bool) {
 	return "", "", false
 }
 
+// pipRefused: pip refuses to install anything in this Python, which the tool that
+// installed it manages (PEP 668): it says so in an EXTERNALLY-MANAGED file beside the
+// standard library, as uv does in the Pythons it installs. A virtual environment of
+// such a Python is not concerned.
+func pipRefused(env pyEnv) bool {
+	return !env.venv && env.sitePackages != "" && exists(filepath.Join(filepath.Dir(env.sitePackages), "EXTERNALLY-MANAGED"))
+}
+
+// pipInstalled: pip is installed in this Python or virtual environment (or, for an
+// environment that sees the packages of its base Python, in that one), so that
+// "python -m pip" runs. A uv environment has none unless asked for. When its packages
+// folder is unknown, as before: it may be.
+func pipInstalled(env pyEnv) bool {
+	if env.sitePackages == "" || isDir(filepath.Join(env.sitePackages, "pip")) {
+		return true
+	}
+	cfg := filepath.Join(env.home, "pyvenv.cfg")
+	if env.venv && lower(pyvenvValue(cfg, "include-system-site-packages")) == "true" {
+		if h := pyvenvHome(cfg); h != "" && isDir(filepath.Join(h, "Lib", "site-packages", "pip")) {
+			return true
+		}
+	}
+	return false
+}
+
 // pipUnsafe is why the pip commands of a Python must not be run as administrator, or
 // "" when they may (or need no administrator rights). They run its python.exe (for a
 // virtual environment, its base Python's), which loads DLLs from its folder and

@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - The Fix window no longer shows “Back up the certificate files” when no fix to run backs up a file, such as an update with pip.
+- No pip command where it cannot work: for a Python or virtual environment where pip is not installed, or for a Python marked as managed by the tool that installed it (EXTERNALLY-MANAGED, as uv does), which pip refuses to change.
+- No Scoop update command for a file in Scoop’s `persist` folder, which Scoop’s updates keep as it is.
+- The packages of a tool that uv installed are updated with `uv tool upgrade`, as uv asks, instead of pip, which uv does not put in its tools.
 
 ## [2.0.0] - 2026-11-05
 

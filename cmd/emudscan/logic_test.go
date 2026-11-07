@@ -202,6 +202,14 @@ func TestPackages(t *testing.T) {
 	if len(runs) != 1 || runs[0].kind != runLink || runs[0].text != "example-app-14 [Scoop]" {
 		t.Errorf("package row: %+v", runs)
 	}
+	// what Scoop keeps through its updates: no update changes it, so none is given
+	kept := Item{Group: GroupApps, Kind: "bundle", Name: "Certificate bundle", Owner: "example-app-14", Status: StWarn, Details: "Outdated.",
+		File: filepath.Join(home, "scoop", "persist", "example-app-14", "data", "cacert.pem")}
+	kept.fillDisplay("")
+	tp.packageAdvice(&kept)
+	if len(kept.Packages) != 1 || kept.Packages[0].Manager != "Scoop" || strings.Contains(kept.Details, "scoop") || fixesIn(kept.Details) != nil {
+		t.Errorf("kept by Scoop: %+v\n%s", kept.Packages, kept.Details)
+	}
 	drawn := Item{Group: GroupApps, Kind: "bundle", Name: "certifi", Owner: "Example App 5", Status: StWarn}
 	drawn.fillDisplay("")
 	tp.packageAdvice(&drawn)
