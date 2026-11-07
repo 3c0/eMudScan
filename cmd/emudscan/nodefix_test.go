@@ -66,6 +66,11 @@ func TestNodeReplaceFix(t *testing.T) {
 			strings.Count(all, psPath(exe, false)) != 3 || !strings.HasPrefix(f.Cmds[len(f.Cmds)-1], "Remove-Item -LiteralPath $nodeNew") {
 			t.Errorf("%s: the change:\n%s", c.arch, all)
 		}
+		// the temporary file may not be there: its removal records no error, which would mark
+		// the command as failed (SilentlyContinue records it)
+		if strings.Count(all, "Remove-Item -LiteralPath $nodeNew -Force -ErrorAction Ignore") != 2 || strings.Contains(all, "SilentlyContinue") {
+			t.Errorf("%s: the removals of the temporary file:\n%s", c.arch, all)
+		}
 		if f.Kind != fixNode || !f.Optional || len(f.Files) != 1 || f.Files[0] != exe || len(f.Plain) != len(f.Cmds) ||
 			strings.Contains(strings.Join(f.Plain, "\n"), ".emudscan-") {
 			t.Errorf("%s: %+v", c.arch, f)

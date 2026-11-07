@@ -42,7 +42,7 @@ func nodeReplaceFix(file string, major int, fixed string) (fixAction, bool) {
 			fmt.Sprintf(`$nodeVersion = $null; $nodeVersion = ((Invoke-RestMethod -UseBasicParsing -Uri https://nodejs.org/dist/index.json) | Where-Object { $_.version -like 'v%d.*' } | Sort-Object { [version]$_.version.TrimStart('v') } -Descending | Select-Object -First 1).version`, major),
 			// its SHA-256, as Node.js publishes it
 			fmt.Sprintf(`$nodeSum = $null; if ($nodeVersion) { $nodeSum = (([Text.Encoding]::ASCII.GetString((Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/$nodeVersion/SHASUMS256.txt").RawContentStream.ToArray()) -split '\r?\n') -match '^[0-9a-f]{64}  %s/node\.exe$' | Select-Object -First 1); if ($nodeSum) { $nodeSum = $nodeSum.Substring(0, 64) } }`, arch),
-			fmt.Sprintf(`$nodeNew = Join-Path $env:TEMP 'emudscan-node.exe'; Remove-Item -LiteralPath $nodeNew -Force -ErrorAction SilentlyContinue; if ($nodeSum) { Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/$nodeVersion/%s/node.exe" -OutFile $nodeNew }`, arch),
+			fmt.Sprintf(`$nodeNew = Join-Path $env:TEMP 'emudscan-node.exe'; Remove-Item -LiteralPath $nodeNew -Force -ErrorAction Ignore; if ($nodeSum) { Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/$nodeVersion/%s/node.exe" -OutFile $nodeNew }`, arch),
 			// that SHA-256, the OpenJS Foundation's signature, a release that is fixed, and the
 			// version it says it is
 			fmt.Sprintf(`$nodeSig = $null; $nodeOK = [bool]$nodeSum -and (Test-Path -LiteralPath $nodeNew) -and (Get-FileHash -LiteralPath $nodeNew).Hash -eq $nodeSum -and ($nodeSig = Get-AuthenticodeSignature -LiteralPath $nodeNew).Status -eq 'Valid' -and $nodeSig.SignerCertificate.Subject -match '(^|, )O=OpenJS Foundation(,|$)' -and [version]$nodeVersion.TrimStart('v') -ge [version]'%s' -and (& $nodeNew --version) -eq $nodeVersion`, fixed),
@@ -50,7 +50,9 @@ func nodeReplaceFix(file string, major int, fixed string) (fixAction, bool) {
 		}
 	}
 	replace := fmt.Sprintf(`Copy-Item -LiteralPath $nodeNew -Destination %s -Force`, psPath(file, admin))
-	cleanup := `Remove-Item -LiteralPath $nodeNew -Force -ErrorAction SilentlyContinue`
+	// Ignore, not SilentlyContinue: the temporary file is usually not there, and an error
+	// that SilentlyContinue hides is still recorded, which marks the command as failed
+	cleanup := `Remove-Item -LiteralPath $nodeNew -Force -ErrorAction Ignore`
 	f := fixAction{Kind: fixNode, Admin: admin, Optional: true, Files: []string{file},
 		Cmds:  append(check(), backupThenLine(file, "$nodeOK", replace, admin), cleanup),
 		Plain: append(check(), changeLine("$nodeOK", replace), cleanup)}
