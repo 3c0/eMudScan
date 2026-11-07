@@ -25,7 +25,7 @@ func TestFixScript(t *testing.T) {
 		}
 		r := fixRunner{backup: backup}
 		units := []fixUnit{r.unit(Item{ID: 1, Name: "App"}, pkg), r.unit(Item{ID: 2, Name: "Tool"}, bundle)}
-		s := fixScript(units, `C:\Users\me\AppData\Local\Temp\x’y\fix.log`, "##emudscan-0123")
+		s := fixScript(units, `C:\Users\me\AppData\Local\Temp\x’y\fix.log`, "##emudscan-0123", nil)
 		want := "if ($a) { backup; write }"
 		if !backup {
 			want = "if ($a) { write }"

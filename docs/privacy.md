@@ -16,14 +16,22 @@ Then:
   temporary folder (`%TEMP%\eMudScan-fix-…`), from which Windows PowerShell runs
   them; eMudScan deletes that folder once they have run;
 - the commands change only what they show: they update software through its
-  package manager, replace certificate bundles and the node.exe of programs, and
-  add the compromised certificates to Java block lists, after backing up the
-  files they replace, next to them, unless you clear **Back up the files to
-  change**;
+  package manager, replace certificate bundles, the node.exe of programs and the
+  ssl files of their Pythons, and add the compromised certificates to Java
+  block lists, after backing up the files they replace, next to them, unless
+  you clear **Back up the files to change**;
 - **Restore the backup**, in the details window of a fixed software, moves these
   backups back in place of their files, once you accept its warning; a file that
   needs administrator rights is moved by the command of the details, in a Windows
   PowerShell started as for the fixes;
+- replacing the ssl files of a Python also writes eMudScan’s tests into that
+  temporary folder: a Python script and certificates made for the fix, valid one
+  hour, whose SHA-256 the commands check before they run; the ssl files are
+  backed up in any case, so that the fix can put them back if a test fails, and
+  a file added beside them is marked by an empty file
+  (`libssl-3-x64.dll.emudscan-20261031-011500.added`), so that **Restore the
+  backup** removes it; if **Back up the files to change** is cleared, these
+  backups and marks are deleted once the tests pass;
 - package managers write what they usually write when they update software;
 - the commands that need administrator rights run in a Windows PowerShell for
   which Windows asks your permission; eMudScan itself does not need them;
@@ -46,6 +54,11 @@ Fixes connect to the internet once you accept the warning, whether or not
 - replacing a node.exe downloads the list of Node.js releases, the SHA-256
   checksums of the chosen release and its node.exe from
   [nodejs.org](https://nodejs.org/dist/), which sees the same;
+- replacing the ssl files of a Python downloads the fixed release of its line
+  from [python.org](https://www.python.org/ftp/python/) (its embeddable
+  package) or from GitHub (the build of
+  [python-build-standalone](https://github.com/astral-sh/python-build-standalone/releases)),
+  which see the same; its tests connect to nothing;
 - Deno’s own updater (`deno upgrade`) downloads Deno’s latest release, as when
   you run it yourself.
 

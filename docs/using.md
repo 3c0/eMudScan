@@ -140,7 +140,12 @@ and no others:
 - the node.exe inside a program replaced with the latest release of its Node.js
   release line, which PowerShell downloads from nodejs.org and checks against
   the SHA-256 checksum that Node.js publishes, the OpenJS Foundation’s signature
-  and its version; this fix is not ticked by default.
+  and its version; this fix is not ticked by default;
+- the ssl files of a Python inside a program replaced with those of the fixed
+  release of its line, which PowerShell downloads from python.org or
+  python-build-standalone and checks against the SHA-256 checksum written in
+  eMudScan, with tests before and after (see
+  [Other software](checks.md#other-software)); this fix is not ticked by default.
 
 The other commands of the details, such as removing a setting, are left for you
 to run; restoring a backup has its own button (see
@@ -156,9 +161,10 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   its location and, after the fixes, the result. They are all ticked, except
   those whose fix replaces a component inside a program (its `node.exe`, the ssl
   files of its Python), a heavier change: tick them yourself, or click
-  **Select All**. A software found in several places has a row for each. Click
-  a location to show it in File Explorer. Drag the bar below the list to make it
-  taller or shorter, down to a single row.
+  **Select All**. A software that has such a fix and others has a row for
+  each, so that the others stay ticked. A software found in several places has
+  a row for each. Click a location to show it in File Explorer. Drag the bar
+  below the list to make it taller or shorter, down to a single row.
 - The PowerShell commands that will run for the ticked software, or for the
   software you click. The button in their top right corner copies them, with
   their comments, as in the details window; after the fixes, it copies their
@@ -175,10 +181,12 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
 software alone, without the list; its button is **Run the fix now**.
 
 **Back up the files to change**, ticked by default, backs up each file before it
-is replaced or changed (a certificate bundle, a Java block list, a node.exe),
-next to the original, as the details window does (see above). It does not cover
-the updates made by package managers or pip, so it is shown only when a fix to
-run backs up a file.
+is replaced or changed (a certificate bundle, a Java block list, a node.exe, the
+ssl files of a Python), next to the original, as the details window does (see
+above). It does not cover the updates made by package managers or pip, so it is
+shown only when a fix to run backs up a file. The ssl files of a Python are
+backed up in any case, so that the fix can put them back if a test fails; if the
+box is cleared, these backups are deleted once the tests pass.
 
 Nothing runs until you accept a warning, which says what the commands do: they
 update software and replace files; package managers will not ask you anything,
@@ -232,10 +240,13 @@ files are there, **Fix this software**, in its details window, becomes **Restore
 the backup** (or **Restore the backups**). Nothing changes until you accept a
 warning, which says that the software will then trust the compromised
 certificates again. eMudScan then moves each backup back in place of its file, as
-the command of the details does. A file in a folder that only administrators can
-change, such as Program Files, is moved by that command, in a Windows PowerShell
-for which Windows asks your permission: eMudScan itself does not need
-administrator rights. The software is then checked again, and a message says
+the command of the details does, and removes the files that the fix added (the
+OpenSSL libraries added beside those of a Python). The ssl files of a Python
+are restored only all together, when all the backups and marks of that fix are
+there, since some of them alone would stop its `ssl` module from loading. A file
+in a folder that only administrators can change, such as Program Files, is moved
+by that command, in a Windows PowerShell for which Windows asks your permission:
+eMudScan itself does not need administrator rights. The software is then checked again, and a message says
 whether its files are back; if it needs fixing, its details offer **Fix this
 software** again. The report keeps what was done.
 

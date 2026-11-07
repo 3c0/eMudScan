@@ -16,7 +16,7 @@ func TestFixSimulation(t *testing.T) {
 	t.Setenv("EMUDSCAN_SIMULATE_FAIL", "choco")
 	units := []fixUnit{{ids: []int{1}, cmds: []string{"scoop update app"}}, {ids: []int{1}, cmds: []string{"choco upgrade x -y", "choco upgrade y -y"}},
 		{ids: []int{2, 3}, cmds: []string{"pip"}}}
-	s := fixScript(units, `C:\Temp\fix.log`, "##m")
+	s := fixScript(units, `C:\Temp\fix.log`, "##m", nil)
 	if strings.Contains(s, "scoop update app") || strings.Contains(s, "choco upgrade") || strings.Count(s, "\n$null = $null\n") != 2 ||
 		strings.Count(s, "\n$global:LASTEXITCODE = 1\n") != 2 || strings.Count(s, simulatedPause) != 2 || strings.Contains(s, "Milliseconds") {
 		t.Errorf("script:\n%s", s)

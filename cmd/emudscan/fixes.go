@@ -27,6 +27,7 @@ const (
 	fixRestore                // puts back files that eMudScan's commands backed up (restoreAdvice)
 	fixTool                   // updates with a tool, after the package managers' updates (uv's Python, after uv)
 	fixNode                   // replaces a node.exe inside a program with nodejs.org's of its release line
+	fixPySSL                  // replaces the ssl files of a Python inside a program with those of its fixed release
 )
 
 // fixAction is one fix: commands that run together, in Windows PowerShell.
@@ -39,6 +40,7 @@ type fixAction struct {
 	From    []string // for a restore: the backup of each file, which is put back in its place
 	Manager string   // for an update: the package manager (Scoop, WinGet, Chocolatey)
 	Warn    string   // what the fix breaks, which the warning before it runs adds
+	Needs   string   // helper files that the runner writes next to the script ("pycheck": pyCheckFiles)
 	// Optional: the fix replaces a component inside a program (its node.exe, the ssl
 	// files of its Python), a heavier change than the others, which the Fix window does
 	// not tick: the user ticks it, or clicks Select All.
@@ -54,8 +56,9 @@ func (f fixAction) lines() string {
 	return strings.Join(out, "\n")
 }
 
-// tickedFirst tells whether the Fix window ticks a row of these elements when it
-// opens: not when all their fixes are optional (fixAction.Optional).
+// tickedFirst tells whether the Fix window ticks a row of these elements (with the
+// fixes of that row, fixParts) when it opens: not when all their fixes are optional
+// (fixAction.Optional).
 func tickedFirst(items []Item) bool {
 	for _, it := range items {
 		for _, f := range it.Fixes {
@@ -65,6 +68,68 @@ func tickedFirst(items []Item) bool {
 		}
 	}
 	return false
+}
+
+// fixPart is which fixes of an element a row of the Fix window's list runs.
+type fixPart int
+
+const (
+	partAll      fixPart = iota // all of them
+	partUsual                   // those that are not optional
+	partOptional                // the optional ones
+)
+
+func (p fixPart) has(f fixAction) bool { return p == partAll || f.Optional == (p == partOptional) }
+
+// fixParts are the rows of the Fix window's list for it: one, but two when it has
+// optional fixes and others, so that the optional ones stay unticked, and run only
+// when the user ticks their row.
+func fixParts(it Item) []fixPart {
+	usual, optional := false, false
+	for _, f := range it.Fixes {
+		usual, optional = usual || !f.Optional, optional || f.Optional
+	}
+	if usual && optional {
+		return []fixPart{partUsual, partOptional}
+	}
+	return []fixPart{partAll}
+}
+
+// fixPick is, for each element, the parts of its fixes that run (those of the ticked
+// rows); nil: all of them.
+type fixPick map[int][]fixPart
+
+func (p fixPick) runs(id int, f fixAction) bool {
+	if p == nil {
+		return true
+	}
+	for _, part := range p[id] {
+		if part.has(f) {
+			return true
+		}
+	}
+	return false
+}
+
+// items are items with only the fixes that run, without those left with none.
+func (p fixPick) items(items []Item) []Item {
+	if p == nil {
+		return items
+	}
+	var out []Item
+	for _, it := range items {
+		var fixes []fixAction
+		for _, f := range it.Fixes {
+			if p.runs(it.ID, f) {
+				fixes = append(fixes, f)
+			}
+		}
+		if len(fixes) > 0 {
+			it.Fixes = fixes
+			out = append(out, it)
+		}
+	}
+	return out
 }
 
 // backsUp tells whether a fix of these elements backs up files (fixAction.Plain), the

@@ -1418,6 +1418,7 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 		case len(lists.ok) > 0:
 			r.Details = joinParas(r.Details, Tf("py.listsOK."+n(lists.ok), andList(lists.ok)))
 		}
+		r.Details = joinParas(r.Details, pySSLRestore(fx.sslLib)) // after eMudScan replaced its ssl files
 		tp.c.finish(it, r)
 		return
 	}
@@ -1458,8 +1459,16 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 			update = a
 		}
 	}
+	// until the program is updated, its ssl files from the fixed release (not ticked by default)
+	sslText := ""
+	if bundled && fx.state == FixOutdated {
+		sslText = pySSLAdvice(env, fx.sslLib, fx.fixed, o.Name)
+	}
 	lead := Tf("py.updateLists", andList(lists.badPkgs))
-	if update != "" {
+	switch {
+	case sslText != "":
+		lead = Tf("py.untilThenAlso", andList(lists.badPkgs))
+	case update != "":
 		lead = Tf("py.untilThen", andList(lists.badPkgs))
 	}
 	// new virtual environments start with the pip of ensurepip: said when no update of
@@ -1473,7 +1482,7 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	if noPip != "" && len(lists.bad) > 0 && update == "" {
 		fixText = noPip
 	}
-	details := joinParas(what, update, fixText, ensureText)
+	details := joinParas(what, update, sslText, fixText, ensureText, pySSLRestore(fx.sslLib))
 	switch {
 	case len(lists.bad) > 0:
 		r.Status, r.Summary, r.Details = StWarn, T("py.sumBad"), details

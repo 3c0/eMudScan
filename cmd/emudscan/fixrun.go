@@ -31,8 +31,10 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf16"
 )
 
@@ -126,6 +128,7 @@ type fixRunner struct {
 	fixed     func(id int)              // an element is fixed: the window unselects it
 	simulated func(id int)              // simulation only: shows an element as fixed, or restored
 	backup    bool                      // "Back up the files to change"
+	pick      fixPick                   // the fixes of each element that run (the ticked rows); nil: all
 	titles    map[int]string            // the titles of the elements, for the console (fixTitles)
 	fixedAny  bool                      // a software is fixed, or restored: it is to be restarted if it was open
 	restoring bool                      // it restores backups (restore), instead of fixing
@@ -145,8 +148,9 @@ func anyRan(res []unitResult) bool {
 // fixedStatus: a status that leaves nothing to fix.
 func fixedStatus(st Status) bool { return st == StOK || st == StInfo }
 
-// run fixes the elements ids. It reports whether Stop ended it. Once a software is
-// fixed, it ends by saying to restart those that were open.
+// run fixes the elements ids, with the fixes that r.pick runs. It reports whether
+// Stop ended it. Once a software is fixed, it ends by saying to restart those that
+// were open.
 func (r *fixRunner) run(ids []int) (stopped bool) {
 	var items []Item // those to fix, as the Fix window names them
 	for _, id := range ids {
@@ -154,7 +158,7 @@ func (r *fixRunner) run(ids []int) (stopped bool) {
 			items = append(items, it)
 		}
 	}
-	r.titles = fixTitles(items)
+	r.titles = fixTitles(r.pick.items(items))
 	for _, update := range []bool{true, false} {
 		ran, ok, stop := r.round(ids, func(it Item) []fixAction {
 			if fixedStatus(it.Status) {
@@ -162,7 +166,7 @@ func (r *fixRunner) run(ids []int) (stopped bool) {
 			}
 			var out []fixAction
 			for _, f := range it.Fixes {
-				if (f.Kind == fixPackage) == update {
+				if (f.Kind == fixPackage) == update && r.pick.runs(it.ID, f) {
 					out = append(out, f)
 				}
 			}
@@ -573,6 +577,8 @@ func fixIntro(f fixAction) string {
 		return Tf("fix.kindJava", admin)
 	case fixNode:
 		return Tf("fix.kindNode", admin)
+	case fixPySSL:
+		return Tf("fix.kindPySSL", admin)
 	}
 	return Tf("fix.kindBundle", admin)
 }
@@ -596,11 +602,25 @@ func fixMarker() string {
 // of this script where it happened, which is not the user's command. The commands run
 // in the script's scope, so that the variables of a fix ($cacert, $ok) go from one
 // command to the next.
-func fixScript(units []fixUnit, logPath, marker string) string {
+//
+// The helper files of the fixes (fixFiles) are next to the script, in $emudscanFiles:
+// the script exits with code 97, as when it changed, if one of them did.
+func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte) string {
 	var b strings.Builder
 	b.WriteString("$ErrorActionPreference = 'Continue'\n")
 	b.WriteString("$ProgressPreference = 'SilentlyContinue'\n") // Invoke-WebRequest is much slower with its progress bar
 	fmt.Fprintf(&b, "$emudscanLog = %s\n", psQuote(logPath))
+	b.WriteString("$emudscanFiles = Split-Path -Parent $emudscanLog\n")
+	names := make([]string, 0, len(files))
+	for n := range files {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		sum := sha256.Sum256(files[n])
+		fmt.Fprintf(&b, "if ((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $emudscanFiles %s)).Hash -ne '%s') { exit %d }\n",
+			psQuote(n), strings.ToUpper(hex.EncodeToString(sum[:])), fixTampered)
+	}
 	b.WriteString("function Write-EmudscanLog([string]$s) { [IO.File]::AppendAllText($emudscanLog, $s + \"`n\", [Text.UTF8Encoding]::new($false)) }\n")
 	prev := 0 // the first element of the previous fix
 	for u, unit := range units {
@@ -637,6 +657,24 @@ func fixBootstrap(scriptPath string, script []byte) string {
 		"$h = -join ([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($t)) | ForEach-Object { $_.ToString('X2') })\n"+
 		"if ($h -ne '%s') { exit 97 }\n"+
 		". ([scriptblock]::Create($t))\n", psQuote(scriptPath), strings.ToUpper(hex.EncodeToString(sum[:])))
+}
+
+// fixFiles are the helper files that the fixes of units need, made for a run at now.
+func fixFiles(units []fixUnit, now time.Time) (map[string][]byte, error) {
+	files := map[string][]byte{}
+	for _, u := range units {
+		if u.fix.Needs == "pycheck" {
+			f, err := pyCheckFiles(now)
+			if err != nil {
+				return nil, err
+			}
+			for n, b := range f {
+				files[n] = b
+			}
+			break
+		}
+	}
+	return files, nil
 }
 
 // fixTampered is the exit code of a script that changed before it ran.

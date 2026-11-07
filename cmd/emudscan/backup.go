@@ -3,7 +3,9 @@ package main
 // eMudScan's backups: before changing a file, the commands that eMudScan proposes keep
 // a copy of it next to it, named after the file and the time the commands ran
 // (cacert.pem.emudscan-20261031-011500.bak), which tells it from the copies that other
-// programs keep. While one is there, eMudScan proposes to put it back.
+// programs keep. While one is there, eMudScan proposes to put it back. A file that a fix
+// added, where there was none, has an empty mark instead
+// (libssl-3-x64.dll.emudscan-20261107-120000.added): restoring removes the file.
 
 import (
 	"bytes"
@@ -43,11 +45,12 @@ func changeLine(cond, change string) string {
 	return fmt.Sprintf(`if (%s) { %s }`, cond, change)
 }
 
-var backupSuffixRe = regexp.MustCompile(`(?i)^\.emudscan-(\d{8}-\d{6})\.bak$`)
+var backupSuffixRe = regexp.MustCompile(`(?i)^\.emudscan-(\d{8}-\d{6})\.(bak|added)$`)
 
 type backup struct {
-	path string
-	at   time.Time // when it was made
+	path  string
+	at    time.Time // when it was made
+	added bool      // the mark of a file that the fix added: restoring removes it
 }
 
 // latestBackup is the most recent of eMudScan's backups of file that differs from it:
@@ -72,7 +75,7 @@ func latestBackup(file string) (backup, bool) {
 		if err != nil {
 			continue
 		}
-		found = append(found, backup{filepath.Join(dir, n), at})
+		found = append(found, backup{filepath.Join(dir, n), at, strings.EqualFold(m[2], "added")})
 	}
 	if len(found) == 0 {
 		return backup{}, false
@@ -83,6 +86,9 @@ func latestBackup(file string) (backup, bool) {
 	}
 	sort.Slice(found, func(i, j int) bool { return found[i].at.After(found[j].at) })
 	for _, b := range found {
+		if b.added { // the file is there: it can be removed
+			return b, true
+		}
 		if data, err := os.ReadFile(b.path); err == nil && !bytes.Equal(data, cur) {
 			return b, true
 		}
@@ -102,9 +108,29 @@ func moveBackups(units []fixUnit, out func(fixLine)) []unitResult {
 			if j >= len(u.fix.From) {
 				break
 			}
-			out(fixLine{lineCommand, Tf("restore.move", shownPath(u.fix.From[j]), shownPath(file))})
+			added := backupSuffixRe.FindStringSubmatch(u.fix.From[j][min(len(file), len(u.fix.From[j])):])
+			removing := added != nil && strings.EqualFold(added[2], "added")
+			if removing {
+				out(fixLine{lineCommand, Tf("restore.remove", shownPath(file))})
+			} else {
+				out(fixLine{lineCommand, Tf("restore.move", shownPath(u.fix.From[j]), shownPath(file))})
+			}
 			if fixSimulation {
 				out(fixLine{lineOK, "✓ " + simulatedResult(false)})
+				continue
+			}
+			if removing { // a file that the fix added, and its mark
+				err := os.Remove(file)
+				if err == nil || os.IsNotExist(err) {
+					err = os.Remove(u.fix.From[j])
+				}
+				if err != nil {
+					out(fixLine{lineFailed, "✗ " + T("fix.cmdFailed")})
+					out(fixLine{lineOutput, err.Error()})
+					res[i].ok = false
+					continue
+				}
+				out(fixLine{lineOK, "✓ " + T("fix.cmdOK")})
 				continue
 			}
 			if err := os.Rename(u.fix.From[j], file); err != nil { // MoveFileEx, replacing the file
@@ -135,7 +161,11 @@ func restoreAdvice(files ...string) string {
 			refused = append(refused, why)
 			continue
 		}
-		list = append(list, "• "+lk(b.path)+" — "+Tf("restore.when", longDate(b.at), b.at.Format("15:04")))
+		if b.added {
+			list = append(list, "• "+lk(f)+" — "+Tf("restore.added", longDate(b.at), b.at.Format("15:04")))
+		} else {
+			list = append(list, "• "+lk(b.path)+" — "+Tf("restore.when", longDate(b.at), b.at.Format("15:04")))
+		}
 		changed = append(changed, f)
 		backups = append(backups, b)
 	}
@@ -145,6 +175,10 @@ func restoreAdvice(files ...string) string {
 	admin := anyNeedsAdmin(changed...) // as psHeader says
 	var cmds []string
 	for i, f := range changed {
+		if backups[i].added {
+			cmds = append(cmds, fmt.Sprintf(`Remove-Item -LiteralPath %s, %s -Force`, psPath(f, admin), psPath(backups[i].path, admin)))
+			continue
+		}
 		cmds = append(cmds, fmt.Sprintf(`Move-Item -LiteralPath %s -Destination %s -Force`, psPath(backups[i].path, admin), psPath(f, admin)))
 	}
 	from := make([]string, len(backups))

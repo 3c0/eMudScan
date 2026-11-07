@@ -66,7 +66,8 @@ The details window explains why, says what to update, and provides the commands 
 - an update through the package manager that installed the software: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx, pip or conda, or Deno’s own updater;
 - Mozilla’s current certificate bundle in place of an outdated one, downloaded from curl.se and checked against its SHA-256 checksum;
 - the compromised certificates added to a Java block list;
-- the node.exe inside a program replaced with the latest release of its Node.js release line, downloaded from nodejs.org and checked (SHA-256, OpenJS Foundation signature, version), not ticked by default.
+- the node.exe inside a program replaced with the latest release of its Node.js release line, downloaded from nodejs.org and checked (SHA-256, OpenJS Foundation signature, version), not ticked by default;
+- the ssl files of a Python inside a program replaced with those of the fixed release of its line, downloaded from python.org or python-build-standalone and checked (SHA-256, then tests before and after, the original files put back if one fails), not ticked by default.
 
 Nothing runs until you accept a warning, and for the commands that need administrator rights, such as replacing a file in Program Files, Windows also asks your permission. The files are backed up before they are replaced or changed, each software is then checked again, and a report is saved in your Downloads folder. Once a software is fixed, **Restore the backup**, in its details window, puts its files back as they were. See [Fixing software](docs/using.md#fixing-software).
 

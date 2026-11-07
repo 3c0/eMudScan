@@ -13,7 +13,8 @@ package main
 // Opened from the main window ("Fix the selected software"), it lists every software
 // that can be fixed, with its vulnerable component, each with a check box, ticked
 // unless its fixes are optional (tickedFirst), above the console, which shows the
-// commands of those ticked. A fixed software is
+// commands of those ticked. A software with optional fixes and others has a row for
+// each (fixParts), the optional ones unticked; each row runs its own. A fixed software is
 // unticked, so that running the fixes again, after Stop, does not fix it twice. At the
 // end, a report is saved in the Downloads folder.
 
@@ -70,7 +71,7 @@ type fixDlg struct {
 	// from the main window: the list of the software that can be fixed
 	list, bAll, bNone uintptr
 	count             uintptr      // "3/9 software selected"
-	rows              []Item       // the rows of the list: a software in one place each
+	rows              []fixRow     // the rows of the list: a software in one place each
 	placeText         []string     // the Location of each row, as shown: shortened to its column (fitPlaces)
 	ranRows           map[int]bool // the rows that the last run fixed or tried to
 	updating          bool         // the check boxes are being changed by eMudScan
@@ -121,18 +122,28 @@ func (a *ui) restoreItems(ids []int) []Item {
 	return out
 }
 
+// fixRow is a row of the list of the Fix window: an element, and which of its fixes
+// the row runs.
+type fixRow struct {
+	Item
+	part fixPart
+}
+
 // fixRows are the software that can be fixed, by name: a finding repeated in
 // several places, which the lists show as one row, has a row for each place, with
-// its own Location.
-func (a *ui) fixRows() []Item {
-	var rows []Item
+// its own Location; a software with optional fixes and others, a row for each
+// (fixParts).
+func (a *ui) fixRows() []fixRow {
+	var rows []fixRow
 	for _, it := range a.items {
 		if len(a.fixItems([]int{it.ID})) > 0 {
-			rows = append(rows, it)
+			for _, part := range fixParts(it) {
+				rows = append(rows, fixRow{it, part})
+			}
 		}
 	}
-	sort.Slice(rows, func(i, j int) bool { return rows[i].ID < rows[j].ID }) // the places of a software in the order found
-	sort.SliceStable(rows, func(i, j int) bool { return lower(itemTitle(rows[i])) < lower(itemTitle(rows[j])) })
+	sort.SliceStable(rows, func(i, j int) bool { return rows[i].ID < rows[j].ID }) // the places of a software in the order found
+	sort.SliceStable(rows, func(i, j int) bool { return lower(itemTitle(rows[i].Item)) < lower(itemTitle(rows[j].Item)) })
 	return rows
 }
 
@@ -184,9 +195,9 @@ func (a *ui) openFixAll() {
 		send(d.list, lvmInsertColumnW, uintptr(i), uintptr(unsafe.Pointer(&col)))
 	}
 	d.updating = true
-	for i, it := range d.rows {
-		items := a.fixItems(it.memberIDs())
-		row := a.setRow(d.list, i, it, []string{fixSoftware(it), appCell(it, colComponent), fixSummary(items), it.copyPath(), ""}, true)
+	for i, r := range d.rows {
+		items := d.rowItems(a, i)
+		row := a.setRow(d.list, i, r.Item, []string{fixSoftware(r.Item), appCell(r.Item, colComponent), fixSummary(items), r.copyPath(), ""}, true)
 		d.check(row, tickedFirst(items))
 	}
 	d.fitPlaces(a)
@@ -382,20 +393,22 @@ func (d *fixDlg) hasBox(row int) bool {
 	return send(d.list, lvmGetItemState, uintptr(row), 0xF000)>>12 != 0
 }
 
-// showCount says how many rows are ticked, of how many that are not fixed.
+// showCount says how many software are ticked, of how many that are not fixed: a
+// software with two rows (fixParts) counts once.
 func (d *fixDlg) showCount() {
 	if d.count == 0 {
 		return
 	}
-	n, of := 0, 0
-	for i := range d.rows {
+	ticked, left := map[int]bool{}, map[int]bool{}
+	for i, row := range d.rows {
 		if d.hasBox(i) {
-			of++
+			left[row.ID] = true
 		}
 		if d.checked(i) {
-			n++
+			ticked[row.ID] = true
 		}
 	}
+	n, of := len(ticked), len(left)
 	key := "fix.selected"
 	if n <= 1 {
 		key = "fix.selected1" // in French, "logiciel" in the singular
@@ -403,18 +416,44 @@ func (d *fixDlg) showCount() {
 	setText(d.count, Tf(key, n, of))
 }
 
-// targets are the elements to fix: those of the details, or of the ticked rows.
-func (d *fixDlg) targets() []int {
+// targets are the elements to fix, those of the details or of the ticked rows, and
+// which of their fixes run: all of them from the details; from the list, those of
+// the ticked rows.
+func (d *fixDlg) targets() ([]int, fixPick) {
 	if d.list == 0 {
-		return d.ids
+		return d.ids, nil
 	}
 	var ids []int
-	for i, it := range d.rows {
-		if d.checked(i) {
-			ids = append(ids, it.memberIDs()...)
+	pick := fixPick{}
+	for i, row := range d.rows {
+		if !d.checked(i) {
+			continue
+		}
+		for _, id := range row.memberIDs() {
+			if _, seen := pick[id]; !seen {
+				ids = append(ids, id)
+			}
+			pick[id] = append(pick[id], row.part)
 		}
 	}
-	return ids
+	return ids, pick
+}
+
+// selected are the elements to fix as they are now, with the fixes that will run.
+func (d *fixDlg) selected(a *ui) []Item {
+	ids, pick := d.targets()
+	return pick.items(a.fixItems(ids))
+}
+
+// rowItems are the elements of a row of the list as they are now, with the fixes
+// that the row runs: none once they have run, or the software is fixed.
+func (d *fixDlg) rowItems(a *ui, row int) []Item {
+	r := d.rows[row]
+	pick := fixPick{}
+	for _, id := range r.memberIDs() {
+		pick[id] = []fixPart{r.part}
+	}
+	return pick.items(a.fixItems(r.memberIDs()))
 }
 
 // newFixWindow makes the window of d, w × h (before scaling), above its owner, with
@@ -487,7 +526,7 @@ func (d *fixDlg) preview(a *ui) {
 	d.clear()
 	d.results = false
 	d.console.updateCopyTip()
-	items := a.fixItems(d.targets())
+	items := d.selected(a)
 	d.titles = fixTitles(items)
 	lines := fixPreview(items, d.backup())
 	// "Back up the files to change" only when a fix backs up files
@@ -695,27 +734,21 @@ func (d *fixDlg) run(a *ui) {
 	}
 	question := d.question
 	if d.list != 0 { // "Fix the 3 selected software?"
-		n := 0
-		for i, row := range d.rows {
-			if d.checked(i) && len(a.fixItems(row.memberIDs())) > 0 {
-				n++
-			}
-		}
-		question = Tf("fix.confirmAll", n)
+		n := len(d.selected(a))
 		if n == 1 {
 			question = T("fix.confirmOne")
 		}
 	}
 	d.asking = true
 	// what the fixes break (the virtual environments of a Python they remove), first
-	text := joinParas(fixWarnings(a.fixItems(d.targets())), T("fix.warning"))
+	text := joinParas(fixWarnings(d.selected(a)), T("fix.warning"))
 	accepted := askWarning(d.hwnd, question, text, T("fix.accept"), T("fix.decline"))
 	d.asking = false
 	if !accepted {
 		return
 	}
-	ids := append([]int(nil), d.targets()...)
-	if len(a.fixItems(ids)) == 0 {
+	ids, pick := d.targets()
+	if len(pick.items(a.fixItems(ids))) == 0 {
 		return
 	}
 	d.running, d.ran = true, true
@@ -737,7 +770,7 @@ func (d *fixDlg) run(a *ui) {
 	d.clear()
 	d.results = true
 	d.console.updateCopyTip()
-	d.titles = fixTitles(a.fixItems(ids)) // as the runner names them
+	d.titles = fixTitles(pick.items(a.fixItems(ids))) // as the runner names them
 	c := a.current
 	// the console, also kept for the report, after a line that says when and what
 	out := func(l fixLine) {
@@ -764,6 +797,7 @@ func (d *fixDlg) run(a *ui) {
 		fixed:     func(id int) { postEvent(uiEvent{kind: 5, item: Item{ID: id}}) },
 		simulated: func(id int) { simulateFixed(c, id) },
 		backup:    d.backup(),
+		pick:      pick,
 	}
 	fixPromptOwner = d.hwnd
 	fixPromptClosed = func() { postEvent(uiEvent{kind: 7}) }
@@ -801,7 +835,7 @@ func (a *ui) fixEvent(e uiEvent) {
 			}
 		}
 		pEnableWindow.Call(d.bStop, 0)
-		pEnableWindow.Call(d.bFix, boolArg(len(a.fixItems(d.targets())) > 0)) // what is left to fix
+		pEnableWindow.Call(d.bFix, boolArg(len(d.selected(a)) > 0)) // what is left to fix
 		pSetFocus.Call(d.bClose)
 		if d.list != 0 {
 			a.saveFixReport(d)
@@ -866,7 +900,8 @@ func bringToFront(hwnd uintptr) bool {
 }
 
 // rowResults shows in the list which rows are fixed, unticked; at the end, also those
-// that are not.
+// that are not. A row has nothing left to run once its fixes have, or once the other
+// row of its software (fixParts) has fixed it.
 func (d *fixDlg) rowResults(a *ui, end bool) {
 	if d.list == 0 {
 		return
@@ -876,18 +911,28 @@ func (d *fixDlg) rowResults(a *ui, end bool) {
 		d.updating = false
 		d.showCount()
 	}()
+	ran := map[int]bool{} // the elements of the rows that ran
 	for i, row := range d.rows {
-		if !d.ranRows[i] {
+		for _, id := range row.memberIDs() {
+			ran[id] = ran[id] || d.ranRows[i]
+		}
+	}
+	for i, row := range d.rows {
+		concerned := false
+		for _, id := range row.memberIDs() {
+			concerned = concerned || ran[id]
+		}
+		if !concerned || !d.hasBox(i) {
 			continue
 		}
 		result := ""
-		if len(a.fixItems(row.memberIDs())) == 0 {
+		if len(d.rowItems(a, i)) == 0 {
 			result = T("fix.resultFixed")
 			d.done(i)
 			if it, ok := a.items[row.ID]; ok {
 				a.setRow(d.list, i, it, []string{fixSoftware(it)}, false) // its new status icon
 			}
-		} else if end {
+		} else if end && d.ranRows[i] {
 			result = T("fix.resultNotFixed")
 		}
 		if result != "" {

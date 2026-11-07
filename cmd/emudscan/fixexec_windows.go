@@ -55,7 +55,16 @@ func runFixes(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, err
 	defer os.RemoveAll(dir)
 	logPath, scriptPath := filepath.Join(dir, "fix.log"), filepath.Join(dir, "fix.ps1")
 	marker := fixMarker()
-	script := []byte(fixScript(units, logPath, marker))
+	files, err := fixFiles(units, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+	}
+	for n, b := range files { // next to the script, which checks them
+		if err := os.WriteFile(filepath.Join(dir, n), b, 0o600); err != nil {
+			return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+		}
+	}
+	script := []byte(fixScript(units, logPath, marker, files))
 	if err := os.WriteFile(scriptPath, script, 0o600); err != nil {
 		return nil, fmt.Errorf(T("fix.noPowerShell"), err)
 	}
