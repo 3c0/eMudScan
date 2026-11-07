@@ -200,46 +200,52 @@ func pySSLAdvice(env pyEnv, sslLib, fixed, program string) string {
 // the files of the run that backed up _ssl.pyd, together, when its backups and marks
 // are all there (pySSLShapes), else nothing: some of them alone would break the ssl
 // module (a new _ssl.pyd without the OpenSSL libraries it loads, or with old ones, does
-// not load), and a file that a mark names as added stays.
+// not load), and a file that a mark names as added stays. A backup the same as its
+// file counts too: a copy interrupted by a crash replaced only some of the files.
 func pySSLRestore(sslLib string) string {
 	if sslLib == "" {
 		return ""
 	}
 	dir := filepath.Dir(sslLib)
-	first, ok := latestBackup(filepath.Join(dir, "_ssl.pyd"))
+	first, ok := latestBackup(filepath.Join(dir, "_ssl.pyd")) // a backup that differs from it: a run changed it
 	if !ok || first.added {
 		return ""
 	}
-	of := func(n string, added bool) bool { // backed up, or marked, by that run
-		b, ok := latestBackup(filepath.Join(dir, n))
-		return ok && b.added == added && b.at.Equal(first.at)
-	}
+	stamp := ".emudscan-" + first.at.Format("20060102-150405")
 	for _, shape := range pySSLShapes {
-		var files []string
+		var pairs []restorePair
+		complete := true
 		for _, n := range shape.replace {
-			if of(n, false) {
-				files = append(files, filepath.Join(dir, n))
+			f, bak := filepath.Join(dir, n), filepath.Join(dir, n+stamp+".bak")
+			if !exists(f) || !exists(bak) {
+				complete = false
+				break
 			}
+			pairs = append(pairs, restorePair{f, backup{bak, first.at, false}})
 		}
 		for _, n := range shape.added {
-			if of(n, true) {
-				files = append(files, filepath.Join(dir, n))
+			f, mark := filepath.Join(dir, n), filepath.Join(dir, n+stamp+".added")
+			if !exists(mark) {
+				complete = false
+				break
+			}
+			if exists(f) { // else the copy did not reach it: nothing to remove
+				pairs = append(pairs, restorePair{f, backup{mark, first.at, true}})
 			}
 		}
-		if len(files) < len(shape.replace)+len(shape.added) {
+		if !complete {
 			continue
 		}
 		var refused []string // one of them refused (restoreUnsafe): none of them
-		for _, f := range files {
-			b, _ := latestBackup(f)
-			if why := restoreUnsafe(f, b.path); why != "" {
+		for _, p := range pairs {
+			if why := restoreUnsafe(p.file, p.b.path); why != "" {
 				refused = append(refused, why)
 			}
 		}
 		if len(refused) > 0 {
 			return joinParas(refused...)
 		}
-		return restoreAdvice(files...)
+		return restoreAdviceFor(pairs)
 	}
 	return ""
 }

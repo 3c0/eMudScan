@@ -152,13 +152,28 @@ func moveBackups(units []fixUnit, out func(fixLine)) []unitResult {
 // that each restore undoes one change. The commands are recorded as a restore, which
 // the Restore button of the details runs (fixes.go).
 func restoreAdvice(files ...string) string {
+	var pairs []restorePair
+	for _, f := range files {
+		if b, ok := latestBackup(f); ok {
+			pairs = append(pairs, restorePair{f, b})
+		}
+	}
+	return restoreAdviceFor(pairs)
+}
+
+// restorePair is a file, and the backup to put back in its place, or the mark of a
+// file that a fix added, which the restore removes.
+type restorePair struct {
+	file string
+	b    backup
+}
+
+// restoreAdviceFor is restoreAdvice for the backups given.
+func restoreAdviceFor(pairs []restorePair) string {
 	var list, changed, refused []string
 	var backups []backup
-	for _, f := range files {
-		b, ok := latestBackup(f)
-		if !ok {
-			continue
-		}
+	for _, p := range pairs {
+		f, b := p.file, p.b
 		if why := restoreUnsafe(f, b.path); why != "" {
 			refused = append(refused, why)
 			continue

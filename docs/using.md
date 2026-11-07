@@ -247,7 +247,8 @@ certificates again. eMudScan then moves each backup back in place of its file, a
 the command of the details does, and removes the files that the fix added (the
 OpenSSL libraries added beside those of a Python). The ssl files of a Python
 are restored only all together, when all the backups and marks of that fix are
-there, since some of them alone would stop its `ssl` module from loading. A file
+there, since some of them alone would stop its `ssl` module from loading; this
+also works after a fix that a crash interrupted during the copy. A file
 in a folder that only administrators can change, such as Program Files, is moved
 by that command, in a Windows PowerShell for which Windows asks your permission:
 eMudScan itself does not need administrator rights. The software is then checked again, and a message says

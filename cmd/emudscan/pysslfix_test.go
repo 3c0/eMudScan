@@ -211,7 +211,8 @@ func TestRestoreAdded(t *testing.T) {
 }
 
 // The ssl files of a Python are put back together, from the run that backed up
-// _ssl.pyd, when all its backups and marks are there; never some of them alone.
+// _ssl.pyd, when all its backups and marks are there; never some of them alone. After a
+// copy interrupted by a crash, the backups the same as their files count too.
 func TestPySSLRestoreTogether(t *testing.T) {
 	Lang = 0
 	dir := t.TempDir()
@@ -267,6 +268,33 @@ func TestPySSLRestoreTogether(t *testing.T) {
 	}
 	if got := fixesIn(pySSLRestore(filepath.Join(dir2, "_ssl.pyd"))); len(got) != 1 || len(got[0].Files) != 3 {
 		t.Errorf("standalone: %+v", got)
+	}
+	// a copy interrupted after _ssl.pyd: the libraries not reached are the same as their
+	// backups, which count, and are put back too
+	for _, n := range []string{"libssl-3-x64.dll", "libcrypto-3-x64.dll"} {
+		os.WriteFile(filepath.Join(dir2, n), []byte("old"), 0o644)
+	}
+	if got := fixesIn(pySSLRestore(filepath.Join(dir2, "_ssl.pyd"))); len(got) != 1 || len(got[0].Files) != 3 {
+		t.Errorf("interrupted: %+v", got)
+	}
+	// python.org's layout, interrupted before the added libraries: _ssl.pyd and
+	// _hashlib.pyd are put back, nothing else to remove
+	dir3 := t.TempDir()
+	os.WriteFile(filepath.Join(dir3, "_ssl.pyd"), []byte("new"), 0o644)
+	os.WriteFile(filepath.Join(dir3, "_ssl.pyd"+run+".bak"), []byte("old"), 0o644)
+	os.WriteFile(filepath.Join(dir3, "_hashlib.pyd"), []byte("old"), 0o644)
+	os.WriteFile(filepath.Join(dir3, "_hashlib.pyd"+run+".bak"), []byte("old"), 0o644)
+	for _, n := range []string{"libssl-3-x64.dll", "libcrypto-3-x64.dll"} {
+		os.WriteFile(filepath.Join(dir3, n+run+".added"), nil, 0o644)
+	}
+	got := fixesIn(pySSLRestore(filepath.Join(dir3, "_ssl.pyd")))
+	if len(got) != 1 || fmt.Sprint(got[0].Files) != fmt.Sprint([]string{filepath.Join(dir3, "_ssl.pyd"), filepath.Join(dir3, "_hashlib.pyd")}) {
+		t.Errorf("interrupted, python.org: %+v", got)
+	}
+	// nothing changed (a crash before the copy): nothing to restore
+	os.WriteFile(filepath.Join(dir3, "_ssl.pyd"), []byte("old"), 0o644)
+	if got := pySSLRestore(filepath.Join(dir3, "_ssl.pyd")); got != "" {
+		t.Errorf("nothing changed: %s", got)
 	}
 }
 
