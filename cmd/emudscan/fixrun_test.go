@@ -234,6 +234,10 @@ func TestFixRunner(t *testing.T) {
 	if !strings.Contains(text, Tf("fix.software", "A")+"\n\n"+Tf("fix.software", "B")+"\n\n"+T("fix.adminPrompt")+"\n\n"+T("fix.checking")) {
 		t.Errorf("console: no blank lines between the software:\n%s", text)
 	}
+	// and after the results of a check, before the next round
+	if !strings.Contains(text, Tf("fix.notFixed", "D")+"\n\n"+T("fix.adminPrompt")) {
+		t.Errorf("console: no blank line after the check:\n%s", text)
+	}
 	// nothing fixed: no reminder to restart
 	if _, _, console, _ := run(setup(), true, 0, 4); strings.Contains(strings.Join(console, "\n"), T("fix.restart")) {
 		t.Errorf("nothing fixed: console:\n%s", strings.Join(console, "\n"))

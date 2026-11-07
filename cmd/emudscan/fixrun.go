@@ -153,6 +153,7 @@ type fixRunner struct {
 	fixedAny  bool                      // a software is fixed, or restored: it is to be restarted if it was open
 	restoring bool                      // it restores backups (restore), instead of fixing
 	restores  map[int][]string          // for a restore: the restores of each element, by their commands (fixAction.key)
+	checked   bool                      // the console ends with the results of a check (checkAgain): a blank line comes before what follows
 }
 
 // anyRan: at least one fix ran.
@@ -413,9 +414,17 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 		}
 		return out
 	}
+	// gap: a blank line after the results of the check of the round before
+	gap := func() {
+		if r.checked {
+			r.out(fixLine{lineNote, ""})
+			r.checked = false
+		}
+	}
 	// Stop, or a failed connection: an element that has a fix that ran, and others that
 	// did not, is not fixed; the console says why in red below the commands that ran
 	notRun := func(why string, left ...[]*fixUnit) {
+		gap()
 		r.out(fixLine{lineError, why})
 		r.out(fixLine{lineNote, ""})
 		for _, us := range left {
@@ -434,6 +443,7 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 			return ran, ok, true
 		}
 		units := values(job)
+		gap()
 		for _, t := range unitTitles(units) {
 			r.out(fixLine{lineSoftware, t})
 		}
@@ -449,6 +459,7 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 			notRun(T("fix.interrupted"), elevated)
 			return ran, ok, true
 		}
+		gap()
 		r.out(fixLine{lineNote, T("fix.adminPrompt")}) // the log names each software as its commands run
 		units := values(elevated)
 		res, err := r.exec(units, true, r.out)
@@ -508,6 +519,7 @@ func (r *fixRunner) checkAgain(ids []int, ok map[int]bool) {
 			r.out(fixLine{lineNotFixed, Tf("fix.notFixed", r.title(it))})
 		}
 	}
+	r.checked = true
 }
 
 // fixPreview is what the Fix window shows before the fixes run: for each element, its
