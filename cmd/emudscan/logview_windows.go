@@ -345,8 +345,8 @@ func (v *logView) fit(dc uintptr, font int, s []uint16, width int32) int {
 	return int(n)
 }
 
-// cut lays a line out in rows: words (with their spaces) are kept whole, unless one
-// is wider than the log by itself.
+// cut lays a line out in rows: words (with their spaces) are kept whole, even in
+// several colors (a command), unless one is wider than the log by itself.
 func (v *logView) cut(dc uintptr, ln *logLine) {
 	ln.rows = ln.rows[:0]
 	var row []logFrag
@@ -366,40 +366,60 @@ func (v *logView) cut(dc uintptr, ln *logLine) {
 		ln.rows = append(ln.rows, row)
 		row, x = nil, 0
 	}
-	off := ln.off
+	// the spans, from where they start in the text
+	type seg struct {
+		a, b, font int
+		color      uint32
+	}
+	var segs []seg
+	end := ln.off
 	for _, sp := range ln.spans {
-		end := off + sp.n
-		for i := off; i < end; {
-			j := i
-			for j < end && v.text[j] != ' ' {
-				j++
+		segs = append(segs, seg{end, end + sp.n, sp.font, sp.color})
+		end += sp.n
+	}
+	pieces := func(a, b int, fn func(a, b int, s seg)) { // what of a…b each span holds
+		for _, s := range segs {
+			if lo, hi := max(a, s.a), min(b, s.b); lo < hi {
+				fn(lo, hi, s)
 			}
-			word := j // without its spaces
-			for j < end && v.text[j] == ' ' {
-				j++
-			}
-			ww := v.measure(dc, sp.font, v.text[i:word])
-			if x > 0 && x+ww > v.width {
-				newRow()
-			}
-			for x == 0 && ww > v.width && i < word { // too wide by itself: cut anywhere
-				n := max(v.fit(dc, sp.font, v.text[i:word], v.width), 1)
-				if n < word-i && n > 1 && v.text[i+n]&0xFC00 == 0xDC00 { // not inside a surrogate pair
-					n--
-				}
-				add(i, n, sp.font, sp.color)
-				i += n
-				if i < word {
-					newRow()
-				}
-				ww = v.measure(dc, sp.font, v.text[i:word])
-			}
-			if i < j {
-				add(i, j-i, sp.font, sp.color)
-			}
-			i = j
 		}
-		off = end
+	}
+	for i := ln.off; i < end; {
+		j := i
+		for j < end && v.text[j] != ' ' {
+			j++
+		}
+		word := j // without its spaces
+		for j < end && v.text[j] == ' ' {
+			j++
+		}
+		ww := int32(0)
+		pieces(i, word, func(a, b int, s seg) { ww += v.measure(dc, s.font, v.text[a:b]) })
+		if x > 0 && x+ww > v.width {
+			newRow()
+		}
+		if x == 0 && ww > v.width { // too wide by itself: cut anywhere
+			pieces(i, word, func(a, b int, s seg) {
+				for a < b {
+					n := v.fit(dc, s.font, v.text[a:b], v.width-x)
+					if n == 0 && x > 0 {
+						newRow()
+						continue
+					}
+					n = max(n, 1)
+					if n < b-a && n > 1 && v.text[a+n]&0xFC00 == 0xDC00 { // not inside a surrogate pair
+						n--
+					}
+					add(a, n, s.font, s.color)
+					if a += n; a < b {
+						newRow()
+					}
+				}
+			})
+			i = word
+		}
+		pieces(i, j, func(a, b int, s seg) { add(a, b-a, s.font, s.color) })
+		i = j
 	}
 	ln.rows = append(ln.rows, row)
 }

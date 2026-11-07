@@ -657,7 +657,7 @@ func (d *fixDlg) show(l fixLine) {
 	d.lines = append(d.lines, l)
 	runs := consoleRuns(l)
 	if l.kind == lineCommand && d.running {
-		runs[0].text = strings.TrimSuffix(runs[0].text, "\n")
+		runs[len(runs)-1].text = strings.TrimSuffix(runs[len(runs)-1].text, "\n")
 		d.open = true
 	}
 	d.console.append(runs, false)
@@ -703,11 +703,26 @@ func (d *fixDlg) showNear(row int) {
 }
 
 // consoleRuns is how the console shows a line, in the colors of a PowerShell window:
-// the commands in white, what they do as comments, in green; then what the commands
-// show in gray, their results in green or red, eMudScan's messages in cyan.
+// the commands in those of PowerShell 7 (psTokens), what they do as comments, in
+// green; then what the commands show in gray, their results in green or red,
+// eMudScan's messages in cyan. The last run ends the line.
 func consoleRuns(l fixLine) []logRun {
 	text, color, bold := l.text, rgb(220, 220, 220), false
 	switch l.kind {
+	case lineCommand:
+		var runs []logRun
+		for _, tk := range psTokens(l.text) {
+			c := color
+			if r, g, b, ok := psColor(tk.kind); ok {
+				c = rgb(r, g, b)
+			}
+			runs = append(runs, logRun{tk.text, c, false, false})
+		}
+		if len(runs) == 0 {
+			runs = []logRun{{text: ""}}
+		}
+		runs[len(runs)-1].text += "\n"
+		return runs
 	case lineSoftware:
 		text, color, bold = "# "+l.text, rgb(106, 153, 85), true
 	case lineComment:

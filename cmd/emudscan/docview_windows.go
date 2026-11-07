@@ -236,19 +236,46 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 		line = append(line, docFrag{x: x, w: w, text: append([]uint16{}, u...), font: p.font, color: p.color, link: p.link})
 		x += w
 	}
+	// the words, each made of the pieces of the parts it spans (a command in colors),
+	// so that a line ends only between words
+	type piece struct {
+		p styled
+		u []uint16
+	}
+	var words [][]piece
+	var cur []piece
 	for _, p := range parts {
 		for _, word := range splitWords(p.text) {
-			u := utf16.Encode([]rune(word))
-			w := L.measure(p.font, u)
-			wt := L.measure(p.font, utf16.Encode([]rune(strings.TrimRight(word, " "))))
-			if x+wt > xMax && len(line) > 0 {
-				commit()
+			cur = append(cur, piece{p, utf16.Encode([]rune(word))})
+			if strings.HasSuffix(word, " ") {
+				words, cur = append(words, cur), nil
 			}
-			if x+wt <= xMax {
-				add(p, u, w)
-				continue
+		}
+	}
+	if len(cur) > 0 {
+		words = append(words, cur)
+	}
+	for _, word := range words {
+		wt := int32(0) // its width, without its spaces
+		for i, pc := range word {
+			if i == len(word)-1 {
+				wt += L.measure(pc.p.font, utf16.Encode([]rune(strings.TrimRight(string(utf16.Decode(pc.u)), " "))))
+			} else {
+				wt += L.measure(pc.p.font, pc.u)
 			}
-			// longer than a whole line: cut it
+		}
+		if x+wt > xMax && len(line) > 0 {
+			commit()
+		}
+		if x+wt <= xMax {
+			for _, pc := range word {
+				add(pc.p, pc.u, L.measure(pc.p.font, pc.u))
+			}
+			continue
+		}
+		// longer than a whole line: cut it
+		for _, pc := range word {
+			p, u := pc.p, pc.u
 			for len(u) > 0 {
 				n := L.fit(p.font, u, xMax-x)
 				if n == 0 {
@@ -268,6 +295,19 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 	}
 	commit()
 	return y
+}
+
+// cmdStyled is a command in the colors of PowerShell (psTokens).
+func (v *docView) cmdStyled(cmd string) []styled {
+	var out []styled
+	for _, tk := range psTokens(cmd) {
+		color := uint32(docCmdText)
+		if r, g, b, ok := psColor(tk.kind); ok {
+			color = rgb(r, g, b)
+		}
+		out = append(out, styled{tk.text, v.fonts["mono"], color, ""})
+	}
+	return out
 }
 
 func (L *docLayouter) newline() { L.v.text = append(L.v.text, '\r', '\n') }
@@ -356,7 +396,7 @@ func (v *docView) layout() {
 			y = top + pad
 			tx := x0 + pad
 			for _, c := range b.cmds {
-				y = L.flow([]styled{{c, v.fonts["mono"], docCmdText, ""}}, tx, tx, xMax-pad-bsz-s(4), y, 1.3)
+				y = L.flow(v.cmdStyled(c), tx, tx, xMax-pad-bsz-s(4), y, 1.3)
 				L.newline()
 			}
 			y = max(y+pad, top+bsz+2*s(6))
