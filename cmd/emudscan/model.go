@@ -360,6 +360,7 @@ type checker struct {
 	items       map[int]*Item
 	order       []int
 	rechecks    map[int]func(*Item)
+	summaries   []summary      // elements that sum up others (addSummary)
 	where       map[int]string // location shown in the log for each item
 	cancel      func() bool
 	fixes       []fixLine // what the fixes showed, for the report
@@ -466,19 +467,46 @@ func (c *checker) get(id int) (Item, bool) {
 }
 
 // addQuiet creates an item whose result is already known, without logging it.
-func (c *checker) addQuiet(g Group, kind, name string, r result) {
+func (c *checker) addQuiet(g Group, kind, name string, r result) int {
 	c.mu.Lock()
 	c.nextID++
 	it := &Item{ID: c.nextID, Group: g, Kind: kind, Name: name}
 	c.items[it.ID] = it
 	c.order = append(c.order, it.ID)
 	c.mu.Unlock()
+	c.setQuiet(it.ID, r)
+	return it.ID
+}
+
+// setQuiet records the result of an item, without logging it.
+func (c *checker) setQuiet(id int, r result) {
 	c.mu.Lock()
+	it := c.items[id]
+	if it == nil {
+		c.mu.Unlock()
+		return
+	}
 	it.Status, it.Summary, it.Details, it.Search = r.Status, r.Summary, r.Details, r.Search
 	it.fillDisplay("")
 	cp := *it
 	c.mu.Unlock()
 	c.r.Upsert(cp)
+}
+
+// summary is an element that sums up others, and how to compute it again.
+type summary struct {
+	id     int
+	update func() result
+}
+
+// addSummary creates, as addQuiet, an element that sums up others (the certificate
+// bundles found): update computes it again once elements are checked again (recheck),
+// since their fixes, or restores, may have changed it.
+func (c *checker) addSummary(g Group, kind, name string, r result, update func() result) {
+	id := c.addQuiet(g, kind, name, r)
+	c.mu.Lock()
+	c.summaries = append(c.summaries, summary{id, update})
+	c.mu.Unlock()
 }
 
 // add creates an item whose result is already known.
@@ -488,7 +516,8 @@ func (c *checker) add(g Group, kind, name string, r result) *Item {
 	return it
 }
 
-// recheck runs the checks of the given items again.
+// recheck runs the checks of the given items again, then computes again the elements
+// that sum up others (addSummary).
 func (c *checker) recheck(ids []int) {
 	if c.refresh != nil {
 		c.refresh()
@@ -512,6 +541,15 @@ func (c *checker) recheck(ids []int) {
 		c.mu.Unlock()
 		c.stepStart(stepLabel(cp.Name, where))
 		fn(it)
+	}
+	c.mu.Lock()
+	sums := append([]summary(nil), c.summaries...)
+	c.mu.Unlock()
+	for _, s := range sums {
+		if c.cancel() {
+			return
+		}
+		c.setQuiet(s.id, s.update())
 	}
 }
 

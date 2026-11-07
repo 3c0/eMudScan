@@ -216,7 +216,9 @@ Once you accept:
 4. Each software is checked again: the console and the **Result** column say
    whether it is fixed, and the lists show its new status. A fixed software
    loses its check box, so that it is not fixed twice: **Select All** leaves it
-   out, and the count of selected software no longer includes it.
+   out, and the count of selected software no longer includes it. The summary
+   of the certificate bundles is updated too: the files it lists are tested
+   again.
 5. A last line reminds you to restart any fixed software that was open: the fix
    takes effect the next time it starts.
 

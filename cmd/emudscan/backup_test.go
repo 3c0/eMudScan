@@ -82,11 +82,9 @@ func TestLatestBackup(t *testing.T) {
 	}
 }
 
-// A list that eMudScan's commands replaced has its own line while their copy is there,
-// up to date or not, with the commands that put it back.
-func TestBundleRestore(t *testing.T) {
-	Lang = 0
-	// an up-to-date list: roots of its own, none leading to the compromised intermediates
+// upToDateBundle is an up-to-date list: roots of its own, none leading to the
+// compromised intermediates.
+func upToDateBundle() []byte {
 	var good bytes.Buffer
 	for i := range minBundleCerts {
 		key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -95,6 +93,56 @@ func TestBundleRestore(t *testing.T) {
 		der, _ := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
 		pem.Encode(&good, &pem.Block{Type: "CERTIFICATE", Bytes: der})
 	}
+	return good.Bytes()
+}
+
+// The summary of the certificate bundles follows the fixes: once elements are checked
+// again, the same files are tested again, and an updated one moves to the up-to-date
+// list.
+func TestBundleSummaryAfterFix(t *testing.T) {
+	Lang = 0
+	dir := t.TempDir()
+	good, old := filepath.Join(dir, "a", "cacert.pem"), filepath.Join(dir, "b", "cacert.pem")
+	for p, data := range map[string][]byte{good: upToDateBundle(), old: outdatedBundle(t)} {
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, data, 0o644)
+	}
+	tp := testApps(t)
+	tp.d = newDiscovery()
+	tp.d.bundles[good], tp.d.bundles[old] = true, true
+	tp.checkBundles()
+	summary := func() Item {
+		for _, id := range tp.c.order {
+			if it := tp.c.items[id]; it.Name == T("bundle.summaryName") {
+				return *it
+			}
+		}
+		t.Fatal("no summary")
+		return Item{}
+	}
+	if s := summary(); s.Status != StInfo || s.Summary != Tf("bundle.sumSomeInfo", 1, 2) || !strings.Contains(s.Details, Tf("bundle.badList", 1)) {
+		t.Fatalf("before: %+v", s)
+	}
+	// the fix of the outdated one (its own line), then the check again
+	var line int
+	for _, id := range tp.c.order {
+		if it := tp.c.items[id]; it.Kind == "bundle" && it.File == old {
+			line = id
+		}
+	}
+	os.WriteFile(old, upToDateBundle(), 0o644)
+	tp.c.recheck([]int{line})
+	if s := summary(); s.Status != StOK || s.Summary != Tf("bundle.sumAllOK", 2) || strings.Contains(s.Details, Tf("bundle.badList", 1)) ||
+		!strings.Contains(s.Details, Tf("bundle.okList", 2)) {
+		t.Errorf("after: %+v", s)
+	}
+}
+
+// A list that eMudScan's commands replaced has its own line while their copy is there,
+// up to date or not, with the commands that put it back.
+func TestBundleRestore(t *testing.T) {
+	Lang = 0
+	good := upToDateBundle()
 	dir := t.TempDir()
 	write := func(n string, data []byte) string {
 		p := filepath.Join(dir, n)
@@ -102,9 +150,9 @@ func TestBundleRestore(t *testing.T) {
 		os.WriteFile(p, data, 0o644)
 		return p
 	}
-	replaced := write("a/cacert.pem", good.Bytes())
+	replaced := write("a/cacert.pem", good)
 	write("a/cacert.pem.emudscan-20261031-011500.bak", outdatedBundle(t))
-	untouched := write("b/cacert.pem", good.Bytes())
+	untouched := write("b/cacert.pem", good)
 	outdated := write("c/cacert.pem", outdatedBundle(t))
 	write("c/cacert.pem.emudscan-20261031-011500.bak", []byte("before"))
 	tp := testApps(t)

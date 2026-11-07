@@ -2402,10 +2402,30 @@ func (tp *appsContext) checkBundles() {
 		}
 	}
 	// a summary of all the bundles tested, with their paths; the outdated ones also
-	// have their own line (or are listed with their software)
-	sumSt := StOK
-	if bad > 0 {
-		sumSt, sum = StInfo, Tf("bundle.sumSomeInfo", bad, total)
+	// have their own line (or are listed with their software). After fixes, the same
+	// files are tested again (no new search), as the fixes may have updated them.
+	tp.c.addSummary(GroupApps, "info", T("bundle.summaryName"), bundleSummary(badAll, okAll), func() result {
+		var bad, ok []string
+		for _, p := range all {
+			if r, read := tp.bc.checkFile(p); read {
+				if r.Bad() {
+					bad = append(bad, p)
+				} else {
+					ok = append(ok, p)
+				}
+			}
+		}
+		return bundleSummary(bad, ok)
+	})
+}
+
+// bundleSummary sums up the certificate bundles tested: those that are outdated
+// (bad), and the others.
+func bundleSummary(bad, ok []string) result {
+	total := len(bad) + len(ok)
+	st, sum := StOK, Tf("bundle.sumAllOK", total)
+	if len(bad) > 0 {
+		st, sum = StInfo, Tf("bundle.sumSomeInfo", len(bad), total)
 	}
 	paths := func(ps []string) string {
 		const limit = 150
@@ -2420,13 +2440,13 @@ func (tp *appsContext) checkBundles() {
 		return strings.Join(lines, "\n")
 	}
 	details := T("bundle.summaryDetails")
-	if len(badAll) > 0 {
-		details = joinParas(details, Tf("bundle.badList", len(badAll))+"\n"+paths(badAll))
+	if len(bad) > 0 {
+		details = joinParas(details, Tf("bundle.badList", len(bad))+"\n"+paths(bad))
 	}
-	if len(okAll) > 0 {
-		details = joinParas(details, Tf("bundle.okList", len(okAll))+"\n"+paths(okAll))
+	if len(ok) > 0 {
+		details = joinParas(details, Tf("bundle.okList", len(ok))+"\n"+paths(ok))
 	}
-	tp.c.addQuiet(GroupApps, "info", T("bundle.summaryName"), result{Status: sumSt, Summary: sum, Details: details})
+	return result{Status: st, Summary: sum, Details: details}
 }
 
 func (tp *appsContext) bundleOne(it *Item, p string) {
