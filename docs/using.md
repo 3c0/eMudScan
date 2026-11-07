@@ -106,7 +106,8 @@ stays out of them. The links and the copied paths keep the full path.
 </p>
 
 Before changing a file, these commands back it up next to the original, with
-the date and time in its name (`cacert.pem.emudscan-20261031-011500.bak`). As
+the date and time in its name (`cacert.pem.emudscan-20261031-011500.bak`) and the
+dates of the original, which a restore puts back too. As
 long as such a backup exists, the details window offers a command to restore it,
 and **Restore the backup** to run it for you (see
 [Restoring a backup](#restoring-a-backup)).

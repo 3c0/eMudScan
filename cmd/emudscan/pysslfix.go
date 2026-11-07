@@ -134,7 +134,8 @@ func (p pySSLPlan) files() []string {
 // its SHA-256; its files taken out (both once for the Pythons fixed in the same run
 // from the same download); the files to change must not be in use (the program
 // closed); a backup of each file replaced, and a mark for each file added, named after
-// the same time; the copy; the checks after; when they fail, the original files put
+// the same time, with the creation date of its file (see backupThen); the copy; the
+// checks after; when they fail, the original files put
 // back and the added ones removed. The backups are made in any case, for the files to
 // be put back; without "Back up the files to change" (Plain), they and the marks are
 // deleted once the checks after pass.
@@ -164,7 +165,7 @@ func pySSLFix(exe string, plan pySSLPlan) fixAction {
 		`$pyNew = Join-Path $emudscanFiles ` + psQuote(plan.src.name()) + `; if ($pyOK -and -not (Test-Path -LiteralPath $pyNew)) { ` + extract + ` };` + inside + ` $pyOK = $pyOK -and -not ($pyFiles + $pyAdded | Where-Object { -not (Test-Path -LiteralPath (Join-Path $pyNew $_)) })`,
 		// in use (the program is running): nothing changes
 		`if ($pyOK) { foreach ($n in $pyFiles) { try { [IO.File]::Open((Join-Path $pyDir $n), 'Open', 'ReadWrite', 'None').Dispose() } catch { $pyOK = $false; Write-Warning ` + psQuote(T("pyssl.inUse")) + ` } } }`,
-		`$pyStamp = Get-Date -Format 'yyyyMMdd-HHmmss'; if ($pyOK) { foreach ($n in $pyFiles) { $pyOK = $pyOK -and [bool](Copy-Item -LiteralPath (Join-Path $pyDir $n) -Destination (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -PassThru) }; foreach ($n in $pyAdded) { $pyOK = $pyOK -and [bool](New-Item -ItemType File -Force -Path (Join-Path $pyDir "$n.emudscan-$pyStamp.added")) } }`,
+		`$pyStamp = Get-Date -Format 'yyyyMMdd-HHmmss'; if ($pyOK) { foreach ($n in $pyFiles) { if ($pyOK) { $pyBak = Copy-Item -LiteralPath (Join-Path $pyDir $n) -Destination (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -PassThru; if ($pyBak) { $pyBak.CreationTimeUtc = (Get-Item -LiteralPath (Join-Path $pyDir $n)).CreationTimeUtc }; $pyOK = [bool]$pyBak } }; foreach ($n in $pyAdded) { $pyOK = $pyOK -and [bool](New-Item -ItemType File -Force -Path (Join-Path $pyDir "$n.emudscan-$pyStamp.added")) } }`,
 		`if ($pyOK) { foreach ($n in $pyFiles + $pyAdded) { Copy-Item -LiteralPath (Join-Path $pyNew $n) -Destination (Join-Path $pyDir $n) -Force } }`,
 		`$pyGood = $false; if ($pyOK) { ` + check + ` after; $pyGood = $LASTEXITCODE -eq 0 }`,
 		`if ($pyOK -and -not $pyGood) { foreach ($n in $pyFiles) { Move-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -Destination (Join-Path $pyDir $n) -Force }; foreach ($n in $pyAdded) { Remove-Item -LiteralPath (Join-Path $pyDir $n), (Join-Path $pyDir "$n.emudscan-$pyStamp.added") -Force }; Write-Warning ` + psQuote(T("pyssl.putBack")) + ` }`,

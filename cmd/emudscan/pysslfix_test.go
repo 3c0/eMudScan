@@ -110,6 +110,7 @@ func TestPySSLFix(t *testing.T) {
 		`tar.exe" -xzf $pyArchive -C $pyNew python/DLLs/_ssl.pyd python/DLLs/_hashlib.pyd python/DLLs/libssl-3-x64.dll python/DLLs/libcrypto-3-x64.dll }; $pyNew = Join-Path $pyNew 'python\DLLs';`,
 		"[IO.File]::Open((Join-Path $pyDir $n), 'Open', 'ReadWrite', 'None')",
 		`"$n.emudscan-$pyStamp.bak"`, `"$n.emudscan-$pyStamp.added"`,
+		"$pyBak.CreationTimeUtc = (Get-Item -LiteralPath (Join-Path $pyDir $n)).CreationTimeUtc", // the creation date of the file
 		"Copy-Item -LiteralPath (Join-Path $pyNew $n) -Destination (Join-Path $pyDir $n) -Force",
 		"$emudscanFiles after; $pyGood = $LASTEXITCODE -eq 0",
 		"if ($pyOK -and -not $pyGood) { foreach ($n in $pyFiles) { Move-Item",

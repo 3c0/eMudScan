@@ -18,12 +18,13 @@ import (
 )
 
 // The commands name each backup after the file and the time they run, in a form that
-// eMudScan reads back.
+// eMudScan reads back, and give it the creation date of the file.
 func TestBackupNames(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "o'neil.pem")
-	copyItem := "(Copy-Item -LiteralPath " + psQuote(f) + " -Destination (" + psQuote(f+".emudscan-") + " + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)"
+	copyItem := "($emudscanBak = Copy-Item -LiteralPath " + psQuote(f) + " -Destination (" + psQuote(f+".emudscan-") + " + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)"
+	change := "{ $emudscanBak.CreationTimeUtc = (Get-Item -LiteralPath " + psQuote(f) + ").CreationTimeUtc; Change }"
 	// the file is changed only once its copy is made, and when the condition is true
-	for cond, want := range map[string]string{"": "if (" + copyItem + ") { Change }", "$ok": "if ($ok -and " + copyItem + ") { Change }"} {
+	for cond, want := range map[string]string{"": "if (" + copyItem + ") " + change, "$ok": "if ($ok -and " + copyItem + ") " + change} {
 		if got := backupThen(f, cond, "Change"); got != cmd(want) {
 			t.Errorf("backup:\n%s\nwant\n%s", got, cmd(want))
 		}

@@ -65,7 +65,7 @@ func TestPsPath(t *testing.T) {
 	if got := pipLine(`C:\Users\me\x\python.exe`, "pip", false); got != `& "$env:USERPROFILE\x\python.exe" -m pip install --upgrade pip` {
 		t.Errorf("pip: %s", got)
 	}
-	if got := backupThenLine(`C:\Users\me\x\cacert.pem`, "$ok", "write", false); got != `if ($ok -and (Copy-Item -LiteralPath "$env:USERPROFILE\x\cacert.pem" -Destination ("$env:USERPROFILE\x\cacert.pem.emudscan-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)) { write }` {
+	if got := backupThenLine(`C:\Users\me\x\cacert.pem`, "$ok", "write", false); got != `if ($ok -and ($emudscanBak = Copy-Item -LiteralPath "$env:USERPROFILE\x\cacert.pem" -Destination ("$env:USERPROFILE\x\cacert.pem.emudscan-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)) { $emudscanBak.CreationTimeUtc = (Get-Item -LiteralPath "$env:USERPROFILE\x\cacert.pem").CreationTimeUtc; write }` {
 		t.Errorf("backup: %s", got)
 	}
 }

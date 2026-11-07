@@ -61,9 +61,9 @@ func TestNodeReplaceFix(t *testing.T) {
 			}
 		}
 		// the backup, then the copy, only when everything was checked; nothing else changes the file
-		if len(f.Cmds) < 2 || !strings.Contains(f.Cmds[len(f.Cmds)-2], "$nodeOK -and (Copy-Item -LiteralPath "+psPath(exe, false)) ||
+		if len(f.Cmds) < 2 || !strings.Contains(f.Cmds[len(f.Cmds)-2], "$nodeOK -and ($emudscanBak = Copy-Item -LiteralPath "+psPath(exe, false)) ||
 			!strings.Contains(f.Cmds[len(f.Cmds)-2], "Copy-Item -LiteralPath $nodeNew -Destination "+psPath(exe, false)+" -Force") ||
-			strings.Count(all, psPath(exe, false)) != 2 || !strings.HasPrefix(f.Cmds[len(f.Cmds)-1], "Remove-Item -LiteralPath $nodeNew") {
+			strings.Count(all, psPath(exe, false)) != 3 || !strings.HasPrefix(f.Cmds[len(f.Cmds)-1], "Remove-Item -LiteralPath $nodeNew") {
 			t.Errorf("%s: the change:\n%s", c.arch, all)
 		}
 		if f.Kind != fixNode || !f.Optional || len(f.Files) != 1 || f.Files[0] != exe || len(f.Plain) != len(f.Cmds) ||

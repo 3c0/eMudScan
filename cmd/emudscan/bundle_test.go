@@ -194,8 +194,8 @@ func TestReplaceBundleFix(t *testing.T) {
 		"$ $sha256 = $null; $sha256 = ([Text.Encoding]::ASCII.GetString((Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem.sha256)",
 		"$ $ok = $cacert -and $sha256 -and (Get-FileHash -InputStream ([IO.MemoryStream]::new($cacert))).Hash -eq $sha256",
 		"$ if (-not $ok) { Write-Warning " + psQuote(T("fix.downloadFailed")) + " }",
-		`$ if ($ok -and (Copy-Item -LiteralPath 'C:\Program Files\App\cacert.pem' -Destination ('C:\Program Files\App\cacert.pem.emudscan-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)) { [IO.File]::WriteAllBytes('C:\Program Files\App\cacert.pem', $cacert) }`,
-		`$ if ($ok -and (Copy-Item -LiteralPath 'C:\Users\o''neil\$x\cert.pem' -Destination ('C:\Users\o''neil\$x\cert.pem.emudscan-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)) { [IO.File]::WriteAllBytes('C:\Users\o''neil\$x\cert.pem', $cacert) }`,
+		`$ if ($ok -and ($emudscanBak = Copy-Item -LiteralPath 'C:\Program Files\App\cacert.pem' -Destination ('C:\Program Files\App\cacert.pem.emudscan-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)) { $emudscanBak.CreationTimeUtc = (Get-Item -LiteralPath 'C:\Program Files\App\cacert.pem').CreationTimeUtc; [IO.File]::WriteAllBytes('C:\Program Files\App\cacert.pem', $cacert) }`,
+		`$ if ($ok -and ($emudscanBak = Copy-Item -LiteralPath 'C:\Users\o''neil\$x\cert.pem' -Destination ('C:\Users\o''neil\$x\cert.pem.emudscan-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)) { $emudscanBak.CreationTimeUtc = (Get-Item -LiteralPath 'C:\Users\o''neil\$x\cert.pem').CreationTimeUtc; [IO.File]::WriteAllBytes('C:\Users\o''neil\$x\cert.pem', $cacert) }`,
 	} {
 		i := strings.Index(fix[at:], w)
 		if i < 0 {

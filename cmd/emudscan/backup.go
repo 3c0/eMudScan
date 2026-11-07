@@ -21,7 +21,9 @@ import (
 // backupThen is a command that keeps a copy of file, named after the time the command
 // runs (so that commands run twice do not replace the first copy), then changes the
 // file with change, only once the copy is made and when cond, if any, is true.
-// Copy-Item -PassThru returns the copy, and nothing when it fails.
+// Copy-Item -PassThru returns the copy, and nothing when it fails. The copy keeps the
+// date modified of file, but Windows dates its creation from now: it is given that of
+// file, so that a restore, which moves it back, puts back both dates.
 func backupThen(file, cond, change string) string {
 	return cmd(backupThenLine(file, cond, change, needsAdmin(file)))
 }
@@ -29,11 +31,11 @@ func backupThen(file, cond, change string) string {
 // backupThenLine is the command of backupThen, without its "$ " mark, run as
 // administrator or not (admin).
 func backupThenLine(file, cond, change string, admin bool) string {
-	backup := fmt.Sprintf(`(Copy-Item -LiteralPath %s -Destination (%s + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)`, psPath(file, admin), psPath(file+".emudscan-", admin))
+	backup := fmt.Sprintf(`($emudscanBak = Copy-Item -LiteralPath %s -Destination (%s + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak') -PassThru)`, psPath(file, admin), psPath(file+".emudscan-", admin))
 	if cond != "" {
 		backup = cond + " -and " + backup
 	}
-	return fmt.Sprintf(`if (%s) { %s }`, backup, change)
+	return fmt.Sprintf(`if (%s) { $emudscanBak.CreationTimeUtc = (Get-Item -LiteralPath %s).CreationTimeUtc; %s }`, backup, psPath(file, admin), change)
 }
 
 // changeLine is the same change without the backup, when cond, if any, is true: what

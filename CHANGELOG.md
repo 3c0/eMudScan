@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - No Scoop update command for a file in Scoop’s `persist` folder, which Scoop’s updates keep as it is.
 - The packages of a tool that uv installed are updated with `uv tool upgrade`, as uv asks, instead of pip, which uv does not put in its tools.
 - The packages of an application that pipx installed are updated with `pipx runpip`, which works whether or not its environment has pip of its own.
+- A file put back by **Restore the backup** has its original creation date again: eMudScan’s backups now keep it, where Windows gave them the date of the backup.
 
 ## [2.0.0] - 2026-11-05
 
