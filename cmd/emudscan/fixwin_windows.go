@@ -46,9 +46,6 @@ const (
 	idDlgFix    = 306 // the Fix button of the details
 )
 
-// fixColPlace is the Location column of the list: the file to fix, a link.
-const fixColPlace = 3
-
 type fixDlg struct {
 	hwnd, owner                  uintptr
 	title                        uintptr // the title of the console
@@ -76,6 +73,7 @@ type fixDlg struct {
 	placeText         []string     // the Location of each row, as shown: shortened to its column (fitPlaces)
 	ranRows           map[int]bool // the rows that the last run fixed or tried to
 	updating          bool         // the check boxes are being changed by eMudScan
+	sortKeys          []sortKey    // how the list is sorted, after clicks on its column headers
 
 	// the bar between the list and the console, which the user drags to make the list
 	// taller or shorter
@@ -121,13 +119,6 @@ func (a *ui) restoreItems(ids []int) []Item {
 		}
 	}
 	return out
-}
-
-// fixRow is a row of the list of the Fix window: an element, and which of its fixes
-// the row runs.
-type fixRow struct {
-	Item
-	part fixPart
 }
 
 // fixRows are the software that can be fixed, by name: a finding repeated in
@@ -265,8 +256,8 @@ func (a *ui) openFixAll() {
 	d.count, _, _ = pCreateWindowExW.Call(0, up("STATIC"), 0, uintptr(wsChild|wsVisible|0x80|0x200 /* SS_NOPREFIX|SS_CENTERIMAGE */),
 		0, 0, 10, 10, d.hwnd, 0, 0, 0)
 	send(d.count, wmSetFont, a.fontUI, 1)
-	// LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS|LVS_NOSORTHEADER
-	d.list, _, _ = pCreateWindowExW.Call(wsExClientEdge, up("SysListView32"), 0, uintptr(wsChild|wsVisible|wsTabStop|0x1|0x4|0x8|0x40|0x8000),
+	// LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS
+	d.list, _, _ = pCreateWindowExW.Call(wsExClientEdge, up("SysListView32"), 0, uintptr(wsChild|wsVisible|wsTabStop|0x1|0x4|0x8|0x40),
 		0, 0, 10, 10, d.hwnd, idFixList, 0, 0)
 	pSetWindowTheme.Call(d.list, up("Explorer"), 0)
 	send(d.list, wmSetFont, a.fontUI, 1)
@@ -387,10 +378,66 @@ func (d *fixDlg) cellTip(row, col int) (string, bool) {
 	if col == fixColPlace {
 		return shownPath(d.placeOf(row)), true
 	}
+	return d.cellText(row, col), false
+}
+
+// cellText is the text of a cell of the list, as shown.
+func (d *fixDlg) cellText(row, col int) string {
 	buf := make([]uint16, 1024)
 	li := lvItem{SubItem: int32(col), Text: &buf[0], TextMax: int32(len(buf))}
 	send(d.list, lvmGetItemTextW, uintptr(row), uintptr(unsafe.Pointer(&li)))
-	return syscall.UTF16ToString(buf), false
+	return syscall.UTF16ToString(buf)
+}
+
+// sortRows sorts the list by its sort keys (fixRowOrder): each row keeps its tick, its
+// check box or its absence, its result and its selection; the commands follow the new
+// order, unless the console shows the results of a run.
+func (d *fixDlg) sortRows(a *ui) {
+	order := fixRowOrder(d.rows, func(row, col int) string {
+		if col == fixColPlace {
+			return d.placeOf(row) // the whole path, not as shortened
+		}
+		return d.cellText(row, col)
+	}, d.sortKeys)
+	type rowState struct {
+		texts                 []string
+		box, ticked, sel, ran bool
+	}
+	old := make([]rowState, len(d.rows))
+	for i := range d.rows {
+		texts := make([]string, numFixCols)
+		for c := range texts {
+			texts[c] = d.cellText(i, c)
+		}
+		texts[fixColPlace] = d.placeOf(i)
+		old[i] = rowState{texts, d.hasBox(i), d.checked(i), send(d.list, lvmGetItemState, uintptr(i), 2) != 0, d.ranRows[i]}
+	}
+	rows, ran := make([]fixRow, len(order)), map[int]bool{}
+	for i, o := range order {
+		rows[i], ran[i] = d.rows[o], old[o].ran
+	}
+	d.rows, d.ranRows, d.placeText = rows, ran, nil
+	d.updating = true
+	for i, o := range order {
+		s := old[o]
+		a.setRow(d.list, i, d.rows[i].Item, s.texts, false)
+		if s.box {
+			d.check(i, s.ticked)
+		} else {
+			d.done(i)
+		}
+		li := lvItem{StateMask: 0x3 /* LVIS_FOCUSED|LVIS_SELECTED */}
+		if s.sel {
+			li.State = 0x3
+		}
+		send(d.list, lvmSetItemState, uintptr(i), uintptr(unsafe.Pointer(&li)))
+	}
+	d.fitPlaces(a)
+	d.updating = false
+	setSortArrows(d.list, numFixCols, d.sortKeys)
+	if !d.results {
+		d.preview(a)
+	}
 }
 
 // fixListDraw draws each Location that is a link as the lists of the main window
@@ -1255,6 +1302,11 @@ func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 					ht.SubItem != fixColPlace && ht.Flags&0x8 /* LVHT_ONITEMSTATEICON */ == 0 {
 					a.openFixDetails(d, int(ht.Item))
 				}
+				return 0
+			}
+			if nm.Hdr.HwndFrom == d.list && nm.Hdr.Code == lvnColumnClick && !d.running && !d.asking {
+				d.sortKeys = clickSort(d.sortKeys, int(nm.SubItem))
+				d.sortRows(a)
 				return 0
 			}
 			if nm.Hdr.HwndFrom == d.list && nm.Hdr.Code == -100 /* LVN_ITEMCHANGING */ && nm.Flags&0x8 /* LVIF_STATE */ != 0 &&

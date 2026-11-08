@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Updates a Deno installed with its own installer with `deno upgrade`, Deno’s own updater (Deno 2.9.8 is fixed).
 - For the virtual environment of a Pipenv, Poetry or uv project whose lock file pins the outdated certifi, which the project’s next install would bring back, the details give the command that updates it in the project, which eMudScan never runs.
 - In the Fix software window, a double-click on a software opens its details, where it can also be fixed or restored; the list is updated when they close.
+- The list of the Fix software window sorts by a click on a column header, as the lists of the main window do.
 - The PowerShell commands, in the details and in the Fix window, are shown in the colors that PowerShell 7 gives them.
 
 ### Changed

@@ -166,8 +166,9 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   each, so that the others stay ticked. A software found in several places has
   a row for each. Click a location to show it in File Explorer. Double-click a
   software to open its details, where you can also fix it, or restore its
-  backup: the list is updated when they close. Drag the bar below the list to
-  make it taller or shorter, down to a single row.
+  backup: the list is updated when they close. Click a column header to sort
+  the list by that column; click it again to reverse the order. Drag the bar
+  below the list to make it taller or shorter, down to a single row.
 - The PowerShell commands that will run for the ticked software (or for the
   software you click), grouped by software. If they run in a different order,
   the warning before they run explains it. The button in their top right

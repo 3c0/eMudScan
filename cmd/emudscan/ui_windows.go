@@ -1199,14 +1199,18 @@ func (a *ui) refreshPathCells(l *listCtl) {
 	})
 }
 
-func (a *ui) updateSortArrows(l *listCtl) {
-	hdr := send(l.h, lvmGetHeader, 0, 0)
-	for c := 0; c < numAppCols; c++ {
+func (a *ui) updateSortArrows(l *listCtl) { setSortArrows(l.h, numAppCols, l.sortKeys) }
+
+// setSortArrows shows in the header of a list, on the column it is sorted by, in which
+// direction.
+func setSortArrows(list uintptr, cols int, keys []sortKey) {
+	hdr := send(list, lvmGetHeader, 0, 0)
+	for c := 0; c < cols; c++ {
 		hi := hdItem{Mask: 0x4 /* HDI_FORMAT */}
 		send(hdr, hdmGetItemW, uintptr(c), uintptr(unsafe.Pointer(&hi)))
 		hi.Fmt &^= 0x400 | 0x200
-		if len(l.sortKeys) > 0 && l.sortKeys[0].col == c {
-			if l.sortKeys[0].desc {
+		if len(keys) > 0 && keys[0].col == c {
+			if keys[0].desc {
 				hi.Fmt |= 0x200 // HDF_SORTDOWN
 			} else {
 				hi.Fmt |= 0x400 // HDF_SORTUP

@@ -126,6 +126,13 @@ func fixParts(it Item) []fixPart {
 	return []fixPart{partAll}
 }
 
+// fixRow is a row of the list of the Fix window: an element, and which of its fixes
+// the row runs.
+type fixRow struct {
+	Item
+	part fixPart
+}
+
 // fixPick is, for each element, the parts of its fixes that run (those of the ticked
 // rows); nil: all of them.
 type fixPick map[int][]fixPart
