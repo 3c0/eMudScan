@@ -71,9 +71,11 @@ const (
 	lineEnd                         // the end of the fixes: a horizontal bar
 )
 
-// fixBar is the end of the fixes (lineEnd) as text: in the report, and when it is
-// copied from the console, which draws it as a line across its width.
-var fixBar = strings.Repeat("─", 40)
+// fixBar is the end of the fixes (lineEnd) as text: in the report, where it also
+// separates the sections, and when it is copied from the console, which draws it as a
+// line across its width. Em dashes make an unbroken line at mid-height in monospaced
+// fonts, as wide as the top of the report, with an empty line before and after it.
+var fixBar = strings.Repeat("—", 78)
 
 // fixLine is a line of the console.
 type fixLine struct {
@@ -121,6 +123,12 @@ func reportLines(lines []fixLine) []string {
 		}
 		if (l.kind == lineOK || l.kind == lineFailed) && l.text == "" {
 			continue // in the mark before the command
+		}
+		if l.kind == lineEnd { // after one empty line (fixBar)
+			for len(out) > 0 && out[len(out)-1] == "" {
+				out = out[:len(out)-1]
+			}
+			out = append(out, "")
 		}
 		out = append(out, strings.TrimRight(l.plain(), " "))
 	}

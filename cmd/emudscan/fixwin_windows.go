@@ -660,11 +660,16 @@ func (d *fixDlg) show(l fixLine) {
 		d.console.setMark(d.cmdLine, "", 0)
 		d.cmdLine = -1
 	}
+	blank := fixLine{lineNote, ""}
+	if l.kind == lineEnd && len(d.lines) > 0 && d.lines[len(d.lines)-1] != blank {
+		d.console.append(consoleRuns(blank), false) // an empty line before the bar, once
+	}
 	d.lineAt = append(d.lineAt, d.console.nextLine())
 	d.lines = append(d.lines, l)
 	d.console.append(consoleRuns(l), false)
-	if l.kind == lineEnd {
+	if l.kind == lineEnd { // drawn in the middle of its row, then an empty line
 		d.console.setBar(d.lineAt[len(d.lineAt)-1], rgb(0x76, 0x76, 0x76))
+		d.console.append(consoleRuns(blank), false)
 	}
 	if l.kind == lineCommand && d.running {
 		d.cmdLine = d.lineAt[len(d.lineAt)-1]

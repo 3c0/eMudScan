@@ -92,8 +92,21 @@ func buildReport(c *checker, logText string) string {
 	// eMudScan's version and the date, Windows, then who made eMudScan
 	fmt.Fprintf(&b, "%s\n%s %s · %s\n%s\n%s\n%s\n\n", line, T("report.title"), appVersionDate()+simulationMark, time.Now().Format("2006-01-02 15:04"),
 		windowsVersionString(), Tf("report.by", appAuthor, appURL), line)
+	// the sections are separated by the bar of the fixes (fixBar), with one empty line
+	// before and after it; once, after the fixes, which end with it
+	separate := func() {
+		s := strings.TrimRight(b.String(), "\n")
+		b.Reset()
+		b.WriteString(s + "\n\n")
+		if !strings.HasSuffix(s, fixBar) {
+			b.WriteString(fixBar + "\n\n")
+		}
+	}
 	items := mergeRepeated(c.snapshot())
-	for _, g := range []Group{GroupWindows, GroupNet, GroupApps} {
+	for i, g := range []Group{GroupWindows, GroupNet, GroupApps} {
+		if i > 0 {
+			separate()
+		}
 		title := groupTitle(g)
 		fmt.Fprintf(&b, "%s\n%s\n", title, strings.Repeat("-", len([]rune(title))))
 		for _, it := range sortedForReport(items, g) {
@@ -128,15 +141,15 @@ func buildReport(c *checker, logText string) string {
 				b.WriteString("\n")
 			}
 		}
-		b.WriteString("\n")
 	}
 	if fixes := c.fixRecord(); len(fixes) > 0 { // what the fixes ran and showed, as the Fix window did
+		separate()
 		fmt.Fprintf(&b, "%s\n%s\n", T("report.fixes"), strings.Repeat("-", len([]rune(T("report.fixes")))))
 		for _, l := range reportLines(fixes) {
 			fmt.Fprintf(&b, "%s\n", l)
 		}
-		b.WriteString("\n")
 	}
+	separate()
 	fmt.Fprintf(&b, "%s\n%s\n%s\n", T("report.log"), strings.Repeat("-", len([]rune(T("report.log")))), logText)
 	return strings.ReplaceAll(strings.ReplaceAll(b.String(), "\r\n", "\n"), "\n", "\r\n")
 }

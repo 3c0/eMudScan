@@ -543,14 +543,31 @@ func TestFixReport(t *testing.T) {
 	if rep := buildReport(c, ""); strings.Contains(rep, "\r\nFixes\r\n") {
 		t.Errorf("a report without fixes has a Fixes section:\n%s", rep)
 	}
+	// the sections are separated by the bar, an unbroken line as wide as the top of the
+	// report, with one empty line before and after it
+	rep := strings.ReplaceAll(buildReport(c, "log"), "\r\n", "\n")
+	for _, title := range []string{groupTitle(GroupNet), groupTitle(GroupApps), T("report.log")} {
+		if !strings.Contains(rep, "\n\n"+fixBar+"\n\n"+title+"\n") {
+			t.Errorf("no bar before %s:\n%s", title, rep)
+		}
+	}
+	if fixBar != strings.Repeat("—", 78) || strings.Contains(rep, "\n\n\n") || strings.Count(rep, fixBar) != 3 || strings.Contains(rep, fixBar+"\n\n"+groupTitle(GroupWindows)) {
+		t.Errorf("bars:\n%s", rep)
+	}
 	for _, l := range []fixLine{{lineNote, "2026-11-04 11:05 · Fix A"}, {lineSoftware, "A"}, {lineCommand, "scoop update a"}, {lineOK, ""},
 		{lineOutput, "Updating a"}, {lineCommand, "scoop update b"}, {lineFailed, ""}, {lineCmdError, "Exit code 1"}, {lineCommand, "never"},
 		{lineNote, T("fix.checking")}, {lineFixed, Tf("fix.fixed", "A")}, {lineEnd, ""}} {
 		c.recordFix(l)
 	}
-	rep := strings.ReplaceAll(buildReport(c, "log"), "\r\n", "\n")
-	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✓ scoop update a\n      Updating a\n  ✗ scoop update b\n      Exit code 1\n    never\n" + T("fix.checking") + "\nA: fixed.\n" + fixBar + "\n\nLog\n"
-	if !strings.Contains(rep, want) {
-		t.Errorf("report without\n%s\nin\n%s", want, rep)
+	rep = strings.ReplaceAll(buildReport(c, "log"), "\r\n", "\n")
+	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✓ scoop update a\n      Updating a\n  ✗ scoop update b\n      Exit code 1\n    never\n" + T("fix.checking") + "\nA: fixed.\n\n" + fixBar + "\n\nLog\n"
+	if !strings.Contains(rep, want) || strings.Count(rep, fixBar) != 4 {
+		t.Errorf("report without\n%s\nin\n%s", want, rep) // the bar of the fixes ends their section too
+	}
+	// one empty line before the bar, also after Stop's
+	for _, lines := range [][]fixLine{{{lineError, T("fix.interrupted")}, {lineNote, ""}, {lineEnd, ""}}, {{lineError, T("fix.interrupted")}, {lineEnd, ""}}} {
+		if got := reportLines(lines); strings.Join(got, "|") != T("fix.interrupted")+"||"+fixBar {
+			t.Errorf("before the bar: %q", got)
+		}
 	}
 }
