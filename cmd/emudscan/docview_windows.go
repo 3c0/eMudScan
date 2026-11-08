@@ -5,9 +5,11 @@ package main
 // The document view of the details window, drawn with GDI: formatted text,
 // label/value fields in two aligned columns, links, command blocks (light text on a
 // black background, with a copy button in their top right corner), mouse selection
-// and scrolling.
+// and scrolling; for several items, the navigation block (detailnav.go), which stays
+// in the top right corner as the text scrolls under it.
 
 import (
+	"fmt"
 	"strings"
 	"syscall"
 	"time"
@@ -74,7 +76,23 @@ type docView struct {
 	tipFrag   int // the fragment of the link whose tooltip is placed (-1: none)
 	onStatus  func(string)
 	onCopyAll func()
+	nav       docNav
+	onNav     func(to int) // a button of the navigation block was clicked: show item to
 }
+
+// docNav is the navigation block, shown for several items (n ≥ 2).
+type docNav struct {
+	pos, n int
+	box    rect         // in client coordinates
+	btns   [numNav]rect // First, Previous, Next, Last
+	text   rect         // "2 / 3"
+	hover  int          // the button under the mouse, or -1
+	down   int          // the button pressed, or -1
+}
+
+// navToolID is the tool of the first button of the navigation block (the others
+// follow).
+const navToolID = 0x20000
 
 // linkToolID is the tool of the link under the mouse (the copy buttons' are 1, 2…).
 const linkToolID = 0x10000
@@ -98,7 +116,7 @@ func (a *ui) newDocView(parent uintptr, blocks []docBlock) *docView {
 		pRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 		docClassOK = true
 	}
-	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1}
+	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1, nav: docNav{hover: -1, down: -1}}
 	v.fonts = map[string]*docFont{}
 	mk := func(name string, pt, weight int, underline bool, face string) {
 		f := &docFont{h: createFont(pt, a.dpi, weight, underline, face)}
@@ -358,10 +376,18 @@ func (v *docView) layout() {
 	labelW = min(labelW, (xMax-x0)*2/5)
 	gap := s(20)
 	y := s(16)
+	v.placeNav(L, rc)
+	// the lines beside the navigation block, at the top, end before it
+	beside := func(y int32) int32 {
+		if v.nav.n >= 2 && y < v.nav.box.Bottom {
+			return max(min(xMax, v.nav.box.Left-s(16)), x0+s(120))
+		}
+		return xMax
+	}
 	for _, b := range v.blocks {
 		switch b.kind {
 		case dkTitle:
-			y = L.flow(v.runsStyled(b.runs, v.fonts["title"], rgb(16, 58, 120)), x0, x0, xMax, y, 1.1)
+			y = L.flow(v.runsStyled(b.runs, v.fonts["title"], rgb(16, 58, 120)), x0, x0, beside(y), y, 1.1)
 			L.newline()
 		case dkStatus:
 			isz := s(20)
@@ -369,7 +395,7 @@ func (v *docView) layout() {
 			v.marks = append(v.marks, docIcon{x0, y + (lh-isz)/2, b.status})
 			c := statusColor(b.status)
 			parts := []styled{{statusText(b.status), v.fonts["status"], c, ""}, {"  —  " + oneLine(b.summary), v.fonts["summary"], c, ""}}
-			y = L.flow(parts, x0+isz+s(8), x0+isz+s(8), xMax, y, 1.3) + s(10)
+			y = L.flow(parts, x0+isz+s(8), x0+isz+s(8), beside(y), y, 1.3) + s(10)
 			L.newline()
 		case dkFields:
 			for _, r := range b.rows {
@@ -407,6 +433,89 @@ func (v *docView) layout() {
 	}
 	v.height = y + s(16)
 	v.setScroll(v.scroll)
+	v.navTips()
+}
+
+// setNav shows the navigation block for item pos of n (n < 2: no block).
+func (v *docView) setNav(pos, n int) {
+	v.nav.pos, v.nav.n, v.nav.hover, v.nav.down = pos, n, -1, -1
+	v.layout()
+}
+
+// setBlocks shows other blocks, from the top, without a selection: the details of
+// another item, or of the same one after a fix.
+func (v *docView) setBlocks(blocks []docBlock) {
+	v.blocks = blocks
+	v.selA, v.selB, v.scroll = 0, 0, 0
+	v.down, v.downBtn, v.hoverBtn, v.downLink = false, -1, -1, ""
+	v.layout()
+}
+
+// placeNav places the navigation block in the top right corner of the client area:
+// four buttons, with "pos / n" between Previous and Next.
+func (v *docView) placeNav(L *docLayouter, rc rect) {
+	s := g.scale
+	nv := &v.nav
+	if nv.n < 2 {
+		nv.box = rect{}
+		return
+	}
+	bw, h, pad := s(30), s(32), s(4)
+	widest := strings.Map(func(r rune) rune { // the widest text of this count: its digits as 8
+		if r >= '0' && r <= '9' {
+			return '8'
+		}
+		return r
+	}, navText(nv.n, nv.n))
+	tw := L.measure(v.fonts["body"], utf16.Encode([]rune(widest))) + s(16)
+	right, top := rc.Right-s(12), s(10)
+	nv.box = rect{right - 2*pad - 4*bw - tw, top, right, top + h}
+	x := nv.box.Left + pad
+	for i := range nv.btns {
+		if i == navNext {
+			nv.text = rect{x, top, x + tw, top + h}
+			x += tw
+		}
+		nv.btns[i] = rect{x, top + pad, x + bw, top + h - pad}
+		x += bw
+	}
+}
+
+// navText is what the block says between its buttons: the item shown, of how many.
+func navText(pos, n int) string { return fmt.Sprintf("%d / %d", pos, n) }
+
+// navAt is the enabled button of the navigation block at a client point; -1 elsewhere
+// in the block, -2 outside it.
+func (v *docView) navAt(p point) int {
+	nv := &v.nav
+	in := func(r rect) bool { return p.X >= r.Left && p.X < r.Right && p.Y >= r.Top && p.Y < r.Bottom }
+	if nv.n < 2 || !in(nv.box) {
+		return -2
+	}
+	for i, r := range nv.btns {
+		if in(r) && navTo(i, nv.pos, nv.n) >= 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+// navTips gives the buttons of the navigation block their tooltips, which name their
+// keys; they do not move as the text scrolls.
+func (v *docView) navTips() {
+	if v.tip == 0 {
+		return
+	}
+	for i := range v.nav.btns {
+		ti := toolInfo{Hwnd: v.hwnd, ID: uintptr(navToolID + i)}
+		ti.Size = uint32(unsafe.Sizeof(ti))
+		send(v.tip, 0x0433 /* TTM_DELTOOLW */, 0, uintptr(unsafe.Pointer(&ti)))
+		if v.nav.n >= 2 {
+			ti = toolInfo{Flags: 0x10 /* TTF_SUBCLASS */, Hwnd: v.hwnd, ID: uintptr(navToolID + i), Rect: v.nav.btns[i], Text: u16(T(navTipKeys[i]))}
+			ti.Size = uint32(unsafe.Sizeof(ti))
+			send(v.tip, 0x0432 /* TTM_ADDTOOLW */, 0, uintptr(unsafe.Pointer(&ti)))
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -696,11 +805,95 @@ func (v *docView) paint() {
 	}
 	pDeleteObject.Call(bg)
 
+	// the navigation block, over the text
+	if v.nav.n >= 2 {
+		v.drawNav(dc)
+	}
+
 	pBitBlt.Call(hdc, 0, 0, uintptr(rc.Right), uintptr(rc.Bottom), dc, 0, 0, 0x00CC0020 /* SRCCOPY */)
 	pSelectObject.Call(dc, oldFont)
 	pSelectObject.Call(dc, oldBmp)
 	pDeleteObject.Call(bmp)
 	pDeleteDC.Call(dc)
+}
+
+// drawNav draws the navigation block: a white box with a thin border and a shadow,
+// its buttons (greyed where they go nowhere, shaded under the mouse) and "pos / n".
+func (v *docView) drawNav(dc uintptr) {
+	s := g.scale
+	nv := &v.nav
+	b := nv.box
+	nullPen, _, _ := pGetStockObject.Call(8 /* NULL_PEN */)
+	round := func(r rect, fill, border uint32, radius int32) {
+		br, _, _ := pCreateSolidBrush.Call(uintptr(fill))
+		pen := nullPen
+		if border != fill {
+			pen, _, _ = pCreatePen.Call(0, uintptr(max(1, s(1))), uintptr(border))
+		}
+		ob, _, _ := pSelectObject.Call(dc, br)
+		op, _, _ := pSelectObject.Call(dc, pen)
+		pRoundRect.Call(dc, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right), uintptr(r.Bottom), uintptr(radius), uintptr(radius))
+		pSelectObject.Call(dc, ob)
+		pSelectObject.Call(dc, op)
+		pDeleteObject.Call(br)
+		if pen != nullPen {
+			pDeleteObject.Call(pen)
+		}
+	}
+	round(rect{b.Left + s(1), b.Top + s(2), b.Right + s(2), b.Bottom + s(3)}, rgb(218, 218, 218), rgb(218, 218, 218), s(12))
+	round(b, rgb(255, 255, 255), rgb(188, 188, 188), s(12))
+	for i, r := range nv.btns {
+		on := navTo(i, nv.pos, nv.n) >= 0
+		if on && (i == nv.hover || i == nv.down) {
+			shade := rgb(232, 232, 232)
+			if i == nv.down {
+				shade = rgb(214, 214, 214)
+			}
+			round(r, shade, shade, s(8))
+		}
+		color := rgb(64, 64, 64)
+		if !on {
+			color = rgb(196, 196, 196)
+		}
+		cx, cy := (r.Left+r.Right)/2, (r.Top+r.Bottom)/2
+		u := func(n float64) int32 { return int32(n*float64(s(100))/100 + 0.5) }
+		tri := func(tip, base int32) { // a triangle pointing to tip, from the vertical side at base
+			pts := [3]point{{base, cy - u(6)}, {base, cy + u(6)}, {tip, cy}}
+			br, _, _ := pCreateSolidBrush.Call(uintptr(color))
+			ob, _, _ := pSelectObject.Call(dc, br)
+			op, _, _ := pSelectObject.Call(dc, nullPen)
+			pPolygon.Call(dc, uintptr(unsafe.Pointer(&pts[0])), 3)
+			pSelectObject.Call(dc, ob)
+			pSelectObject.Call(dc, op)
+			pDeleteObject.Call(br)
+		}
+		bar := func(x int32) {
+			br, _, _ := pCreateSolidBrush.Call(uintptr(color))
+			rr := rect{x, cy - u(6), x + max(2, u(2)), cy + u(6) + 1}
+			pFillRect.Call(dc, uintptr(unsafe.Pointer(&rr)), br)
+			pDeleteObject.Call(br)
+		}
+		switch i {
+		case navFirst:
+			bar(cx - u(6))
+			tri(cx-u(3), cx+u(5))
+		case navPrevious:
+			tri(cx-u(4), cx+u(4))
+		case navNext:
+			tri(cx+u(4), cx-u(4))
+		case navLast:
+			tri(cx+u(3), cx-u(5))
+			bar(cx + u(4))
+		}
+	}
+	t := utf16.Encode([]rune(navText(nv.pos+1, nv.n)))
+	L := &docLayouter{v: v, dc: dc}
+	f := v.fonts["body"]
+	pSelectObject.Call(dc, f.h)
+	pSetTextColor.Call(dc, uintptr(rgb(32, 32, 32)))
+	x := (nv.text.Left + nv.text.Right - L.measure(f, t)) / 2
+	y := (nv.text.Top + nv.text.Bottom - f.height) / 2
+	pExtTextOutW.Call(dc, uintptr(x), uintptr(y), 0, 0, uintptr(unsafe.Pointer(&t[0])), uintptr(len(t)), 0)
 }
 
 // drawCopyButton draws the copy button of a block of commands.
@@ -828,7 +1021,16 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			return 0
 		case wmSetCursor:
 			if loword(lParam) == 1 {
-				p := v.docPoint(cursorIn(hwnd))
+				cp := cursorIn(hwnd)
+				if nb := v.navAt(cp); nb > -2 { // the navigation block: the hand on a button
+					if nb >= 0 {
+						pSetCursor.Call(a.curHand)
+					} else {
+						pSetCursor.Call(a.curArrow)
+					}
+					return 1
+				}
+				p := v.docPoint(cp)
 				switch {
 				case v.btnAt(p) >= 0 || v.linkAt(p) != "":
 					pSetCursor.Call(a.curHand)
@@ -843,6 +1045,9 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		case wmLButtonDown:
 			pSetFocus.Call(hwnd)
 			pt := point{xParam(lParam), yParam(lParam)}
+			if v.navPress(pt) {
+				return 0
+			}
 			p := v.docPoint(pt)
 			v.down, v.moved, v.downPt = true, false, pt
 			v.downBtn, v.downLink = v.btnAt(p), v.linkAt(p)
@@ -859,6 +1064,9 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			return 0
 		case wmMouseMove:
 			pt := point{xParam(lParam), yParam(lParam)}
+			if v.nav.down >= 0 {
+				return 0
+			}
 			if v.down && v.downBtn < 0 {
 				if abs32(pt.X-v.downPt.X)+abs32(pt.Y-v.downPt.Y) > a.scale(4) {
 					v.moved = true
@@ -875,9 +1083,21 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 				}
 				return 0
 			}
-			v.linkTipAt(v.linkFragAt(v.docPoint(pt)))
-			if hb := v.btnAt(v.docPoint(pt)); hb != v.hoverBtn {
-				v.hoverBtn = hb
+			nb := v.navAt(pt)
+			if nb > -2 { // over the navigation block: not over what it covers
+				v.linkTipAt(-1)
+			} else {
+				v.linkTipAt(v.linkFragAt(v.docPoint(pt)))
+			}
+			hb := -1
+			if nb == -2 {
+				hb = v.btnAt(v.docPoint(pt))
+			}
+			if nb < 0 {
+				nb = -1
+			}
+			if hb != v.hoverBtn || nb != v.nav.hover {
+				v.hoverBtn, v.nav.hover = hb, nb
 				pInvalidateRect.Call(hwnd, 0, 0)
 				tme := struct {
 					Size, Flags uint32
@@ -889,12 +1109,23 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			}
 			return 0
 		case wmMouseLeave:
-			if v.hoverBtn >= 0 {
-				v.hoverBtn = -1
+			if v.hoverBtn >= 0 || v.nav.hover >= 0 {
+				v.hoverBtn, v.nav.hover = -1, -1
 				pInvalidateRect.Call(hwnd, 0, 0)
 			}
 			return 0
 		case wmLButtonUp:
+			if nb := v.nav.down; nb >= 0 { // a button of the navigation block: it acts on the release, still on it
+				v.nav.down = -1
+				pReleaseCapture.Call()
+				pInvalidateRect.Call(hwnd, 0, 0)
+				if v.navAt(point{xParam(lParam), yParam(lParam)}) == nb && v.onNav != nil {
+					if to := navTo(nb, v.nav.pos, v.nav.n); to >= 0 {
+						v.onNav(to)
+					}
+				}
+				return 0
+			}
 			if !v.down {
 				return 0
 			}
@@ -917,6 +1148,9 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			pInvalidateRect.Call(hwnd, 0, 0)
 			return 0
 		case wmLButtonDblClk:
+			if v.navPress(point{xParam(lParam), yParam(lParam)}) { // a second quick click on a button counts too
+				return 0
+			}
 			p := v.docPoint(point{xParam(lParam), yParam(lParam)})
 			if v.btnAt(p) < 0 && v.linkAt(p) == "" && len(v.text) > 0 {
 				v.selectWord(min(v.offsetAt(p), len(v.text)-1))
@@ -925,6 +1159,10 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			return 0
 		case wmCaptureChanged:
 			v.down = false
+			if v.nav.down >= 0 {
+				v.nav.down = -1
+				pInvalidateRect.Call(hwnd, 0, 0)
+			}
 			return 0
 		case wmContextMenu:
 			pt := point{xParam(lParam), yParam(lParam)}
@@ -975,6 +1213,22 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	}
 	r, _, _ := pDefWindowProcW.Call(hwnd, uintptr(msg), wParam, lParam)
 	return r
+}
+
+// navPress handles a press of the mouse button on the navigation block: on a button,
+// it shows it pressed until the release. It tells whether the point is on the block,
+// which keeps the text under it from being selected.
+func (v *docView) navPress(pt point) bool {
+	nb := v.navAt(pt)
+	if nb == -2 {
+		return false
+	}
+	if nb >= 0 {
+		v.nav.down = nb
+		pSetCapture.Call(v.hwnd)
+		pInvalidateRect.Call(v.hwnd, 0, 0)
+	}
+	return true
 }
 
 func abs32(x int32) int32 {

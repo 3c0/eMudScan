@@ -109,15 +109,15 @@ type ui struct {
 	logPending bool
 	logText    strings.Builder
 
-	detailQueue []Item
-	dlg         *detailsDlg
-	fix         *fixDlg       // the Fix window, above the details
-	fixUnder    *fixDlg       // the Fix software window, under the details it opened, while their own Fix window is open
-	dlgOwner    uintptr       // the window under the details, disabled while they are open: the Fix software window, or 0 for the main window
-	restoring   bool          // a restore of backups runs, from the details (restoreBackups)
-	dlgFocus    uintptr       // the control that had the focus before the details: it gets it back
-	detailBack  []detailsBack // details left through a link, shown again when closed
-	navigating  bool
+	detailSet  []Item // the items of the details window opened for several: it shows one at a time (detailsGo)
+	dlg        *detailsDlg
+	fix        *fixDlg       // the Fix window, above the details
+	fixUnder   *fixDlg       // the Fix software window, under the details it opened, while their own Fix window is open
+	dlgOwner   uintptr       // the window under the details, disabled while they are open: the Fix software window, or 0 for the main window
+	restoring  bool          // a restore of backups runs, from the details (restoreBackups)
+	dlgFocus   uintptr       // the control that had the focus before the details: it gets it back
+	detailBack []detailsBack // details left through a link, shown again when closed
+	navigating bool
 }
 
 var g = &ui{items: map[int]Item{}, shown: map[int]Item{}, winIdx: map[int]int{}, dragging: -1}
@@ -1460,10 +1460,13 @@ func (a *ui) runMenu(id int, h uintptr, items []Item) {
 		return out
 	}
 	switch id {
-	case menuDetails:
-		if len(items) > 0 && a.confirmMany(len(items)) {
-			a.detailQueue = append(a.detailQueue, items...)
-			a.nextDetails()
+	case menuDetails: // several items: one window, with the navigation block
+		switch {
+		case len(items) == 1:
+			a.openDetails(items[0], -1)
+		case len(items) > 1:
+			a.detailSet = items
+			a.openDetails(items[0], 0)
 		}
 	case menuOpenFile:
 		if sel := filter(func(it Item) bool { return it.File != "" }); a.confirmMany(len(sel)) {
@@ -1890,7 +1893,7 @@ func (a *ui) reset() {
 	a.activity, a.spinText = "", ""
 	a.logText.Reset()
 	a.logPending = false
-	a.detailQueue, a.detailBack = nil, nil
+	a.detailSet, a.detailBack = nil, nil
 	a.createControls()
 	a.layout()
 	a.appendLog([]logRun{{T("log.ready"), rgb(110, 110, 110), false, false}}, true)
@@ -1905,6 +1908,7 @@ type detailsDlg struct {
 	hwnd, bCopy, bCmds, bFolder, bFix, bClose, status uintptr
 	view                                              *docView
 	item                                              Item
+	pos                                               int // its place in detailSet, or -1 for an item on its own
 	blocks                                            []docBlock
 	cmds                                              []string
 }
@@ -1924,18 +1928,6 @@ func (a *ui) openItemRef(key string) {
 			return
 		}
 	}
-}
-
-func (a *ui) nextDetails() {
-	if a.dlg != nil || len(a.detailQueue) == 0 {
-		return
-	}
-	it := a.detailQueue[0]
-	a.detailQueue = a.detailQueue[1:]
-	if cur, ok := a.itemFor(it.ID); ok {
-		it = cur
-	}
-	a.openDetails(it)
 }
 
 // The main window opens with a share of the screen, mainShareW% of its width and
@@ -1979,11 +1971,13 @@ func (a *ui) workArea() rect {
 	return wa
 }
 
-func (a *ui) openDetails(it Item) {
+// openDetails opens the details window for it: an item on its own (pos -1), or item
+// pos of detailSet, with the navigation block.
+func (a *ui) openDetails(it Item, pos int) {
 	if a.dlg == nil && a.dlgFocus == 0 {
 		a.dlgFocus, _, _ = pGetFocus.Call()
 	}
-	d := &detailsDlg{item: it, blocks: detailBlocks(it)}
+	d := &detailsDlg{item: it, pos: pos, blocks: detailBlocks(it)}
 	for _, b := range d.blocks {
 		d.cmds = append(d.cmds, b.cmds...)
 	}
@@ -2011,6 +2005,10 @@ func (a *ui) openDetails(it Item) {
 	d.view = a.newDocView(d.hwnd, d.blocks)
 	d.view.onStatus = func(s string) { setText(d.status, s) }
 	d.view.onCopyAll = func() { d.copyAll() }
+	d.view.onNav = a.detailsGo
+	if pos >= 0 {
+		d.view.nav.pos, d.view.nav.n = pos, len(a.detailSet)
+	}
 	d.bCopy = a.iconButton(d.hwnd, T("dlg.copyAll"), idDlgCopy, false, glyphCopy)
 	d.bCmds = a.iconButton(d.hwnd, T("dlg.copyCmds"), idDlgCmds, false, glyphTerminal)
 	d.bFolder = a.iconButton(d.hwnd, T("dlg.openFolder"), idDlgFolder, false, glyphFolder)
@@ -2029,6 +2027,43 @@ func (a *ui) openDetails(it Item) {
 	pEnableWindow.Call(a.detailsOwner(), 0)
 	pShowWindow.Call(d.hwnd, 1)
 	pSetForegroundWindow.Call(d.hwnd) // also when it replaces other details (keys go to it)
+	pSetFocus.Call(d.view.hwnd)
+}
+
+// detailsGo shows item to of detailSet in the details window, in place of the one it
+// shows (the navigation block, or its keys).
+func (a *ui) detailsGo(to int) {
+	d := a.dlg
+	if d == nil || d.pos < 0 || to < 0 || to >= len(a.detailSet) || to == d.pos || a.restoring || !pEnabled(d.hwnd) {
+		return
+	}
+	it := a.detailSet[to]
+	if cur, ok := a.itemFor(it.ID); ok {
+		it = cur
+	}
+	a.showDetails(d, it, to)
+}
+
+// showDetails shows it in the details window d, from the top: another item of
+// detailSet (pos), or the same one as a fix or a restore left it (refreshDetails).
+func (a *ui) showDetails(d *detailsDlg, it Item, pos int) {
+	d.item, d.pos, d.blocks, d.cmds = it, pos, detailBlocks(it), nil
+	for _, b := range d.blocks {
+		d.cmds = append(d.cmds, b.cmds...)
+	}
+	setText(d.hwnd, itemTitle(it)+" · "+appName)
+	setText(d.status, "")
+	pEnableWindow.Call(d.bCmds, boolArg(len(d.cmds) > 0))
+	pEnableWindow.Call(d.bFolder, boolArg(it.Folder != "" || it.File != ""))
+	a.setDetailsFix(d) // fixed: Restore the backup; restored: Fix this software
+	d.fitButtons(a)
+	d.layout(a)
+	if pos >= 0 {
+		d.view.nav.pos, d.view.nav.n = pos, len(a.detailSet)
+	} else {
+		d.view.nav.n = 0
+	}
+	d.view.setBlocks(d.blocks)
 	pSetFocus.Call(d.view.hwnd)
 }
 
@@ -2160,13 +2195,15 @@ func (a *ui) closeDetails() {
 		if cur, ok := a.itemFor(it.ID); ok {
 			it = cur
 		}
-		a.openDetails(it)
+		a.openDetails(it, b.pos)
 		if a.dlg != nil {
 			a.dlg.view.setScroll(b.scroll)
 		}
 		return
 	}
-	a.nextDetails()
+	if !a.navigating {
+		a.detailSet = nil
+	}
 	if a.dlg == nil && !a.navigating && a.dlgOwner != 0 { // back to the Fix software window
 		a.dlgOwner = 0
 		if f := a.fix; f != nil && f.hwnd == owner {
@@ -2179,6 +2216,7 @@ func (a *ui) closeDetails() {
 type detailsBack struct {
 	item   Item
 	scroll int32
+	pos    int // its place in detailSet, or -1
 }
 
 func detailsWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
@@ -2461,12 +2499,12 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		if it, ok := a.items[int(wParam)]; ok && !a.restoring {
 			if d := a.dlg; d != nil {
 				// the current details come back when the new ones are closed
-				a.detailBack = append(a.detailBack, detailsBack{d.item, d.view.scroll})
+				a.detailBack = append(a.detailBack, detailsBack{d.item, d.view.scroll, d.pos})
 				a.navigating = true
 				a.closeDetails()
 				a.navigating = false
 			}
-			a.openDetails(it)
+			a.openDetails(it, -1)
 		}
 		return 0
 	case wmApp + 3: // the client area of a list changed
@@ -2622,6 +2660,15 @@ func main() {
 		}
 		if m.Message == wmKeyDown && a.dlg == nil && a.shortcut(m.WParam) {
 			continue
+		}
+		if d := a.dlg; m.Message == wmSysKeyDown && d != nil && d.pos >= 0 && navKey(m.WParam) >= 0 {
+			// Alt+Home, Alt+←, Alt+→, Alt+End: the navigation block of the details
+			if child, _, _ := pIsChild.Call(d.hwnd, m.Hwnd); child != 0 || m.Hwnd == d.hwnd {
+				if to := navTo(navKey(m.WParam), d.pos, len(a.detailSet)); to >= 0 {
+					a.detailsGo(to)
+				}
+				continue
+			}
 		}
 		target := hwnd
 		if a.dlg != nil {

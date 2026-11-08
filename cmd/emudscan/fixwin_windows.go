@@ -208,7 +208,7 @@ func (a *ui) openFixDetails(d *fixDlg, row int) {
 		return
 	}
 	a.dlgOwner = d.hwnd
-	a.openDetails(it)
+	a.openDetails(it, -1)
 	if a.dlg == nil {
 		a.dlgOwner = 0
 	}
@@ -1479,19 +1479,5 @@ func (a *ui) refreshDetails() {
 	if !ok {
 		return
 	}
-	old := d.view.hwnd
-	d.view.destroy()
-	pDestroyWindow.Call(old) // else, over the new page, it would get the clicks
-	d.item, d.blocks, d.cmds = it, detailBlocks(it), nil
-	for _, b := range d.blocks {
-		d.cmds = append(d.cmds, b.cmds...)
-	}
-	d.view = a.newDocView(d.hwnd, d.blocks)
-	d.view.onStatus = func(s string) { setText(d.status, s) }
-	d.view.onCopyAll = func() { d.copyAll() }
-	pEnableWindow.Call(d.bCmds, boolArg(len(d.cmds) > 0))
-	a.setDetailsFix(d) // fixed: Restore the backup; restored: Fix this software
-	d.fitButtons(a)
-	d.layout(a)
-	pSetFocus.Call(d.view.hwnd)
+	a.showDetails(d, it, d.pos)
 }

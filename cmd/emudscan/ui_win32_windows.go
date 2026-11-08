@@ -121,6 +121,7 @@ var (
 	pRoundRect            = modgdi32.NewProc("RoundRect")
 	pMoveToEx             = modgdi32.NewProc("MoveToEx")
 	pLineTo               = modgdi32.NewProc("LineTo")
+	pPolygon              = modgdi32.NewProc("Polygon")
 
 	pInitCommonControlsEx = modcomctl32.NewProc("InitCommonControlsEx")
 	pImageListCreate      = modcomctl32.NewProc("ImageList_Create")
@@ -181,6 +182,7 @@ const (
 	wmMouseWheel     = 0x020A
 	wmMouseLeave     = 0x02A3
 	wmKeyDown        = 0x0100
+	wmSysKeyDown     = 0x0104
 	wmSetFocus       = 0x0007
 	wmKillFocus      = 0x0008
 	wmGetDlgCode     = 0x0087

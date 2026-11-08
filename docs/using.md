@@ -101,6 +101,12 @@ action**. Commands are shown in black blocks, with a copy button, for you to run
 When eMudScan can run them for you, **Fix this software** does so, once you
 confirm (see [Fixing software](#fixing-software)).
 
+With several items selected, **Detailed information on 3 items…** (or Enter)
+opens one window that shows them one at a time. The block in its top right
+corner says which one is shown (**2 / 3**) and goes to the first, previous, next
+or last item; it stays in place as the page scrolls. Alt+Home, Alt+←, Alt+→ and Alt+End do the same. A
+link to another item opens that item on its own; closing it brings you back.
+
 A path in your user folder is shown with the variable that names that folder, as
 File Explorer understands it: `%USERPROFILE%`, `%APPDATA%` or `%LOCALAPPDATA%`
 (`%LOCALAPPDATA%\Programs\App\app.exe`). So are the paths of the report, the log
@@ -301,6 +307,8 @@ the only time eMudScan writes a file.
 | Ctrl+Q | Quit eMudScan |
 | Enter | Show the detailed information of the selected items |
 | Esc | Close the detailed information window |
+| Alt+←, Alt+→ | In the detailed information of several items: previous, next item |
+| Alt+Home, Alt+End | In the detailed information of several items: first, last item |
 | Ctrl+C, Ctrl+A | In a list: copy the selected items, select all |
 
 Hover over the **Scan**, **Copy report** and **Save report** buttons to see
