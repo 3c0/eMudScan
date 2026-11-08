@@ -76,10 +76,10 @@ own) and pipx is on the PATH. Pipenv, Poetry and uv keep a project’s virtual
 environment as its lock file says (`Pipfile.lock`, `poetry.lock`, `uv.lock`), so
 the project’s next install would bring the old `certifi` back: when the lock
 file of the project (the folder of its `.venv`, or the one that Pipenv links to
-its environment) names the outdated version, the details also give the command
-that updates it there (`pipenv update certifi`, `poetry update certifi`,
-`uv sync --upgrade-package certifi`). eMudScan never runs it, since it changes
-your project.
+its environment) names the outdated version, the detailed information also gives
+the command that updates it there (`pipenv update certifi`,
+`poetry update certifi`, `uv sync --upgrade-package certifi`). eMudScan never
+runs it, since it changes your project.
 
 Until a program that ships a 64-bit Python 3.11 to 3.15 is updated, eMudScan
 can replace the ssl files of that Python with those of the fixed release of its
@@ -206,21 +206,22 @@ builds, are never shown.
 
 ## Package managers
 
-Software installed with Scoop, WinGet or Chocolatey is recognized from its files.
-Scoop’s `current` folder is a link to the folder of the installed version: what
-is found through it is shown once, under the version’s folder. When an update is
-needed, the details give the command (`scoop update …`, `winget upgrade --id …`,
-`choco upgrade …`), except for what Scoop keeps through its updates (its
-`persist` folder), which they do not change. The Microsoft Store updates its apps automatically; the
-details explain how to get the update sooner. Windows protects the folders of
-Store apps, so no manual fix is offered for them.
+Software installed with Scoop, WinGet or Chocolatey is recognized from its
+files. Scoop’s `current` folder is a link to the folder of the installed
+version: what is found through it is shown once, under the version’s folder.
+When an update is needed, the detailed information gives the command
+(`scoop update …`, `winget upgrade --id …`, `choco upgrade …`), except for what
+Scoop keeps through its updates (its `persist` folder), which they do not
+change. The Microsoft Store updates its apps automatically; the detailed
+information explains how to get the update sooner. Windows protects the folders
+of Store apps, so no manual fix is offered for them.
 
 A Python installed with the Python Install Manager (`py install`) is recognized
 by the `__install__.json` in its folder. When the manager is installed, an
 outdated Python 3.14 or later is updated with it
 (`pymanager install --update -y 3.14-64`), which keeps its installed packages.
 python.org publishes no Windows build of the fixed 3.11, 3.12 and 3.13, so for
-these the details suggest installing Python 3.14 beside it.
+these the detailed information suggests installing Python 3.14 beside it.
 
 A Python installed by uv is recognized by its folder
 (`cpython-3.12.9-windows-x86_64-none`, beside uv’s `.lock`). When it is
@@ -235,8 +236,8 @@ uv (`uv python upgrade 3.12`; uv 0.13.6 or later knows the fixed versions), and
 removed (`uv python uninstall`), only once a fixed version of its release line
 is installed. The virtual environments that uv created for its release line
 follow the upgrade; those found that use the removed copy itself are named, in
-the details and in the warning before the fix runs, so that you can recreate
-them.
+the detailed information and in the warning before the fix runs, so that you can
+recreate them.
 
 Pythons installed otherwise are left to their own updates.
 

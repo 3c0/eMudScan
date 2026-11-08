@@ -100,7 +100,7 @@ func TestLinkTip(t *testing.T) {
 	for target, want := range map[string]string{
 		"https://app1.example.org": "Open in your browser:\nhttps://app1.example.org",
 		`C:\Program Files\Git`:     "Show in Explorer:\nC:\\Program Files\\Git",
-		itemLinkPrefix + "wincopy": "Show this item’s details",
+		itemLinkPrefix + "wincopy": "Show this item’s detailed information",
 		openInPrefix + `C:\Users\me\scoop\apps\thorium\156.0.7000.10\chrome.exe>https://emudhra.we-have-a-problem.com/`: "Open with chrome.exe:\nhttps://emudhra.we-have-a-problem.com/",
 	} {
 		if got := linkTip(target); got != want {

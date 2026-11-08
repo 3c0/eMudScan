@@ -65,9 +65,9 @@ In the lists, each status has a shield; the log and the report use a symbol.
 
 The same finding in several places (two copies of Node.js inside the same
 program) is a single item: its **Outdated file** ends with *(+1)*, and its
-details list every copy, then their explanation once, with the commands for each
-copy. **Scan again** checks each copy; copies that no longer match get their own
-items again.
+detailed information lists every copy, then their explanation once, with the
+commands for each copy. **Scan again** checks each copy; copies that no longer
+match get their own items again.
 
 Click a column header to sort, click a path to open it in File Explorer, and
 hover over a cell to see its full content.
@@ -80,13 +80,13 @@ end of the top line of each list then counts the items found ("Search found 2
 items: …"), and its shield shows their worst status. Esc clears it, as do
 **Scan** and **Scan again**.
 
-Right-click one or more items for: **Details**, **Open file location**, **Open
-software folder**, **Open homepage**, **Search on Google**, **Scan again**,
-**Copy**, **Copy paths** and **Select all**. **Scan again** first reads the
-installed software again, so a program you have just updated shows its new
-version.
+Right-click one or more items for: **Detailed information**,
+**Open file location**, **Open software folder**, **Open homepage**,
+**Search on Google**, **Scan again**, **Copy**, **Copy paths** and
+**Select all**. **Scan again** first reads the installed software again, so a
+program you have just updated shows its new version.
 
-## The details window
+## The detailed information window
 
 Double-click an item (or press Enter) to see its software date and where that
 date comes from, its folders, homepage and package, and the **recommended
@@ -102,14 +102,14 @@ and the Fix window, and the commands name the folder as PowerShell does
 stays out of them. The links and the copied paths keep the full path.
 
 <p align="center">
-  <img src="images/details-window.png" width="560" alt="The details window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown, or with Fix this software">
+  <img src="images/details-window.png" width="560" alt="The detailed information window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown, or with Fix this software">
 </p>
 
-Before changing a file, these commands back it up next to the original, with
-the date and time in its name (`cacert.pem.emudscan-20261031-011500.bak`) and the
-dates of the original, which a restore puts back too. As
-long as such a backup exists, the details window offers a command to restore it,
-and **Restore the backup** to run it for you (see
+Before changing a file, these commands back it up next to the original, with the
+date and time in its name (`cacert.pem.emudscan-20261031-011500.bak`) and the
+dates of the original, which a restore puts back too. As long as such a backup
+exists, the detailed information window offers a command to restore it, and
+**Restore the backup** to run it for you (see
 [Restoring a backup](#restoring-a-backup)).
 
 In C:\ProgramData, any user can create folders, and often add files to the
@@ -124,12 +124,13 @@ For a browser that may not be protected, links open the test pages of
 we-have-a-problem.com in that browser, so that you can check for yourself.
 eMudScan starts only a browser registered in Windows or kept in a folder that
 only administrators or you can change (Program Files, Windows, your user
-folder): for another one, the details give the pages’ addresses to open in it.
+folder): for another one, the detailed information gives the pages’ addresses to
+open in it.
 
 ## Fixing software
 
-eMudScan can run for you the commands that the details give to fix a software,
-and no others:
+eMudScan can run for you the commands that the detailed information gives to fix
+a software, and no others:
 
 - an update through the package manager that installed the software or its
   component: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx,
@@ -148,11 +149,11 @@ and no others:
   eMudScan, with tests before and after (see
   [Other software](checks.md#other-software)); this fix is not ticked by default.
 
-The other commands of the details, such as removing a setting, are left for you
-to run; restoring a backup has its own button (see
+The other commands of the detailed information, such as removing a setting, are
+left for you to run; restoring a backup has its own button (see
 [Restoring a backup](#restoring-a-backup)). Software that only its publisher,
 Windows Update, the Microsoft Store or a network administrator can fix is not
-listed: its details say what to do.
+listed: its detailed information says what to do.
 
 **Fix**, beside **Scan**, is enabled once a scan has found software that eMudScan
 can fix. It opens the **Fix software** window, with, from top to bottom:
@@ -162,18 +163,18 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   its location and, after the fixes, the result. They are all ticked, except
   those whose fix replaces a component inside a program (its `node.exe`, the ssl
   files of its Python), a heavier change: tick them yourself, or click
-  **Select All**. A software that has such a fix and others has a row for
-  each, so that the others stay ticked. A software found in several places has
-  a row for each. Click a location to show it in File Explorer. Double-click a
-  software to open its details, where you can also fix it, or restore its
-  backup: the list is updated when they close. Click a column header to sort
-  the list by that column; click it again to reverse the order. Drag the bar
-  below the list to make it taller or shorter, down to a single row.
+  **Select All**. A software that has such a fix and others has a row for each,
+  so that the others stay ticked. A software found in several places has a row
+  for each. Click a location to show it in File Explorer. Double-click a
+  software to open its detailed information, where you can also fix it, or
+  restore its backup: the list is updated when they close. Click a column header
+  to sort the list by that column; click it again to reverse the order. Drag the
+  bar below the list to make it taller or shorter, down to a single row.
 - The PowerShell commands that will run for the ticked software (or for the
   software you click), grouped by software. If they run in a different order,
-  the warning before they run explains it. The button in their top right
-  corner copies them, with their comments, as in the details window; after the
-  fixes, it copies their results. You can also select part of the text and
+  the warning before they run explains it. The button in their top right corner
+  copies them, with their comments, as in the detailed information window; after
+  the fixes, it copies their results. You can also select part of the text and
   copy it (Ctrl+C, or right-click).
 - **Back up the files to change**, **Fix the selected software**, **Stop** and
   **Close**.
@@ -182,18 +183,18 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   <img src="images/fix-window.png" width="860" alt="The Fix software window: the software that eMudScan can fix, Inkscape ticked, and the PowerShell commands that replace its outdated certificate bundle">
 </p>
 
-**Fix this software**, in the details window, opens the same window for that
-software alone, without the list and without **Stop**, since a fix that has
-started to change files always runs to its end; its button is **Run the fix
-now**.
+**Fix this software**, in the detailed information window, opens the same window
+for that software alone, without the list and without **Stop**, since a fix that
+has started to change files always runs to its end; its button is
+**Run the fix now**.
 
 **Back up the files to change**, ticked by default, backs up each file before it
 is replaced or changed (a certificate bundle, a Java block list, a node.exe, the
-ssl files of a Python), next to the original, as the details window does (see
-above). It does not cover the updates made by package managers or pip, so it is
-shown only when a fix to run backs up a file. The ssl files of a Python are
-backed up in any case, so that the fix can put them back if a test fails; if the
-box is cleared, these backups are deleted once the tests pass.
+ssl files of a Python), next to the original, as the detailed information window
+does (see above). It does not cover the updates made by package managers or pip,
+so it is shown only when a fix to run backs up a file. The ssl files of a Python
+are backed up in any case, so that the fix can put them back if a test fails; if
+the box is cleared, these backups are deleted once the tests pass.
 
 Nothing runs until you accept a warning, which says what the commands do: they
 update software and replace files; package managers will not ask you anything,
@@ -252,28 +253,29 @@ To try the Fix function without changing anything, build the simulation: see
 
 ### Restoring a backup
 
-Once a software has nothing left to fix, and as long as eMudScan’s backups of its
-files are there, **Fix this software**, in its details window, becomes **Restore
-the backup** (or **Restore the backups**). Nothing changes until you accept a
-warning, which says that the software will then trust the compromised
-certificates again. eMudScan then moves each backup back in place of its file, as
-the command of the details does, and removes the files that the fix added (the
-OpenSSL libraries added beside those of a Python). The ssl files of a Python
-are restored only all together, when all the backups and marks of that fix are
-there, since some of them alone would stop its `ssl` module from loading; this
-also works after a fix that a crash interrupted during the copy. A file
-in a folder that only administrators can change, such as Program Files, is moved
-by that command, in a Windows PowerShell for which Windows asks your permission:
-eMudScan itself does not need administrator rights. The software is then checked again, and a message says
-whether its files are back; if it needs fixing, its details offer **Fix this
-software** again. The report keeps what was done.
+Once a software has nothing left to fix, and as long as eMudScan’s backups of
+its files are there, **Fix this software**, in its detailed information window,
+becomes **Restore the backup** (or **Restore the backups**). Nothing changes
+until you accept a warning, which says that the software will then trust the
+compromised certificates again. eMudScan then moves each backup back in place of
+its file, as the command of the detailed information does, and removes the files
+that the fix added (the OpenSSL libraries added beside those of a Python). The
+ssl files of a Python are restored only all together, when all the backups and
+marks of that fix are there, since some of them alone would stop its `ssl`
+module from loading; this also works after a fix that a crash interrupted during
+the copy. A file in a folder that only administrators can change, such as
+Program Files, is moved by that command, in a Windows PowerShell for which
+Windows asks your permission: eMudScan itself does not need administrator
+rights. The software is then checked again, and a message says whether its files
+are back; if it needs fixing, its detailed information offers
+**Fix this software** again. The report keeps what was done.
 
 ## The report
 
 **Copy report** and **Save report** (UTF-8 text) include every item, with the
-same explanations as the details windows and, after fixes, the commands that ran
-and what they showed. Apart from the fixes, saving a report is the only time
-eMudScan writes a file.
+same explanations as the detailed information windows and, after fixes, the
+commands that ran and what they showed. Apart from the fixes, saving a report is
+the only time eMudScan writes a file.
 
 ## Keyboard shortcuts
 
@@ -284,8 +286,8 @@ eMudScan writes a file.
 | Ctrl+Shift+C | Copy the report |
 | Ctrl+F | Search the lists |
 | Ctrl+Q | Quit eMudScan |
-| Enter | Show the details of the selected items |
-| Esc | Close the details window |
+| Enter | Show the detailed information of the selected items |
+| Esc | Close the detailed information window |
 | Ctrl+C, Ctrl+A | In a list: copy the selected items, select all |
 
 Hover over the **Scan**, **Copy report** and **Save report** buttons to see

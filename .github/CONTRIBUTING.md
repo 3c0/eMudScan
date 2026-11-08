@@ -31,8 +31,8 @@ them is not merged:
 - **It changes nothing until the user confirms a fix.** A scan writes no file
   except the report the user chooses to save, writes nothing to the registry,
   and saves no settings. Only the Fix function changes the PC, once the user
-  accepts its warning, and it runs only commands that the details show
-  (`newFix`, `fixes.go`).
+  accepts its warning, and it runs only commands that the detailed information
+  shows (`newFix`, `fixes.go`).
 - **eMudScan itself needs no administrator rights.** The commands of a fix that
   need them run in a Windows PowerShell for which Windows asks the user’s
   permission (User Account Control).
@@ -62,9 +62,9 @@ them is not merged:
 - Texts follow the style of the existing ones: American English, short
   sentences, the same terms throughout (certificate bundle, root store, block
   list; in French, fichier de certificats, magasin de certificats racines, liste
-  de blocage), names of buttons and items in bold in the details pages, and curly
-  quotation marks and apostrophes (“ ” and ’ in English; « » with non-breaking
-  spaces, and a non-breaking space before : ; ! ? in French).
+  de blocage), names of buttons and items in bold in the detailed information
+  windows, and curly quotation marks and apostrophes (“ ” and ’ in English; « »
+  with non-breaking spaces, and a non-breaking space before : ; ! ? in French).
 - Logic gets a test (`*_test.go`); file readers have test data in
   `cmd/emudscan/testdata/`.
 - A user-visible change gets one line in `CHANGELOG.md`, which follows

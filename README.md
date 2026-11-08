@@ -56,10 +56,10 @@ Each item gets a colored shield:
 | <img src="docs/images/status-update.png" width="22" alt=""> | Update needed | Accepts the compromised certificates until updated |
 | <img src="docs/images/status-problem.png" width="22" alt=""> | Critical | Windows itself still trusts the compromised certificates |
 
-The details window explains why, says what to update, and provides the commands to copy. When eMudScan can run them, **Fix this software** does so, once you accept a warning: you decide.
+The detailed information window explains why, says what to update, and provides the commands to copy. When eMudScan can run them, **Fix this software** does so, once you accept a warning: you decide.
 
 <p align="center">
-  <img src="docs/images/details-window.png" width="560" alt="The details window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown, or with Fix this software">
+  <img src="docs/images/details-window.png" width="560" alt="The detailed information window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown, or with Fix this software">
 </p>
 
 ## 🔧 Fix
@@ -92,7 +92,7 @@ A scan connects to the internet only when **Allow the online test** is checked: 
 
 ## 📖 Documentation
 
-- [Using eMudScan](docs/using.md): the window, the statuses, the details, fixes and the report
+- [Using eMudScan](docs/using.md): the window, the statuses, the detailed information, fixes and the report
 - [What eMudScan checks](docs/checks.md)
 - [Software listed by we-have-a-problem.com](docs/coverage.md): how eMudScan checks each one
 - [Privacy](docs/privacy.md)

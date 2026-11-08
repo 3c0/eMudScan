@@ -20,10 +20,10 @@ Then:
   ssl files of their Pythons, and add the compromised certificates to Java
   block lists, after backing up the files they replace, next to them, unless
   you clear **Back up the files to change**;
-- **Restore the backup**, in the details window of a fixed software, moves these
-  backups back in place of their files, once you accept its warning; a file that
-  needs administrator rights is moved by the command of the details, in a Windows
-  PowerShell started as for the fixes;
+- **Restore the backup**, in the detailed information window of a fixed
+  software, moves these backups back in place of their files, once you accept
+  its warning; a file that needs administrator rights is moved by the command of
+  the detailed information, in a Windows PowerShell started as for the fixes;
 - replacing the ssl files of a Python also writes eMudScan’s tests into that
   temporary folder: a Python script and certificates made for the fix, valid one
   hour, whose SHA-256 the commands check before they run; the ssl files are
@@ -117,9 +117,8 @@ fixes that you run still connect, as described above.
 
 The Windows certificate checks run without network access and without updating
 the Windows certificate lists. Apart from the online test and the fixes, nothing
-is sent anywhere. The only files
-read over your network are those on the drives you select to scan, and a
-certificate bundle on a network share that one of your certificate settings
-names, as the software that uses that setting reads it. Links in the
-details windows (homepages, web searches, test pages) open in your browser only
-when you click them.
+is sent anywhere. The only files read over your network are those on the drives
+you select to scan, and a certificate bundle on a network share that one of your
+certificate settings names, as the software that uses that setting reads it.
+Links in the detailed information windows (homepages, web searches, test pages)
+open in your browser only when you click them.

@@ -15,18 +15,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Can replace the node.exe inside a program with the latest release of its Node.js release line from nodejs.org, once checked (its published SHA-256, its OpenJS Foundation signature and its version), after backing it up: a fix that is not ticked by default, since it changes a program that its publisher has not updated yet.
 - Can replace the ssl files of a 64-bit Python 3.11 to 3.15 inside a program with those of the fixed release of its line, from python.org’s embeddable package or python-build-standalone’s build (on GitHub), once checked against their SHA-256. Before and after, that Python runs eMudScan’s tests (its ssl and hashlib modules, the Windows roots, TLS 1.2 and 1.3 connections in memory, the rejection of a compromised chain); if one that passed before fails after, the original files are put back. A fix that is not ticked by default: a software that also has other fixes gets a second row for it in the Fix window. **Restore the backup** puts the original files back and removes those the fix added, all together, only when all the backups and marks of that fix are there, even after a copy that a crash interrupted.
 - Updates a Deno installed with its own installer with `deno upgrade`, Deno’s own updater (Deno 2.9.8 is fixed).
-- For the virtual environment of a Pipenv, Poetry or uv project whose lock file pins the outdated certifi, which the project’s next install would bring back, the details give the command that updates it in the project, which eMudScan never runs.
-- In the Fix software window, a double-click on a software opens its details, where it can also be fixed or restored; the list is updated when they close.
+- For the virtual environment of a Pipenv, Poetry or uv project whose lock file pins the outdated certifi, which the project’s next install would bring back, the detailed information gives the command that updates it in the project, which eMudScan never runs.
+- In the Fix software window, a double-click on a software opens its detailed information, where it can also be fixed or restored; the list is updated when they close.
 - The list of the Fix software window sorts by a click on a column header, as the lists of the main window do.
-- The PowerShell commands, in the details and in the Fix window, are shown in the colors that PowerShell 7 gives them.
+- The PowerShell commands, in the detailed information and in the Fix window, are shown in the colors that PowerShell 7 gives them.
 
 ### Changed
 
-- Shorter details for Python: one sentence for the problem, then the recommended action, which names the program a bundled Python belongs to.
+- Shorter detailed information for Python: one sentence for the problem, then the recommended action, which names the program a bundled Python belongs to.
 - A finding in several places shows its explanation once, with the commands for each place.
 - “Back up the certificate files”, in the Fix window, is now “Back up the files to change”, since it also covers node.exe and the ssl files of a Python.
-- The details no longer suggest updating everything installed with a package manager (`scoop update -a`, `winget upgrade --all`, `choco upgrade all`): eMudScan stays targeted, with the update of the software it found only.
-- The Fix window opened from the details no longer has a **Stop** button: it fixes one software, and a fix that has started to change files always runs to its end.
+- The detailed information no longer suggests updating everything installed with a package manager (`scoop update -a`, `winget upgrade --all`, `choco upgrade all`): eMudScan stays targeted, with the update of the software it found only.
+- The Fix window opened from the detailed information no longer has a **Stop** button: it fixes one software, and a fix that has started to change files always runs to its end.
 - The About box, like the README, says that eMudScan is intended for administrators, developers and advanced users.
 - The About box shows the link to the source code beside its title, and the sites that the fixes connect to as a list.
 - The texts name we-have-a-problem.com, a third-party site, instead of “the advisory”.
@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The console of the Fix window shows the result of each command in a column on its left (a green ✔ or a red ✘), its warnings in yellow and its errors in red below it, and its exit code when it failed; the report puts the ✓ or ✗ before each command.
 - The console of the Fix window ends with a horizontal bar instead of “End of the fixes.”, with an empty line before and after it. In the report, the bar is a line of em dashes (—), as wide as the top of the report, and it also separates the sections.
 - The Fix window says “PowerShell commands that eMudScan will run” instead of “PowerShell commands to run”. Each check after the fixes says which stage finished, such as “Updates finished. Checking again whether the software is still vulnerable…”.
+- The details window is now named “Detailed information”, in the right-click menu, the reminders, the tooltip of the links to an item and the docs.
 
 ### Fixed
 
