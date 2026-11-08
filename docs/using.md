@@ -86,6 +86,11 @@ Right-click one or more items for: **Detailed information**,
 **Select all**. **Scan again** first reads the installed software again, so a
 program you have just updated shows its new version.
 
+With several items selected, each entry says how many things it acts on, and
+counts once what the items share: for three items in two folders,
+**Open 2 software folders**. The entries that open a window or a tab for each
+thing (**Open…** and **Search…**) ask first when there are more than two.
+
 ## The detailed information window
 
 Double-click an item (or press Enter) to see its software date and where that

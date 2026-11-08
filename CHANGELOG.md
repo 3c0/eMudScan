@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The console of the Fix window ends with a horizontal bar instead of “End of the fixes.”, with an empty line before and after it. In the report, the bar is a line of em dashes (—), as wide as the top of the report, and it also separates the sections.
 - The Fix window says “PowerShell commands that eMudScan will run” instead of “PowerShell commands to run”. Each check after the fixes says which stage finished, such as “Updates finished. Checking again whether the software is still vulnerable…”.
 - The details window is now named “Detailed information”, in the right-click menu, the reminders, the tooltip of the links to an item and the docs.
+- With several items selected, each entry of the right-click menu says how many things it acts on, counting once what the items share, such as “Open 2 software folders” for three items in two folders. **Scan again** no longer asks before scanning more than two items, since it opens no window.
 
 ### Fixed
 

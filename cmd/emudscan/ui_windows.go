@@ -1361,15 +1361,6 @@ func (a *ui) copyRows(h uintptr) {
 	setClipboard(a.hwnd, b.String())
 }
 
-// copiesOf: the other copies of merged elements.
-func copiesOf(items []Item) []Item {
-	var out []Item
-	for _, it := range items {
-		out = append(out, it.Copies...)
-	}
-	return out
-}
-
 func (a *ui) selectAll(h uintptr) {
 	li := lvItem{StateMask: 2, State: 2}
 	send(h, lvmSetItemState, ^uintptr(0), uintptr(unsafe.Pointer(&li)))
@@ -1409,29 +1400,30 @@ func (a *ui) contextMenu(h uintptr, lParam uintptr) {
 		return 1 // MF_GRAYED
 	}
 	menu, _, _ := pCreatePopupMenu.Call()
-	add := func(flags uintptr, id int, key string) { pAppendMenuW.Call(menu, flags, uintptr(id), up(T(key))) }
+	add := func(flags uintptr, id int, label string) { pAppendMenuW.Call(menu, flags, uintptr(id), up(label)) }
 	sep := func() { pAppendMenuW.Call(menu, 0x800, 0, 0) }
 	program := h != a.hListWin
-	add(0, menuDetails, "menu.details")
+	n := countMenu(items)
+	add(0, menuDetails, menuLabel("menu.details", "menu.detailsN", n.rows))
 	sep()
 	if program {
-		add(grayedUnless(func(it Item) bool { return it.File != "" }), menuOpenFile, "menu.openFile")
-		add(grayedUnless(func(it Item) bool { return it.Folder != "" }), menuOpenFolder, "menu.openFolder")
-		add(grayedUnless(func(it Item) bool { return it.Homepage() != "" }), menuHomepage, "menu.homepage")
-		add(0, menuSearch, "menu.search")
+		add(grayedUnless(func(it Item) bool { return it.File != "" }), menuOpenFile, menuLabel("menu.openFile", "menu.openFileN", n.files))
+		add(grayedUnless(func(it Item) bool { return it.Folder != "" }), menuOpenFolder, menuLabel("menu.openFolder", "menu.openFolderN", n.folders))
+		add(grayedUnless(func(it Item) bool { return it.Homepage() != "" }), menuHomepage, menuLabel("menu.homepage", "menu.homepageN", n.homepages))
+		add(0, menuSearch, menuLabel("menu.search", "menu.searchN", n.searches))
 		sep()
 	}
 	recheck := grayedUnless(func(it Item) bool { return it.Recheck })
 	if a.running || a.current == nil {
 		recheck = 1
 	}
-	add(recheck, menuRecheck, "menu.recheck")
+	add(recheck, menuRecheck, menuLabel("menu.recheck", "menu.recheckN", n.rechecks))
 	sep()
-	add(0, menuCopy, "menu.copy")
+	add(0, menuCopy, menuLabel("menu.copy", "menu.copyN", n.rows))
 	if program {
-		add(grayedUnless(func(it Item) bool { return it.File != "" || it.Folder != "" }), menuCopyPaths, "menu.copyPaths")
+		add(grayedUnless(func(it Item) bool { return it.File != "" || it.Folder != "" }), menuCopyPaths, menuLabel("menu.copyPath", "menu.copyPathsN", n.paths))
 	}
-	add(0, menuSelectAll, "menu.selectAll")
+	add(0, menuSelectAll, T("menu.selectAll"))
 	cmdID, _, _ := pTrackPopupMenu.Call(menu, 0x100|0x2 /* RETURNCMD|RIGHTBUTTON */, uintptr(pt.X), uintptr(pt.Y), 0, a.hwnd, 0)
 	pDestroyMenu.Call(menu)
 	a.runMenu(int(cmdID), h, items)
@@ -1496,7 +1488,7 @@ func (a *ui) runMenu(id int, h uintptr, items []Item) {
 				ids = append(ids, it.memberIDs()...)
 			}
 		}
-		if len(ids) > 0 && a.confirmMany(len(ids)) {
+		if len(ids) > 0 { // no question: it opens no window, and the menu gave the number
 			a.startRecheck(ids)
 		}
 	case menuCopy:

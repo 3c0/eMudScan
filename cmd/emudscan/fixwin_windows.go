@@ -605,7 +605,8 @@ func (a *ui) fixContextMenu(d *fixDlg, lParam uintptr) {
 	add(grayed(it.Recheck && !a.running && a.current != nil && !d.running), menuRecheck, "menu.recheck")
 	sep()
 	add(0, menuCopy, "menu.copy")
-	add(grayed(it.File != "" || it.Folder != ""), menuCopyPaths, "menu.copyPaths")
+	// a row is one software, but its paths may be several: its file and its folder
+	pAppendMenuW.Call(menu, grayed(it.File != "" || it.Folder != ""), menuCopyPaths, up(menuLabel("menu.copyPath", "menu.copyPathsN", countMenu([]Item{it}).paths)))
 	cmd, _, _ := pTrackPopupMenu.Call(menu, 0x100|0x2 /* RETURNCMD|RIGHTBUTTON */, uintptr(pt.X), uintptr(pt.Y), 0, d.hwnd, 0)
 	pDestroyMenu.Call(menu)
 	switch int(cmd) {
