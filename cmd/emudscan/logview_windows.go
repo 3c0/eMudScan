@@ -63,6 +63,8 @@ type logLine struct {
 	// bar: drawn as a horizontal line across the log, in barColor, in place of its text
 	bar      bool
 	barColor uint32
+	// link: its last linkN characters are a link, underlined, which calls onLink(link)
+	link, linkN int
 }
 
 type logRowRef struct{ line, row int }
@@ -96,6 +98,9 @@ type logView struct {
 	copyHover, copyDown bool
 	copied              time.Time
 	tip                 uintptr
+	// links (setLink): what a click on one does, and the link pressed
+	onLink   func(id int)
+	linkDown int
 }
 
 // copyRect is where the copy button is: in the top right corner, as in the details.
@@ -172,6 +177,54 @@ func (v *logView) setBar(line int, color uint32) {
 		v.lines[line].bar, v.lines[line].barColor = true, color
 		pInvalidateRect.Call(v.hwnd, 0, 0)
 	}
+}
+
+// setLink makes the last n characters of a line, before its line break, a link: a
+// click on it calls onLink(id).
+func (v *logView) setLink(line, n, id int) {
+	if line >= 0 && line < len(v.lines) && id != 0 {
+		v.lines[line].link, v.lines[line].linkN = id, n
+		pInvalidateRect.Call(v.hwnd, 0, 0)
+	}
+}
+
+// linkRange is where the link of a line is in the text of the log.
+func (v *logView) linkRange(ln *logLine) (int, int) {
+	end := ln.off
+	for _, sp := range ln.spans {
+		end += sp.n
+	}
+	return end - ln.linkN, end
+}
+
+// linkAt is the link under a point, or 0.
+func (v *logView) linkAt(pt point) int {
+	if v.onLink == nil || len(v.rows) == 0 || pt.Y < v.padY() {
+		return 0
+	}
+	r := v.top + int((pt.Y-v.padY())/v.pitch)
+	if r >= len(v.rows) {
+		return 0
+	}
+	ref := v.rows[r]
+	ln := &v.lines[ref.line]
+	if ln.link == 0 {
+		return 0
+	}
+	s, e := v.linkRange(ln)
+	x := pt.X - v.padX() - v.gutter()
+	dc, _, _ := pCreateCompatibleDC.Call(0)
+	defer pDeleteDC.Call(dc)
+	for _, f := range ln.rows[ref.row] {
+		if e > f.off && s < f.off+f.n {
+			t := v.text[f.off : f.off+f.n]
+			i0, i1 := max(s-f.off, 0), min(e-f.off, f.n)
+			if xa, xb := f.x+v.measure(dc, f.font, t[:i0]), f.x+v.measure(dc, f.font, t[:i1]); x >= xa && x < xb {
+				return ln.link
+			}
+		}
+	}
+	return 0
 }
 
 // logViews are the logs shown, by window: the main window's, and the console of the
@@ -707,6 +760,17 @@ func (v *logView) paint() {
 			pSelectObject.Call(dc, v.fonts[f.font])
 			pSetTextColor.Call(dc, uintptr(f.color))
 			pExtTextOutW.Call(dc, uintptr(px+f.x), uintptr(ty), 0, 0, uintptr(unsafe.Pointer(&s[0])), uintptr(len(s)), 0)
+			if ln := &v.lines[ref.line]; ln.link != 0 { // the link, underlined
+				if ls, le := v.linkRange(ln); le > f.off && ls < f.off+f.n {
+					i0, i1 := max(ls-f.off, 0), min(le-f.off, f.n)
+					xa, xb := px+f.x+v.measure(dc, f.font, s[:i0]), px+f.x+v.measure(dc, f.font, s[:i1])
+					uy := y + v.ascent + max(a.scale(1), 1)
+					r := rect{xa, uy, xb, uy + max(a.scale(1), 1)}
+					br, _, _ := pCreateSolidBrush.Call(uintptr(f.color))
+					pFillRect.Call(dc, uintptr(unsafe.Pointer(&r)), br)
+					pDeleteObject.Call(br)
+				}
+			}
 			if selE > f.off && selS < f.off+f.n {
 				i0, i1 := max(selS-f.off, 0), min(selE-f.off, f.n)
 				xa, xb := px+f.x+v.measure(dc, f.font, s[:i0]), px+f.x+v.measure(dc, f.font, s[:i1])
@@ -833,7 +897,7 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		return 0
 	case wmSetCursor:
 		if loword(lParam) == 1 { // HTCLIENT
-			if v.onCopy(cursorIn(hwnd)) {
+			if p := cursorIn(hwnd); v.onCopy(p) || v.linkAt(p) != 0 {
 				pSetCursor.Call(a.curHand)
 				return 1
 			}
@@ -855,6 +919,11 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		pt := point{xParam(lParam), yParam(lParam)}
 		if v.onCopy(pt) {
 			v.copyDown = true
+			pSetCapture.Call(hwnd)
+			return 0
+		}
+		if id := v.linkAt(pt); id != 0 { // a link: it opens on the release, still on it
+			v.linkDown = id
 			pSetCapture.Call(hwnd)
 			return 0
 		}
@@ -909,13 +978,21 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			}
 			return 0
 		}
+		if id := v.linkDown; id != 0 {
+			v.linkDown = 0
+			pReleaseCapture.Call()
+			if v.linkAt(point{xParam(lParam), yParam(lParam)}) == id && v.onLink != nil {
+				v.onLink(id)
+			}
+			return 0
+		}
 		if v.down {
 			v.down = false
 			pReleaseCapture.Call()
 		}
 		return 0
 	case wmCaptureChanged:
-		v.down, v.copyDown = false, false
+		v.down, v.copyDown, v.linkDown = false, false, 0
 		return 0
 	case wmLButtonDblClk:
 		if v.onCopy(point{xParam(lParam), yParam(lParam)}) {

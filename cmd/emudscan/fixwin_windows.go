@@ -288,6 +288,7 @@ func (a *ui) openFixAll(ids ...int) {
 	}
 	d.fitPlaces(a)
 	d.updating = false
+	d.links(a, true)
 	a.showFix(d)
 }
 
@@ -701,7 +702,12 @@ func (a *ui) newFixWindow(d *fixDlg, w, h int) bool {
 	d.console = a.newConsoleView(d.hwnd, idFixLog)
 	// its copy button: the commands, as a script with their comments, or, once they
 	// have run, their results
-	d.console.copyText = func() string { return string(utf16.Decode(d.console.text)) }
+	d.console.copyText = func() string {
+		if d.results { // as the report has them: with their results, without the links to the details
+			return strings.Join(reportLines(d.lines), "\n") + "\n"
+		}
+		return string(utf16.Decode(d.console.text))
+	}
 	d.console.copyTip = func() string {
 		if d.results {
 			return T("fix.copyResults")
@@ -800,7 +806,18 @@ func (d *fixDlg) show(l fixLine) {
 	}
 	d.lineAt = append(d.lineAt, d.console.nextLine())
 	d.lines = append(d.lines, l)
-	d.console.append(consoleRuns(l), false)
+	runs := consoleRuns(l)
+	id := d.resultOf(l)
+	link := ""
+	if id != 0 { // the result of a check: a link to the detailed information of its software
+		link = resultLink(g.items[id], d.titles[id])
+		runs[len(runs)-1].text = strings.TrimSuffix(runs[len(runs)-1].text, "\n")
+		runs = append(runs, logRun{" " + link + "\n", rgb(97, 214, 214), false, false})
+	}
+	d.console.append(runs, false)
+	if id != 0 {
+		d.console.setLink(d.lineAt[len(d.lineAt)-1], len(utf16.Encode([]rune(link))), id)
+	}
 	if l.kind == lineEnd { // drawn in the middle of its row, then an empty line
 		d.console.setBar(d.lineAt[len(d.lineAt)-1], rgb(0x76, 0x76, 0x76))
 		d.console.append(consoleRuns(blank), false)
@@ -808,6 +825,38 @@ func (d *fixDlg) show(l fixLine) {
 	if l.kind == lineCommand && d.running {
 		d.cmdLine = d.lineAt[len(d.lineAt)-1]
 		d.console.setMark(d.cmdLine, "…", rgb(0x76, 0x76, 0x76))
+	}
+}
+
+// resultOf is, for the result of a check after the fixes in the Fix software window,
+// the element it is about; else 0. The Fix window of the details has no such link:
+// they are under it.
+func (d *fixDlg) resultOf(l fixLine) int {
+	if d.list == 0 {
+		return 0
+	}
+	return checkResultOf(l, d.titles)
+}
+
+// links makes the links after the checks (resultOf) work, or not while the fixes run.
+func (d *fixDlg) links(a *ui, on bool) {
+	d.console.onLink = nil
+	if on && d.list != 0 {
+		d.console.onLink = func(id int) { a.openResult(d, id) }
+	}
+}
+
+// openResult opens the details of the element of a link after a check (resultOf), as
+// a double-click on its row does.
+func (a *ui) openResult(d *fixDlg, id int) {
+	if d.running || d.asking {
+		return
+	}
+	for i, row := range d.rows {
+		if slices.Contains(row.memberIDs(), id) {
+			a.openFixDetails(d, i)
+			return
+		}
 	}
 }
 
@@ -1032,6 +1081,7 @@ func (d *fixDlg) run(a *ui) {
 		return
 	}
 	d.running, d.ran = true, true
+	d.links(a, false)
 	d.stop.Store(false)
 	d.ranRows = map[int]bool{}
 	for i := range d.rows {
@@ -1113,6 +1163,7 @@ func (a *ui) fixEvent(e uiEvent) {
 	case 6:
 		d.rowResults(a, true)
 		d.running = false
+		d.links(a, true)
 		for _, h := range []uintptr{d.bClose, d.bBackup, d.list, d.bAll, d.bNone} {
 			if h != 0 {
 				pEnableWindow.Call(h, 1)

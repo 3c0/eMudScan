@@ -545,6 +545,31 @@ func (r *fixRunner) checkAgain(ids []int, ok map[int]bool, title string) {
 	r.checked = true
 }
 
+// checkResultOf is the element that a line of a check after the fixes is about
+// (checkAgain), by its title in the console; else 0.
+func checkResultOf(l fixLine, titles map[int]string) int {
+	if l.kind != lineFixed && l.kind != lineNotFixed {
+		return 0
+	}
+	for id, t := range titles {
+		if l.text == Tf("fix.fixed", t) || l.text == Tf("fix.notFixed", t) {
+			return id
+		}
+	}
+	return 0
+}
+
+// resultLink is the link after the result of a check, in the Fix software window: to
+// the detailed information of the software, named without its version (the result
+// gives it); title, for an element that is not a program's.
+func resultLink(it Item, title string) string {
+	name := it.Program
+	if name == "" {
+		name = title
+	}
+	return Tf("fix.resultLink", name)
+}
+
 // fixPreview is what the Fix window shows before the fixes run: for each element, its
 // title and, below it, its file, which also tells copies of a software apart; then the
 // commands of each fix, as they will run, after a comment that says what they do. The

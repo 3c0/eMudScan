@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The list of the Fix software window sorts by a click on a column header, as the lists of the main window do.
 - The list of the Fix software window has the right-click menu of the main window, and Ctrl+C copies its selected row. A reminder beside the number of selected software says so.
 - **Fix**, in the right-click menu of the lists, opens the Fix software window for the selected items that can be fixed, such as “Fix 3 items…”.
+- After the fixes, each result of the checks in the console of the Fix software window ends with a link to the detailed information of its software, such as “Detailed information on Inkscape…”.
 - The PowerShell commands, in the detailed information and in the Fix window, are shown in the colors that PowerShell 7 gives them.
 
 ### Changed

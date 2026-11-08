@@ -567,3 +567,40 @@ func TestFixReport(t *testing.T) {
 		}
 	}
 }
+
+// The results of the checks after the fixes are linked to the detailed information
+// of their element, found by its title; other lines are not.
+func TestCheckResultOf(t *testing.T) {
+	titles := map[int]string{3: "example-app-1 1.0.1 [Scoop]", 7: "Example App 2 2.0.1.200 › Certificate bundle"}
+	for _, c := range []struct {
+		l    fixLine
+		want int
+	}{
+		{fixLine{lineNotFixed, Tf("fix.notFixed", titles[3])}, 3},
+		{fixLine{lineFixed, Tf("fix.fixed", titles[7])}, 7},
+		{fixLine{lineNotFixed, Tf("fix.notFixed", "other")}, 0},
+		{fixLine{lineNote, Tf("fix.notFixed", titles[3])}, 0},
+		{fixLine{lineSoftware, titles[3]}, 0},
+	} {
+		if got := checkResultOf(c.l, titles); got != c.want {
+			t.Errorf("%v: %d, want %d", c.l, got, c.want)
+		}
+	}
+}
+
+// The link names the software without its version, or the element when it is not a
+// program's.
+func TestResultLink(t *testing.T) {
+	defer func(l int) { Lang = l }(Lang)
+	Lang = 0
+	if s := resultLink(Item{Program: "example-app-1", ProgVersion: "1.0.1"}, "example-app-1 1.0.1 [Scoop]"); s != "Detailed information on example-app-1…" {
+		t.Errorf("program: %q", s)
+	}
+	if s := resultLink(Item{Name: "Windows block list"}, "Windows block list"); s != "Detailed information on Windows block list…" {
+		t.Errorf("element: %q", s)
+	}
+	Lang = 1
+	if s := resultLink(Item{Program: "Inkscape"}, ""); s != "Informations détaillées sur Inkscape…" {
+		t.Errorf("French: %q", s)
+	}
+}
