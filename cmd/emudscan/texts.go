@@ -316,6 +316,7 @@ var tr = map[string][2]string{
 	"fix.kindJava":       {"Add the compromised certificates to Java’s block list%s:", "Ajout des certificats compromis à la liste de blocage de Java%s\u00a0:"},
 	"fix.ifStillNeeded":  {"Then, if the update does not fix it:", "Puis, si la mise à jour ne le corrige pas\u00a0:"},
 	"fix.stillFor":       {"Then, if the update does not fix %s:", "Puis, si la mise à jour ne corrige pas %s\u00a0:"},
+	"fix.order":          {"Updates run first, followed by the other fixes. In each stage, commands that require administrator rights run last.", "Les mises à jour s’exécutent en premier, suivies des autres corrections. À chaque étape, les commandes qui nécessitent les droits d’administrateur s’exécutent en dernier."},
 	"fix.titleIn":        {"%s in %s", "%s dans %s"},
 	"fix.end":            {"End of the fixes.", "Fin des corrections."},
 	"fix.restart":        {"Restart any fixed software that was open: the fix takes effect the next time it starts.", "Redémarrez les logiciels corrigés qui étaient ouverts\u00a0: la correction prend effet à leur prochain démarrage."},

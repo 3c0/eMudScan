@@ -677,7 +677,9 @@ var (
 )
 
 // showRow scrolls the console to the commands of a row of the list, or to what they
-// did; it reports whether the console shows them.
+// did, up to the blank line after them, as little as needed, so that what is above
+// stays in view when it can (the order of the fixes, at the top of the preview); it
+// reports whether the console shows them.
 func (d *fixDlg) showRow(row int) bool {
 	if row < 0 || row >= len(d.rows) {
 		return false
@@ -690,7 +692,14 @@ func (d *fixDlg) showRow(row int) bool {
 	}
 	for i, l := range d.lines {
 		if l.kind == lineSoftware && want[l.text] {
-			d.console.scrollToLine(d.lineAt[i])
+			last := d.lineAt[len(d.lineAt)-1]
+			for j := i + 1; j < len(d.lines); j++ {
+				if d.lines[j] == (fixLine{lineNote, ""}) {
+					last = d.lineAt[j] - 1
+					break
+				}
+			}
+			d.console.showLines(d.lineAt[i], last)
 			return true
 		}
 	}
@@ -857,9 +866,7 @@ func (d *fixDlg) run(a *ui) {
 		}
 	}
 	d.asking = true
-	// what the fixes break (the virtual environments of a Python they remove), first
-	text := joinParas(fixWarnings(d.selected(a)), T("fix.warning"))
-	accepted := askWarning(d.hwnd, question, text, T("fix.accept"), T("fix.decline"))
+	accepted := askWarning(d.hwnd, question, fixWarningText(d.selected(a)), T("fix.accept"), T("fix.decline"))
 	d.asking = false
 	if !accepted {
 		return

@@ -168,11 +168,12 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   software to open its details, where you can also fix it, or restore its
   backup: the list is updated when they close. Drag the bar below the list to
   make it taller or shorter, down to a single row.
-- The PowerShell commands that will run for the ticked software, or for the
-  software you click. The button in their top right corner copies them, with
-  their comments, as in the details window; after the fixes, it copies their
-  results. You can also select part of the text and copy it (Ctrl+C, or
-  right-click).
+- The PowerShell commands that will run for the ticked software (or for the
+  software you click), grouped by software. If they run in a different order,
+  a comment at the top explains it, and the warning repeats it. The button in
+  their top right corner copies them, with their comments, as in the details
+  window; after the fixes, it copies their results. You can also select part
+  of the text and copy it (Ctrl+C, or right-click).
 - **Back up the files to change**, **Fix the selected software**, **Stop** and
   **Close**.
 
@@ -205,9 +206,11 @@ software to fix and save your work first.
 
 Once you accept:
 
-1. The updates through Scoop, WinGet, Chocolatey, the Python Install Manager,
-   uv, pipx and Deno’s updater run first; then, for the software that they did not fix, the other
-   fixes (such as the upgrade of a Python with uv, once uv itself is updated).
+1. Updates (Scoop, WinGet, Chocolatey, Python Install Manager, uv, pipx and
+   Deno’s updater) run first, followed by the other fixes for the software the
+   updates did not fix. In each stage, commands that require administrator
+   rights run last, together, so Windows asks for permission at most once per
+   stage.
 2. The commands that need administrator rights run in a Windows PowerShell for
    which Windows asks your permission, in a window that shows Microsoft as the
    verified publisher. eMudScan itself does not need them.

@@ -193,6 +193,19 @@ func fixWarnings(items []Item) string {
 	return strings.Join(out, "\n\n")
 }
 
+// fixWarningText is the warning before the fixes of items run: what they break (the
+// virtual environments of a Python they remove), then the general warning, with, after
+// its first paragraph (what eMudScan will run), the order of the fixes when the
+// preview says it (fixOrderDiffers).
+func fixWarningText(items []Item) string {
+	first, rest, _ := strings.Cut(T("fix.warning"), "\n\n")
+	order := ""
+	if fixOrderDiffers(items) {
+		order = T("fix.order")
+	}
+	return joinParas(fixWarnings(items), first, order, rest)
+}
+
 // key identifies a fix by its commands.
 func (f fixAction) key() string { return strings.Join(f.Cmds, "\n") }
 

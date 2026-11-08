@@ -34,6 +34,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -524,12 +525,16 @@ func (r *fixRunner) checkAgain(ids []int, ok map[int]bool) {
 
 // fixPreview is what the Fix window shows before the fixes run: for each element, its
 // title and, below it, its file, which also tells copies of a software apart; then the
-// commands of each fix, as they will run, after a comment that says what they do. The elements that share an
-// update, such as two problems of the same software, are shown together, with the
-// update once, as it runs: the fixes of their files follow, for when it does not fix
-// them.
+// commands of each fix, as they will run, after a comment that says what they do. The
+// elements that share an update, such as two problems of the same software, are shown
+// together, with the update once, as it runs: the fixes of their files follow, for when
+// it does not fix them. When the fixes run in another order (fixOrderDiffers), a
+// comment at the top says in which.
 func fixPreview(items []Item, backup bool) []fixLine {
 	var out []fixLine
+	if fixOrderDiffers(items) {
+		out = append(out, fixLine{lineComment, T("fix.order")}, fixLine{lineNote, ""})
+	}
 	cmdLines := func(f fixAction) {
 		out = append(out, fixLine{lineComment, fixIntro(f)})
 		cmds := f.Cmds
@@ -577,6 +582,58 @@ func fixPreview(items []Item, backup bool) []fixLine {
 			}
 		}
 		out = append(out, fixLine{lineNote, ""})
+	}
+	return out
+}
+
+// fixOrderDiffers: the fixes of items run in another order (runOrder) than fixPreview
+// shows them, software by software. The preview, and the warning before the fixes
+// run, then say in which (fix.order).
+func fixOrderDiffers(items []Item) bool {
+	var shown []string // as fixPreview shows them, each once
+	seen := map[string]bool{}
+	add := func(f fixAction) {
+		if !seen[f.key()] {
+			seen[f.key()] = true
+			shown = append(shown, f.key())
+		}
+	}
+	for _, group := range updateGroups(items) {
+		for _, it := range group {
+			for _, f := range it.Fixes {
+				if f.Kind == fixPackage {
+					add(f)
+				}
+			}
+		}
+		for _, it := range group {
+			for _, f := range it.Fixes {
+				if f.Kind != fixPackage {
+					add(f)
+				}
+			}
+		}
+	}
+	return !slices.Equal(shown, runOrder(items))
+}
+
+// runOrder is the order in which the runner runs the fixes of items (run, round), each
+// once: the updates, then the other fixes; each time, software by software, those
+// that need no administrator rights, then those that need them, together.
+func runOrder(items []Item) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, update := range []bool{true, false} {
+		for _, admin := range []bool{false, true} {
+			for _, it := range items {
+				for _, f := range it.Fixes {
+					if (f.Kind == fixPackage) == update && f.Admin == admin && !seen[f.key()] {
+						seen[f.key()] = true
+						out = append(out, f.key())
+					}
+				}
+			}
+		}
 	}
 	return out
 }

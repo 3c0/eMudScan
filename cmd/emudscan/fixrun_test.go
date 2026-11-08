@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf16"
@@ -219,6 +220,23 @@ func TestFixRunner(t *testing.T) {
 	}
 	if fmt.Sprint(fixed) != "[2 1 3]" {
 		t.Errorf("fixed %v", fixed)
+	}
+	// runOrder, which the preview compares with its own order, is the order they ran in
+	var ranOrder []string
+	for _, c := range calls {
+		if _, cmds, ok := strings.Cut(c, ":"); ok {
+			ranOrder = append(ranOrder, strings.Split(cmds, ",")...)
+		}
+	}
+	all := setup()
+	var kept []string // without those that the update of their software made needless
+	for _, k := range runOrder([]Item{all[1].it, all[2].it, all[3].it, all[4].it}) {
+		if slices.Contains(ranOrder, k) {
+			kept = append(kept, k)
+		}
+	}
+	if strings.Join(kept, ",") != strings.Join(ranOrder, ",") || len(kept) != 5 {
+		t.Errorf("run order %v, ran %v", kept, ranOrder)
 	}
 	text := strings.Join(console, "\n")
 	for _, w := range []string{Tf("fix.fixed", "B"), Tf("fix.notFixed", "D"), T("fix.adminPrompt"), Tf("fix.software", "A"), T("fix.restart")} {
@@ -457,6 +475,33 @@ func TestFixPreview(t *testing.T) {
 `
 	if got != want {
 		t.Errorf("shared update:\n%s", got)
+	}
+	// when the fixes run in another order, a comment at the top says in which: an update
+	// after the fix of another software, which runs after it...
+	plain := func(id int, name string, admin bool) Item {
+		return Item{ID: id, Group: GroupApps, Name: name, Program: name, File: `C:\` + name + `\cacert.pem`,
+			Fixes: []fixAction{{Kind: fixBundle, Admin: admin, Cmds: []string{"replace " + name}}}}
+	}
+	updated := Item{ID: 7, Group: GroupApps, Name: "tool", Program: "tool", File: `C:\t\cacert.pem`,
+		Fixes: []fixAction{it.Fixes[0], {Kind: fixBundle, Cmds: []string{"replace tool"}}}}
+	order := []fixLine{{lineComment, T("fix.order")}, {lineNote, ""}}
+	if lines := fixPreview([]Item{plain(8, "Other", false), updated}, true); fmt.Sprint(lines[:2]) != fmt.Sprint(order) {
+		t.Errorf("an update after another software:\n%s", strings.Join(plainLines(lines), "\n"))
+	}
+	// ... or a fix as administrator before one without, which runs before it
+	if lines := fixPreview([]Item{plain(8, "Other", true), plain(9, "Tool", false)}, true); fmt.Sprint(lines[:2]) != fmt.Sprint(order) {
+		t.Errorf("as administrator first:\n%s", strings.Join(plainLines(lines), "\n"))
+	}
+	// the warning before the fixes run says it too, after what eMudScan will run
+	first, rest, _ := strings.Cut(T("fix.warning"), "\n\n")
+	if w := fixWarningText([]Item{plain(8, "Other", false), updated}); w != first+"\n\n"+T("fix.order")+"\n\n"+rest {
+		t.Errorf("warning:\n%s", w)
+	}
+	// in the order they run: no comment, and the warning as it is
+	for _, items := range [][]Item{{updated, plain(8, "Other", false)}, {plain(9, "Tool", false), plain(8, "Other", true)}} {
+		if lines := fixPreview(items, true); lines[0].kind != lineSoftware || fixWarningText(items) != T("fix.warning") {
+			t.Errorf("in order:\n%s", strings.Join(plainLines(lines), "\n"))
+		}
 	}
 }
 
