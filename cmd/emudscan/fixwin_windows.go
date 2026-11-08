@@ -56,6 +56,7 @@ type fixDlg struct {
 	lineAt                       []int          // the line of the console where each starts
 	cmdLine                      int            // the line of the console of the command running, or -1
 	results                      bool           // the console shows the results of the commands
+	report                       string         // the report saved after the fixes, whose path is a link at the end of the console
 	titles                       map[int]string // the titles of the elements in the console (fixTitles)
 	frame                        rect           // the black frame around the console
 	bBackup, bFix, bStop, bClose uintptr
@@ -842,9 +843,19 @@ func (d *fixDlg) resultOf(l fixLine) int {
 func (d *fixDlg) links(a *ui, on bool) {
 	d.console.onLink = nil
 	if on && d.list != 0 {
-		d.console.onLink = func(id int) { a.openResult(d, id) }
+		d.console.onLink = func(id int) {
+			if id == fixReportLink { // shown in File Explorer, as by the message that gave it
+				openPath(d.hwnd, d.report)
+				return
+			}
+			a.openResult(d, id)
+		}
 	}
 }
+
+// fixReportLink is the link of the saved report, in the console; the others are the
+// elements of the results (resultOf).
+const fixReportLink = -1
 
 // openResult opens the details of the element of a link after a check (resultOf), as
 // a double-click on its row does.
@@ -1289,7 +1300,9 @@ func (a *ui) saveFixReport(d *fixDlg) {
 		msgBox(d.hwnd, msg, 0x30 /* ICONWARNING */)
 		return
 	}
+	d.report = path
 	d.show(fixLine{lineNote, Tf("fix.reportSaved", shownPath(path))})
+	d.console.setLink(d.lineAt[len(d.lineAt)-1], len(utf16.Encode([]rune(shownPath(path)))), fixReportLink) // the path, at the end of the line
 	a.showSaved(d.hwnd, T("fix.reportSavedIn"), path)
 }
 

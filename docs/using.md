@@ -265,7 +265,8 @@ Once you accept:
 </p>
 
 The **Fix software** window then saves the report in your Downloads folder, and
-gives its path as a link that shows it in File Explorer.
+gives its path, in a message and at the end of the console, as a link that shows
+it in File Explorer.
 
 <p align="center">
   <img src="images/report-saved.png" width="400" alt="The message that gives the path of the saved report, as a link that shows it in File Explorer">

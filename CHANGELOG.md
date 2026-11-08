@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The details window is now named “Detailed information”, in the right-click menu, the reminders, the tooltip of the links to an item and the docs.
 - With several items selected, each entry of the right-click menu says how many things it acts on, counting once what the items share, such as “Open 2 software folders” for three items in two folders; **Search on Google** searches once per software. **Scan again** no longer asks before scanning more than two items, since it opens no window.
 - The detailed information of several items opens in one window, instead of one window after another, and without asking first for more than two items. A block in its top right corner, which stays in place as the page scrolls, says which item is shown and goes to the first, previous, next or last one; Alt+Home, Alt+←, Alt+→ and Alt+End do the same.
+- At the end of the console of the Fix software window, the path of the report saved after the fixes is a link that shows it in File Explorer, as in the message that gives it.
 
 ### Fixed
 
