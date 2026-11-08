@@ -97,3 +97,26 @@ func TestBundleDateShown(t *testing.T) {
 		t.Errorf("French: %q", got)
 	}
 }
+
+// The web search for a bundle: its software, for its own copy; else the software the
+// list shows with the file's name; for a bundle of no software, its name alone (not
+// the folder it is in: "Downloads cacert.pem", "certifi cacert.pem").
+func TestBundleSearch(t *testing.T) {
+	root := t.TempDir()
+	tool := filepath.Join(root, "Tools", "example-app-2", "lib", "site-packages", "certifi", "cacert.pem")
+	alone := filepath.Join(root, "Downloads", "cacert-2026-09-25.pem")
+	for _, c := range []struct {
+		owner, p string
+		bundled  bool
+		want     string
+	}{
+		{"Example App 1", filepath.Join(root, "Example App 1", "cacert.pem"), true, "Example App 1"},
+		{"", tool, false, "example-app-2 cacert.pem"},
+		{"", alone, false, "cacert-2026-09-25.pem"},
+		{"Python 3.14", tool, false, "Python 3.14 cacert.pem"},
+	} {
+		if got := bundleSearch(c.owner, c.p, c.bundled); got != c.want {
+			t.Errorf("%s: %q, want %q", c.p, got, c.want)
+		}
+	}
+}
