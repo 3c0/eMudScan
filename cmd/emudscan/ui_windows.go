@@ -1637,6 +1637,9 @@ func (a *ui) finish() {
 	a.redrawSpinner()
 	a.setButton(a.hCheck, T("btn.again"), glyphRefresh, true)
 	a.setRunning(false)
+	if d := a.fix; d != nil && d.list != 0 && !d.running { // Scan again from its list: the rows as they are now
+		d.rowsAgain(a)
+	}
 	if a.current != nil {
 		setText(a.hSummary, a.current.counts().text("summary.done"))
 	}

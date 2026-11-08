@@ -158,7 +158,8 @@ listed: its detailed information says what to do.
 **Fix**, beside **Scan**, is enabled once a scan has found software that eMudScan
 can fix. It opens the **Fix software** window, with, from top to bottom:
 
-- **Select All**, **Select None**, and how many software are selected.
+- **Select All**, **Select None**, how many software are selected, and a
+  reminder of what the list can do.
 - The software that eMudScan can fix, with its vulnerable component, the fix,
   its location and, after the fixes, the result. They are all ticked, except
   those whose fix replaces a component inside a program (its `node.exe`, the ssl
@@ -167,9 +168,12 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   so that the others stay ticked. A software found in several places has a row
   for each. Click a location to show it in File Explorer. Double-click a
   software to open its detailed information, where you can also fix it, or
-  restore its backup: the list is updated when they close. Click a column header
-  to sort the list by that column; click it again to reverse the order. Drag the
-  bar below the list to make it taller or shorter, down to a single row.
+  restore its backup: the list is updated when they close. Right-click a
+  software for the menu of the main window: its detailed information, open its
+  file, folder or homepage, search for it, scan it again, or copy its row
+  (Ctrl+C) or its paths. Click a column header to sort the list by that column;
+  click it again to reverse the order. Drag the bar below the list to make it
+  taller or shorter, down to a single row.
 - The PowerShell commands that will run for the ticked software (or for the
   software you click), grouped by software. If they run in a different order,
   the warning before they run explains it. The button in their top right corner

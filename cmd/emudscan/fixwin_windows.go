@@ -253,7 +253,7 @@ func (a *ui) openFixAll() {
 	}
 	d.bAll = a.iconButton(d.hwnd, T("fix.selectAll"), idFixAll, false, glyphNone)
 	d.bNone = a.iconButton(d.hwnd, T("fix.selectNone"), idFixNone, false, glyphNone)
-	d.count, _, _ = pCreateWindowExW.Call(0, up("STATIC"), 0, uintptr(wsChild|wsVisible|0x80|0x200 /* SS_NOPREFIX|SS_CENTERIMAGE */),
+	d.count, _, _ = pCreateWindowExW.Call(0, up("STATIC"), 0, uintptr(wsChild|wsVisible|0x80|0x200|0x4000 /* SS_NOPREFIX|SS_CENTERIMAGE|SS_ENDELLIPSIS */),
 		0, 0, 10, 10, d.hwnd, 0, 0, 0)
 	send(d.count, wmSetFont, a.fontUI, 1)
 	// LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS
@@ -544,7 +544,82 @@ func (d *fixDlg) showCount() {
 	if n <= 1 {
 		key = "fix.selected1" // in French, "logiciel" in the singular
 	}
-	setText(d.count, Tf(key, n, of))
+	setText(d.count, Tf(key, n, of)+" · "+T("fix.listHint"))
+}
+
+// copyRow copies a row of the list, with the headers of the list, as Copy (with
+// headers) does in the main window (copyRows).
+func (d *fixDlg) copyRow(row int) {
+	if row < 0 || row >= len(d.rows) {
+		return
+	}
+	var hdr, cells []string
+	for c, key := range []string{"fix.colSoftware", "col.component", "fix.colFix", "fix.colPlace", "fix.colResult"} {
+		hdr = append(hdr, T(key))
+		if c == fixColPlace {
+			cells = append(cells, d.placeOf(row))
+		} else {
+			cells = append(cells, d.cellText(row, c))
+		}
+	}
+	setClipboard(d.hwnd, strings.Join(hdr, "\t")+"\n"+strings.Join(cells, "\t")+"\n")
+}
+
+// fixContextMenu is the menu of a right-click on a row of the list: that of the
+// software lists of the main window (contextMenu), for that row, without Select all,
+// which would be taken for the Select All button.
+func (a *ui) fixContextMenu(d *fixDlg, lParam uintptr) {
+	row := int(int32(send(d.list, lvmGetNextItem, ^uintptr(0), 2 /* LVNI_SELECTED */)))
+	if row < 0 || row >= len(d.rows) || d.asking {
+		return
+	}
+	it := d.rows[row].Item
+	if now, ok := a.items[it.ID]; ok {
+		it = now
+	}
+	var pt point
+	if int32(lParam) == -1 { // from the keyboard
+		rc := rect{}
+		send(d.list, lvmGetItemRect, uintptr(row), uintptr(unsafe.Pointer(&rc)))
+		pt = point{rc.Left + a.scale(20), rc.Bottom}
+		pClientToScreen.Call(d.list, uintptr(unsafe.Pointer(&pt)))
+	} else {
+		pt = point{xParam(lParam), yParam(lParam)}
+	}
+	grayed := func(ok bool) uintptr {
+		if ok {
+			return 0
+		}
+		return 1 // MF_GRAYED
+	}
+	menu, _, _ := pCreatePopupMenu.Call()
+	add := func(flags uintptr, id int, key string) { pAppendMenuW.Call(menu, flags, uintptr(id), up(T(key))) }
+	sep := func() { pAppendMenuW.Call(menu, 0x800, 0, 0) }
+	add(grayed(!d.running), menuDetails, "menu.details")
+	sep()
+	add(grayed(it.File != ""), menuOpenFile, "menu.openFile")
+	add(grayed(it.Folder != ""), menuOpenFolder, "menu.openFolder")
+	add(grayed(it.Homepage() != ""), menuHomepage, "menu.homepage")
+	add(0, menuSearch, "menu.search")
+	sep()
+	add(grayed(it.Recheck && !a.running && a.current != nil && !d.running), menuRecheck, "menu.recheck")
+	sep()
+	add(0, menuCopy, "menu.copy")
+	add(grayed(it.File != "" || it.Folder != ""), menuCopyPaths, "menu.copyPaths")
+	cmd, _, _ := pTrackPopupMenu.Call(menu, 0x100|0x2 /* RETURNCMD|RIGHTBUTTON */, uintptr(pt.X), uintptr(pt.Y), 0, d.hwnd, 0)
+	pDestroyMenu.Call(menu)
+	switch int(cmd) {
+	case 0:
+	case menuDetails:
+		a.openFixDetails(d, row)
+	case menuCopy:
+		d.copyRow(row)
+	default:
+		a.runMenu(int(cmd), d.list, []Item{it})
+		if a.running { // Scan again: no fix until the list shows the result (finish)
+			pEnableWindow.Call(d.bFix, 0)
+		}
+	}
 }
 
 // targets are the elements to fix, those of the details or of the ticked rows, and
@@ -924,7 +999,7 @@ func (d *fixDlg) paint(a *ui, hwnd uintptr) {
 // run asks the user to accept the warning, then starts the fixes, in the background;
 // the console follows them.
 func (d *fixDlg) run(a *ui) {
-	if d.running || d.asking || !pEnabled(d.bFix) {
+	if d.running || d.asking || a.running || !pEnabled(d.bFix) {
 		return
 	}
 	question := d.question
@@ -1290,6 +1365,11 @@ func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		case wmCtlColorStatic: // the title and the check box, on the window's background
 			pSetBkColor.Call(wParam, uintptr(sysColor(5)))
 			return a.brushWindow
+		case wmContextMenu:
+			if wParam == d.list && d.list != 0 {
+				a.fixContextMenu(d, lParam)
+				return 0
+			}
 		case wmNotify:
 			if h := (*nmhdr)(ptr(lParam)); h.HwndFrom == d.list && h.Code == nmCustomDraw {
 				return a.fixListDraw(d, (*nmLVCustomDraw)(ptr(lParam)))
@@ -1302,6 +1382,10 @@ func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 					ht.SubItem != fixColPlace && ht.Flags&0x8 /* LVHT_ONITEMSTATEICON */ == 0 {
 					a.openFixDetails(d, int(ht.Item))
 				}
+				return 0
+			}
+			if nm.Hdr.HwndFrom == d.list && nm.Hdr.Code == lvnKeyDown && ctrlDown() && (*nmLVKeyDown)(ptr(lParam)).VKey == 'C' {
+				d.copyRow(int(int32(send(d.list, lvmGetNextItem, ^uintptr(0), 2 /* LVNI_SELECTED */)))) // as Copy (with headers)
 				return 0
 			}
 			if nm.Hdr.HwndFrom == d.list && nm.Hdr.Code == lvnColumnClick && !d.running && !d.asking {

@@ -291,6 +291,7 @@ var tr = map[string][2]string{
 	"fix.resultNotFixed": {"Not fixed", "Non corrigé"},
 	"fix.selected":       {"%d/%d software selected", "%d/%d logiciels sélectionnés"},
 	"fix.selected1":      {"%d/%d software selected", "%d/%d logiciel sélectionné"},
+	"fix.listHint":       {"Double-click a software for detailed information, or right-click it for more actions.", "Double-cliquez sur un logiciel pour voir ses informations détaillées, ou faites un clic droit pour plus d’actions."},
 	"fix.noneSelected":   {"Tick the software to fix in the list above.", "Cochez dans la liste ci-dessus les logiciels à corriger."},
 	"fix.confirmAll":     {"Fix the %d selected software?", "Corriger les %d logiciels sélectionnés\u00a0?"},
 	"fix.confirmOne":     {"Fix the selected software?", "Corriger le logiciel sélectionné\u00a0?"},
