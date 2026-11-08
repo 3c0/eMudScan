@@ -201,7 +201,14 @@ func (r *fixRunner) run(ids []int) (stopped bool) {
 			}
 			return out
 		})
-		r.checkAgain(ran, ok)
+		switch {
+		case stop:
+			r.checkAgain(ran, ok, T("fix.checking"))
+		case update:
+			r.checkAgain(ran, ok, T("fix.checkingUpdates"))
+		default:
+			r.checkAgain(ran, ok, T("fix.checkingFixes"))
+		}
 		if stop {
 			stopped = true
 			break
@@ -230,7 +237,7 @@ func (r *fixRunner) restore(ids []int) (stopped bool) {
 	}
 	r.titles = fixTitles(items)
 	ran, ok, stopped := r.round(ids, func(it Item) []fixAction { return it.Restores })
-	r.checkAgain(ran, ok)
+	r.checkAgain(ran, ok, T("fix.checking"))
 	if r.fixedAny {
 		r.out(fixLine{lineNote, T("restore.restart")})
 	}
@@ -491,11 +498,11 @@ func haltReason(u fixUnit) string {
 
 // checkAgain checks again the elements that ran something, and reports each one:
 // fixed, or restored.
-func (r *fixRunner) checkAgain(ids []int, ok map[int]bool) {
+func (r *fixRunner) checkAgain(ids []int, ok map[int]bool, title string) {
 	if len(ids) == 0 {
 		return
 	}
-	r.out(fixLine{lineNote, T("fix.checking")})
+	r.out(fixLine{lineNote, title})
 	r.recheck(ids)
 	for _, id := range ids {
 		it, found := r.item(id)
@@ -539,8 +546,11 @@ func (r *fixRunner) checkAgain(ids []int, ok map[int]bool) {
 // comment at the top says in which.
 func fixPreview(items []Item, backup bool) []fixLine {
 	var out []fixLine
-	if fixOrderDiffers(items) {
-		out = append(out, fixLine{lineComment, T("fix.order")}, fixLine{lineNote, ""})
+	if fixOrderDiffers(items) { // a comment line for each sentence
+		for _, s := range strings.Split(T("fix.order"), "\n") {
+			out = append(out, fixLine{lineComment, s})
+		}
+		out = append(out, fixLine{lineNote, ""})
 	}
 	cmdLines := func(f fixAction) {
 		out = append(out, fixLine{lineComment, fixIntro(f)})

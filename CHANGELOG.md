@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The fixes stop at the first download that fails, before its fix changes anything, and after an update that fails when the servers of its package manager cannot be reached (eMudScan then checks them): the next fixes would most likely fail too. A red line says why.
 - The console of the Fix window shows the result of each command in a column on its left (a green ✔ or a red ✘), its warnings in yellow and its errors in red below it, and its exit code when it failed; the report puts the ✓ or ✗ before each command.
 - The console of the Fix window ends with a horizontal bar instead of “End of the fixes.”
+- The Fix window says “PowerShell commands that eMudScan will run” instead of “PowerShell commands to run”. Each check after the fixes says which stage finished, such as “Updates finished. Checking again whether the software is still vulnerable…”.
 
 ### Fixed
 

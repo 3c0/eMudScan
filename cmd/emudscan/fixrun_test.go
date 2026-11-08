@@ -249,11 +249,12 @@ func TestFixRunner(t *testing.T) {
 	}
 	// a blank line after the commands of each software, and after those run as
 	// administrator
-	if !strings.Contains(text, Tf("fix.software", "A")+"\n\n"+Tf("fix.software", "B")+"\n\n"+T("fix.adminPrompt")+"\n\n"+T("fix.checking")) {
+	if !strings.Contains(text, Tf("fix.software", "A")+"\n\n"+Tf("fix.software", "B")+"\n\n"+T("fix.adminPrompt")+"\n\n"+T("fix.checkingUpdates")) {
 		t.Errorf("console: no blank lines between the software:\n%s", text)
 	}
-	// and after the results of a check, before the next round
-	if !strings.Contains(text, Tf("fix.notFixed", "D")+"\n\n"+T("fix.adminPrompt")) {
+	// and after the results of a check, before the next round; each check says which
+	// stage ended
+	if !strings.Contains(text, Tf("fix.notFixed", "D")+"\n\n"+T("fix.adminPrompt")) || strings.Count(text, T("fix.checkingFixes")) != 1 {
 		t.Errorf("console: no blank line after the check:\n%s", text)
 	}
 	// nothing fixed: no reminder to restart
@@ -484,17 +485,19 @@ func TestFixPreview(t *testing.T) {
 	}
 	updated := Item{ID: 7, Group: GroupApps, Name: "tool", Program: "tool", File: `C:\t\cacert.pem`,
 		Fixes: []fixAction{it.Fixes[0], {Kind: fixBundle, Cmds: []string{"replace tool"}}}}
-	order := []fixLine{{lineComment, T("fix.order")}, {lineNote, ""}}
-	if lines := fixPreview([]Item{plain(8, "Other", false), updated}, true); fmt.Sprint(lines[:2]) != fmt.Sprint(order) {
+	// (a comment line for each sentence)
+	first, second, _ := strings.Cut(T("fix.order"), "\n")
+	order := []fixLine{{lineComment, first}, {lineComment, second}, {lineNote, ""}}
+	if lines := fixPreview([]Item{plain(8, "Other", false), updated}, true); fmt.Sprint(lines[:3]) != fmt.Sprint(order) {
 		t.Errorf("an update after another software:\n%s", strings.Join(plainLines(lines), "\n"))
 	}
 	// ... or a fix as administrator before one without, which runs before it
-	if lines := fixPreview([]Item{plain(8, "Other", true), plain(9, "Tool", false)}, true); fmt.Sprint(lines[:2]) != fmt.Sprint(order) {
+	if lines := fixPreview([]Item{plain(8, "Other", true), plain(9, "Tool", false)}, true); fmt.Sprint(lines[:3]) != fmt.Sprint(order) {
 		t.Errorf("as administrator first:\n%s", strings.Join(plainLines(lines), "\n"))
 	}
 	// the warning before the fixes run says it too, after what eMudScan will run
-	first, rest, _ := strings.Cut(T("fix.warning"), "\n\n")
-	if w := fixWarningText([]Item{plain(8, "Other", false), updated}); w != first+"\n\n"+T("fix.order")+"\n\n"+rest {
+	warn, rest, _ := strings.Cut(T("fix.warning"), "\n\n")
+	if w := fixWarningText([]Item{plain(8, "Other", false), updated}); w != warn+"\n\n"+T("fix.order")+"\n\n"+rest {
 		t.Errorf("warning:\n%s", w)
 	}
 	// in the order they run: no comment, and the warning as it is
@@ -546,7 +549,7 @@ func TestFixReport(t *testing.T) {
 		c.recordFix(l)
 	}
 	rep := strings.ReplaceAll(buildReport(c, "log"), "\r\n", "\n")
-	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✓ scoop update a\n      Updating a\n  ✗ scoop update b\n      Exit code 1\n    never\nChecking again…\nA: fixed.\n" + fixBar + "\n\nLog\n"
+	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✓ scoop update a\n      Updating a\n  ✗ scoop update b\n      Exit code 1\n    never\n" + T("fix.checking") + "\nA: fixed.\n" + fixBar + "\n\nLog\n"
 	if !strings.Contains(rep, want) {
 		t.Errorf("report without\n%s\nin\n%s", want, rep)
 	}
