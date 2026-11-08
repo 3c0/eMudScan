@@ -112,11 +112,11 @@ func buildReport(c *checker, logText string) string {
 		for _, it := range sortedForReport(items, g) {
 			fmt.Fprintf(&b, "%s %s — %s — %s\n", statusMark(it.Status), itemTitle(it), statusText(it.Status), it.Summary)
 			if g != GroupWindows {
-				if u := it.Updated; u.shown() {
-					stale := ""
-					if m := it.stale(); m > 0 {
-						stale = " — " + Tf("stale.short", ageText(m))
-					}
+				stale := ""
+				if m := it.stale(); m > 0 {
+					stale = " — " + Tf("stale.short", ageText(m))
+				}
+				if u := it.Updated; u.shown() && !u.mozilla() { // a bundle on its own: the date curl wrote, below
 					fmt.Fprintf(&b, "      %s%s%s%s\n", T("dlg.updated"), labelSep(), u.text(shownPath(u.File)), stale)
 				}
 				file, folder := it.File, it.Folder
@@ -126,6 +126,13 @@ func buildReport(c *checker, logText string) string {
 				for _, f := range []struct{ k, v string }{{it.fileLabel(), file}, {T("col.folder"), folder}, {T("dlg.homepage"), it.Homepage()}} {
 					if f.v != "" {
 						fmt.Fprintf(&b, "      %s%s%s\n", f.k, labelSep(), shownPath(f.v))
+					}
+					if d := it.Data; f.v != "" && f.v == file && d.known() { // under the bundle: the date curl wrote in it
+						age := ""
+						if it.Updated.mozilla() {
+							age = stale
+						}
+						fmt.Fprintf(&b, "      %s%s\n", d.text(""), age)
 					}
 				}
 				if len(it.Packages) > 0 {

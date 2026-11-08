@@ -123,6 +123,7 @@ type Item struct {
 	Search      string   // web search query
 	Recheck     bool     // can be checked again on its own
 	Updated     lastUpdate
+	Data        lastUpdate  // the date of the certificate data in the bundle checked, when curl made it (bundledate.go)
 	Copies      []Item      // the same finding in other places, shown with this element (repeated.go)
 	Fixes       []fixAction // what the Fix function runs: the fixes whose commands the details show (fixes.go)
 	Restores    []fixAction // what the Restore button of the details runs: the restores of backups that they show
@@ -143,9 +144,11 @@ func (u lastUpdate) known() bool { return u.Src != dateNone }
 func (u lastUpdate) shown() bool { return u.known() || u.Unknown }
 
 // text is the date in words with where it comes from (file is how the file is
-// named), or why it is unknown.
+// named), or why it is unknown; for the date curl wrote in a bundle, its words.
 func (u lastUpdate) text(file string) string {
 	switch {
+	case u.mozilla():
+		return u.mozillaLabel() + labelSep() + longDate(u.Time)
 	case u.known():
 		return longDate(u.Time) + " (" + u.source(file) + ")"
 	case u.File != "":
@@ -195,7 +198,7 @@ func ageText(months int) string {
 
 // staleAdvice is the paragraph about software whose installed version is old.
 func staleAdvice(it Item) string {
-	if m := it.stale(); m > 0 {
+	if m := it.stale(); m > 0 && !it.Updated.mozilla() { // not for a bundle on its own: it is about software
 		return Tf("stale.advice", ageText(m))
 	}
 	return ""
@@ -413,12 +416,13 @@ func (c *checker) begin(g Group, kind, name, where string, check func(*Item)) *I
 
 // finish records the result of a check and ends its line in the log.
 func (c *checker) finish(it *Item, r result) {
-	var upd lastUpdate
+	var upd, data lastUpdate
 	if c.dated != nil && it.Group != GroupWindows {
 		upd = c.dated(it.Kind, r)
+		data = mozillaDateOf(r.File)
 	}
 	c.mu.Lock()
-	it.Updated = upd
+	it.Updated, it.Data = upd, data
 	it.Status, it.Summary, it.Details = r.Status, r.Summary, strings.Trim(r.Details, "\n")
 	if r.Bundled {
 		it.Details = copyWarning(it.Details)

@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The detailed information of several items opens in one window, instead of one window after another, and without asking first for more than two items. A block in its top right corner, which stays in place as the page scrolls, says which item is shown and goes to the first, previous, next or last one; Alt+Home, Alt+←, Alt+→ and Alt+End do the same.
 - At the end of the console of the Fix software window, the path of the report saved after the fixes is a link that shows it in File Explorer, as in the message that gives it.
 - After the fixes, a software still not fixed after all its fixes ran is unticked in the Fix software window, so that they do not run again by mistake; when an update installed no newer version, its result says so: “still not fixed (no newer version installed)”.
+- A certificate bundle made by curl shows the date of its certificate data, as curl wrote it at the top of the file: “Certificate data from Mozilla as of: 25 September 2026”. A bundle that belongs to no software no longer shows a software date: it was the modification date of the file, which only tells when the file was copied or downloaded.
 
 ### Fixed
 

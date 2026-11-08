@@ -707,6 +707,9 @@ func (tp *appsContext) dated(kind string, r result) lastUpdate {
 	if exe == "" || !tp.inScope(exe) {
 		return lastUpdate{Unknown: true}
 	}
+	if exe == r.File && !isPEName(exe) { // a certificate bundle on its own: the date curl wrote in it, or none
+		return mozillaDateOf(exe)
+	}
 	// Electron applications carry the build date of Electron, not their own
 	noBuild := kind == "electron" || r.Component == "Electron" || isElectronDir(filepath.Dir(exe))
 	t, src := publisherDate(exe, noBuild)

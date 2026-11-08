@@ -35,6 +35,8 @@ var tr = map[string][2]string{
 	"upd.signed":        {"digital signature of %s", "signature numérique de %s"},
 	"upd.modified":      {"modification date of %s", "date de modification de %s"},
 	"upd.built":         {"build date recorded in %s", "date de compilation inscrite dans %s"},
+	"upd.asOf":          {"Certificate data from Mozilla as of", "Date des données de certificats issues de Mozilla"},
+	"upd.downloadedOn":  {"Certificate data from Mozilla downloaded on", "Date de téléchargement des données de certificats issues de Mozilla"},
 	"log.ready":         {"Ready. Click “Scan” to start.", "Prêt. Cliquez sur «\u00a0Scanner\u00a0» pour commencer."},
 	"summary.done":      {"Result: %s. Double-click an item for detailed information, or right-click it for more actions.", "Résultat\u00a0: %s. Double-cliquez sur un élément pour voir ses informations détaillées, ou faites un clic droit pour plus d’actions."},
 	"sec.items1":        {"%d item: %s", "%d élément\u00a0: %s"},

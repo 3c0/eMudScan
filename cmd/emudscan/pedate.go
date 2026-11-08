@@ -29,10 +29,12 @@ import (
 type dateSource int
 
 const (
-	dateNone     dateSource = iota
-	dateSigned              // digital signature time stamp
-	dateModified            // modified date of the file
-	dateBuilt               // build date in the program header
+	dateNone            dateSource = iota
+	dateSigned                     // digital signature time stamp
+	dateModified                   // modified date of the file
+	dateBuilt                      // build date in the program header
+	dateMozilla                    // in a bundle made by curl: the date of Mozilla's data (bundledate.go)
+	dateMozillaDownload            // the same, when curl wrote the date it downloaded the data
 )
 
 // writtenHere: modified and created within this delay, the file was written on this

@@ -393,7 +393,7 @@ func detailBlocks(it Item) []docBlock {
 		if it.Component != "" {
 			add(T("dlg.component"), strings.TrimSpace(it.Component+" "+it.Version), false)
 		}
-		if u := it.Updated; u.shown() {
+		if u := it.Updated; u.shown() && !u.mozilla() { // a bundle on its own: the date curl wrote, below
 			parts := strings.SplitN(u.text("\x00"), "\x00", 2) // the file name is a link
 			runs := []mrun{{kind: runText, text: parts[0]}}
 			if len(parts) == 2 {
@@ -407,6 +407,13 @@ func detailBlocks(it Item) []docBlock {
 		if len(it.Copies) == 0 { // else the copies are listed below
 			add(T("dlg.folder"), it.Folder, true)
 			add(it.fileLabel(), it.File, true)
+			if d := it.Data; it.File != "" && d.known() { // under the bundle: the date curl wrote in it
+				runs := []mrun{{kind: runText, text: longDate(d.Time)}}
+				if m := it.stale(); m > 0 && it.Updated.mozilla() {
+					runs = append(runs, mrun{kind: runText, text: " — "}, mrun{kind: runWarn, text: "⚠ " + Tf("stale.short", ageText(m))})
+				}
+				rows = append(rows, docRow{d.mozillaLabel(), runs})
+			}
 		}
 		add(T("dlg.homepage"), it.Homepage(), true)
 		if q := it.SearchText(); q != "" {

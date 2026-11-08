@@ -204,6 +204,14 @@ Firefox-based browsers without a signature time stamp use the BuildID in their
 `application.ini`. Placeholder dates, such as the 1 January 2000 of reproducible
 builds, are never shown.
 
+A certificate bundle that belongs to no software has no software date: the
+modification date of a file on its own only tells when it was copied or
+downloaded. When curl made a bundle from Mozilla’s certificates, its first lines
+give the date of that data; eMudScan shows it under the bundle’s file, with
+curl’s words: “Certificate data from Mozilla as of: 25 September 2026” (or
+“downloaded on”, when Mozilla gave no date). For a bundle on its own, the
+**Software date** column shows that date.
+
 ## Package managers
 
 Software installed with Scoop, WinGet or Chocolatey is recognized from its
