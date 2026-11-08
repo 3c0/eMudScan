@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Several homepages or Google searches, from the right-click menu, open in one start of the default browser, as tabs: Firefox, set to ask for a profile at start, asked once per page, and a page could get lost when the browser was already open.
 - The Fix window no longer shows “Back up the files to change” when no fix to run backs up a file, such as an update with pip.
 - No pip command where it cannot work: for a Python or virtual environment where pip is not installed, or for a Python marked as managed by the tool that installed it (EXTERNALLY-MANAGED, as uv does), which pip refuses to change.
 - No Scoop update command for a file in Scoop’s `persist` folder, which Scoop’s updates keep as it is.

@@ -86,7 +86,7 @@ var tr = map[string][2]string{
 	"menu.copyPath":     {"Copy path", "Copier le chemin"},
 	"menu.copyPathsN":   {"Copy %d paths", "Copier %d chemins"},
 	"menu.selectAll":    {"Select all\tCtrl+A", "Tout sélectionner\tCtrl+A"},
-	"confirm.many":      {"This action applies to %d items and may open as many windows. Continue?", "Cette action s’applique à %d éléments et peut ouvrir autant de fenêtres. Continuer\u00a0?"},
+	"confirm.many":      {"This action applies to %d items and may open as many windows or tabs. Continue?", "Cette action s’applique à %d éléments et peut ouvrir autant de fenêtres ou d’onglets. Continuer\u00a0?"},
 	"dlg.copyAll":       {"Copy all", "Tout copier"},
 	"dlg.copyCmds":      {"Copy commands", "Copier les commandes"},
 	"dlg.openFolder":    {"Open folder", "Ouvrir le dossier"},

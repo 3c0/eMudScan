@@ -1482,16 +1482,16 @@ func (a *ui) runMenu(id int, h uintptr, items []Item) {
 		}
 	case menuHomepage:
 		if urls := unique(func(it Item) string { return it.Homepage() }); a.confirmMany(len(urls)) {
-			for _, u := range urls {
-				openURL(a.hwnd, u)
-			}
+			openURLs(a.hwnd, urls)
 		}
 	case menuSearch:
 		qs := searchQueries(items)
 		if a.confirmMany(len(qs)) {
+			var urls []string
 			for _, q := range qs {
-				openURL(a.hwnd, googleURL(q))
+				urls = append(urls, googleURL(q))
 			}
+			openURLs(a.hwnd, urls)
 		}
 	case menuRecheck:
 		var ids []int

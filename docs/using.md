@@ -91,7 +91,8 @@ shows its new version.
 With several items selected, each entry says how many things it acts on, and
 counts once what the items share: for three items in two folders,
 **Open 2 software folders**. **Search on Google** searches once per software.
-The entries that open a window or a tab for each thing (**Open…** and
+Several homepages or searches open in one start of your default browser, as
+tabs. The entries that open a window or a tab for each thing (**Open…** and
 **Search…**) ask first when there are more than two.
 
 ## The detailed information window

@@ -6,6 +6,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -655,6 +656,44 @@ func openURL(owner uintptr, u string) {
 	if webAddress(u) {
 		pShellExecuteW.Call(owner, up("open"), up(u), 0, 0, 1)
 	}
+}
+
+// openURLs opens web pages: several at once in the default browser, started once
+// with all of them (openpages.go); one, or without such a browser, one by one.
+func openURLs(owner uintptr, urls []string) {
+	urls = webAddresses(urls)
+	if len(urls) >= 2 {
+		if exe := defaultBrowser(); exe != "" {
+			c := exec.Command(exe, urls...)
+			if c.Start() == nil {
+				c.Process.Release()
+				return
+			}
+		}
+	}
+	for _, u := range urls {
+		openURL(owner, u)
+	}
+}
+
+var pAssocQueryStringW = sysDLL("shlwapi.dll").NewProc("AssocQueryStringW")
+
+// defaultBrowser is the program of the default browser, the one that opens https
+// addresses, as Windows gives it (AssocQueryString); "" if there is none, or if it is
+// not a program of its own (pagesBrowser).
+func defaultBrowser() string {
+	buf := make([]uint16, 1024)
+	n := uint32(len(buf))
+	r, _, _ := pAssocQueryStringW.Call(0x1000 /* ASSOCF_ISPROTOCOL */, 2 /* ASSOCSTR_EXECUTABLE */, up("https"), up("open"),
+		uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&n)))
+	if r != 0 { // not S_OK
+		return ""
+	}
+	exe := syscall.UTF16ToString(buf)
+	if st, err := os.Stat(exe); err != nil || !st.Mode().IsRegular() {
+		return ""
+	}
+	return pagesBrowser(exe, os.Getenv("SystemRoot"))
 }
 
 // openTarget opens a link of the markup: a URL, a path, or a page in a browser that
