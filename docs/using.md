@@ -170,10 +170,10 @@ can fix. It opens the **Fix software** window, with, from top to bottom:
   make it taller or shorter, down to a single row.
 - The PowerShell commands that will run for the ticked software (or for the
   software you click), grouped by software. If they run in a different order,
-  a comment at the top explains it, and the warning repeats it. The button in
-  their top right corner copies them, with their comments, as in the details
-  window; after the fixes, it copies their results. You can also select part
-  of the text and copy it (Ctrl+C, or right-click).
+  the warning before they run explains it. The button in their top right
+  corner copies them, with their comments, as in the details window; after the
+  fixes, it copies their results. You can also select part of the text and
+  copy it (Ctrl+C, or right-click).
 - **Back up the files to change**, **Fix the selected software**, **Stop** and
   **Close**.
 

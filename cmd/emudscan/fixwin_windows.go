@@ -686,8 +686,7 @@ var (
 
 // showRow scrolls the console to the commands of a row of the list, or to what they
 // did, up to the blank line after them, as little as needed, so that what is above
-// stays in view when it can (the order of the fixes, at the top of the preview); it
-// reports whether the console shows them.
+// stays in view when it can; it reports whether the console shows them.
 func (d *fixDlg) showRow(row int) bool {
 	if row < 0 || row >= len(d.rows) {
 		return false

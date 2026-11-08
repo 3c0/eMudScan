@@ -550,16 +550,10 @@ func (r *fixRunner) checkAgain(ids []int, ok map[int]bool, title string) {
 // commands of each fix, as they will run, after a comment that says what they do. The
 // elements that share an update, such as two problems of the same software, are shown
 // together, with the update once, as it runs: the fixes of their files follow, for when
-// it does not fix them. When the fixes run in another order (fixOrderDiffers), a
-// comment at the top says in which.
+// it does not fix them. When the fixes run in another order (fixOrderDiffers), the
+// warning before they run says in which.
 func fixPreview(items []Item, backup bool) []fixLine {
 	var out []fixLine
-	if fixOrderDiffers(items) { // a comment line for each sentence
-		for _, s := range strings.Split(T("fix.order"), "\n") {
-			out = append(out, fixLine{lineComment, s})
-		}
-		out = append(out, fixLine{lineNote, ""})
-	}
 	cmdLines := func(f fixAction) {
 		out = append(out, fixLine{lineComment, fixIntro(f)})
 		cmds := f.Cmds
@@ -612,8 +606,8 @@ func fixPreview(items []Item, backup bool) []fixLine {
 }
 
 // fixOrderDiffers: the fixes of items run in another order (runOrder) than fixPreview
-// shows them, software by software. The preview, and the warning before the fixes
-// run, then say in which (fix.order).
+// shows them, software by software. The warning before the fixes run then says in
+// which (fix.order).
 func fixOrderDiffers(items []Item) bool {
 	var shown []string // as fixPreview shows them, each once
 	seen := map[string]bool{}

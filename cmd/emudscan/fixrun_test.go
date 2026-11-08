@@ -477,30 +477,26 @@ func TestFixPreview(t *testing.T) {
 	if got != want {
 		t.Errorf("shared update:\n%s", got)
 	}
-	// when the fixes run in another order, a comment at the top says in which: an update
-	// after the fix of another software, which runs after it...
+	// when the fixes run in another order, the warning before they run says in which,
+	// after what eMudScan will run, and the preview stays as it is: an update after the
+	// fix of another software, which runs after it, or a fix as administrator before one
+	// without, which runs before it
 	plain := func(id int, name string, admin bool) Item {
 		return Item{ID: id, Group: GroupApps, Name: name, Program: name, File: `C:\` + name + `\cacert.pem`,
 			Fixes: []fixAction{{Kind: fixBundle, Admin: admin, Cmds: []string{"replace " + name}}}}
 	}
 	updated := Item{ID: 7, Group: GroupApps, Name: "tool", Program: "tool", File: `C:\t\cacert.pem`,
 		Fixes: []fixAction{it.Fixes[0], {Kind: fixBundle, Cmds: []string{"replace tool"}}}}
-	// (a comment line for each sentence)
-	first, second, _ := strings.Cut(T("fix.order"), "\n")
-	order := []fixLine{{lineComment, first}, {lineComment, second}, {lineNote, ""}}
-	if lines := fixPreview([]Item{plain(8, "Other", false), updated}, true); fmt.Sprint(lines[:3]) != fmt.Sprint(order) {
-		t.Errorf("an update after another software:\n%s", strings.Join(plainLines(lines), "\n"))
-	}
-	// ... or a fix as administrator before one without, which runs before it
-	if lines := fixPreview([]Item{plain(8, "Other", true), plain(9, "Tool", false)}, true); fmt.Sprint(lines[:3]) != fmt.Sprint(order) {
-		t.Errorf("as administrator first:\n%s", strings.Join(plainLines(lines), "\n"))
-	}
-	// the warning before the fixes run says it too, after what eMudScan will run
 	warn, rest, _ := strings.Cut(T("fix.warning"), "\n\n")
-	if w := fixWarningText([]Item{plain(8, "Other", false), updated}); w != warn+"\n\n"+T("fix.order")+"\n\n"+rest {
-		t.Errorf("warning:\n%s", w)
+	for _, items := range [][]Item{{plain(8, "Other", false), updated}, {plain(8, "Other", true), plain(9, "Tool", false)}} {
+		if w := fixWarningText(items); w != warn+"\n\n"+T("fix.order")+"\n\n"+rest {
+			t.Errorf("warning:\n%s", w)
+		}
+		if lines := fixPreview(items, true); lines[0].kind != lineSoftware || strings.Contains(strings.Join(plainLines(lines), "\n"), "administrator rights run last") {
+			t.Errorf("preview:\n%s", strings.Join(plainLines(lines), "\n"))
+		}
 	}
-	// in the order they run: no comment, and the warning as it is
+	// in the order they run: the warning as it is
 	for _, items := range [][]Item{{updated, plain(8, "Other", false)}, {plain(9, "Tool", false), plain(8, "Other", true)}} {
 		if lines := fixPreview(items, true); lines[0].kind != lineSoftware || fixWarningText(items) != T("fix.warning") {
 			t.Errorf("in order:\n%s", strings.Join(plainLines(lines), "\n"))
