@@ -276,6 +276,7 @@ const (
 	menuCopy
 	menuCopyPaths
 	menuSelectAll
+	menuFix
 
 	timerSpin = 1
 	timerLang = 2

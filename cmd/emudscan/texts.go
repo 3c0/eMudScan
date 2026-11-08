@@ -65,6 +65,8 @@ var tr = map[string][2]string{
 	"status.pend":       {"Checking…", "Vérification…"},
 	"menu.details":      {"Detailed information…", "Informations détaillées…"},
 	"menu.detailsN":     {"Detailed information on %d items…", "Informations détaillées sur %d éléments…"},
+	"menu.fix":          {"Fix…", "Corriger…"},
+	"menu.fixN":         {"Fix %d items…", "Corriger %d éléments…"},
 	"menu.openFile":     {"Open file location", "Ouvrir l’emplacement du fichier"},
 	"menu.openFileN":    {"Open %d file locations", "Ouvrir %d emplacements de fichiers"},
 	"menu.openFolder":   {"Open software folder", "Ouvrir le dossier du logiciel"},

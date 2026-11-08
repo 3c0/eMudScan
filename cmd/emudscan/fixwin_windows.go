@@ -25,6 +25,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -121,13 +122,16 @@ func (a *ui) restoreItems(ids []int) []Item {
 	return out
 }
 
-// fixRows are the software that can be fixed, by name: a finding repeated in
-// several places, which the lists show as one row, has a row for each place, with
-// its own Location; a software with optional fixes and others, a row for each
-// (fixParts).
-func (a *ui) fixRows() []fixRow {
+// fixRows are the software that can be fixed, by name: all of them, or those of ids.
+// A finding repeated in several places, which the lists show as one row, has a row
+// for each place, with its own Location; a software with optional fixes and others,
+// a row for each (fixParts).
+func (a *ui) fixRows(ids ...int) []fixRow {
 	var rows []fixRow
 	for _, it := range a.items {
+		if ids != nil && !slices.Contains(ids, it.ID) {
+			continue
+		}
 		if len(a.fixItems([]int{it.ID})) > 0 {
 			for _, part := range fixParts(it) {
 				rows = append(rows, fixRow{it, part})
@@ -242,12 +246,13 @@ func (d *fixDlg) rowsAgain(a *ui) {
 	d.preview(a)
 }
 
-// openFixAll opens the Fix window for all the software that can be fixed.
-func (a *ui) openFixAll() {
+// openFixAll opens the Fix software window for all the software that can be fixed,
+// or for those of ids (Fix in the right-click menu).
+func (a *ui) openFixAll(ids ...int) {
 	if a.fix != nil || a.current == nil || a.running {
 		return
 	}
-	d := &fixDlg{owner: a.hwnd, label: T("fix.allTitle"), runText: T("fix.runAll"), rows: a.fixRows(), cmdLine: -1}
+	d := &fixDlg{owner: a.hwnd, label: T("fix.allTitle"), runText: T("fix.runAll"), rows: a.fixRows(ids...), cmdLine: -1}
 	if len(d.rows) == 0 || !a.newFixWindow(d, 1100, 860) {
 		return
 	}

@@ -1405,6 +1405,15 @@ func (a *ui) contextMenu(h uintptr, lParam uintptr) {
 	program := h != a.hListWin
 	n := countMenu(items)
 	add(0, menuDetails, menuLabel("menu.details", "menu.detailsN", n.rows))
+	if program { // the items that can be fixed, in the Fix software window
+		fixable := 0
+		for _, it := range items {
+			if len(a.fixItems(it.memberIDs())) > 0 {
+				fixable++
+			}
+		}
+		add(boolArg(fixable == 0 || a.fix != nil || a.running || a.current == nil), menuFix, menuLabel("menu.fix", "menu.fixN", fixable))
+	}
 	sep()
 	if program {
 		add(grayedUnless(func(it Item) bool { return it.File != "" }), menuOpenFile, menuLabel("menu.openFile", "menu.openFileN", n.files))
@@ -1507,6 +1516,14 @@ func (a *ui) runMenu(id int, h uintptr, items []Item) {
 		setClipboard(a.hwnd, b.String())
 	case menuSelectAll:
 		a.selectAll(h)
+	case menuFix:
+		var ids []int
+		for _, it := range items {
+			ids = append(ids, it.memberIDs()...)
+		}
+		if len(a.fixItems(ids)) > 0 {
+			a.openFixAll(ids...)
+		}
 	}
 }
 

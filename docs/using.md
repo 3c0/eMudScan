@@ -80,11 +80,13 @@ end of the top line of each list then counts the items found ("Search found 2
 items: …"), and its shield shows their worst status. Esc clears it, as do
 **Scan** and **Scan again**.
 
-Right-click one or more items for: **Detailed information**,
+Right-click one or more items for: **Detailed information**, **Fix**,
 **Open file location**, **Open software folder**, **Open homepage**,
 **Search on Google**, **Scan again**, **Copy**, **Copy paths** and
-**Select all**. **Scan again** first reads the installed software again, so a
-program you have just updated shows its new version.
+**Select all**. **Fix** opens the **Fix software** window for the selected items
+that can be fixed (see [Fixing software](#fixing-software)). **Scan again**
+first reads the installed software again, so a program you have just updated
+shows its new version.
 
 With several items selected, each entry says how many things it acts on, and
 counts once what the items share: for three items in two folders,
@@ -160,8 +162,10 @@ left for you to run; restoring a backup has its own button (see
 Windows Update, the Microsoft Store or a network administrator can fix is not
 listed: its detailed information says what to do.
 
-**Fix**, beside **Scan**, is enabled once a scan has found software that eMudScan
-can fix. It opens the **Fix software** window, with, from top to bottom:
+**Fix**, beside **Scan**, is enabled once a scan has found software that
+eMudScan can fix. It opens the **Fix software** window; **Fix** in the
+right-click menu of the lists opens it for the selected items only. The window
+has, from top to bottom:
 
 - **Select All**, **Select None**, how many software are selected, and a
   reminder of what the list can do.
