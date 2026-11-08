@@ -122,6 +122,7 @@ var (
 	pMoveToEx             = modgdi32.NewProc("MoveToEx")
 	pLineTo               = modgdi32.NewProc("LineTo")
 	pPolygon              = modgdi32.NewProc("Polygon")
+	pGdiAlphaBlend        = modgdi32.NewProc("GdiAlphaBlend")
 
 	pInitCommonControlsEx = modcomctl32.NewProc("InitCommonControlsEx")
 	pImageListCreate      = modcomctl32.NewProc("ImageList_Create")

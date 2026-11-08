@@ -88,6 +88,11 @@ type docNav struct {
 	text   rect         // "2 / 3"
 	hover  int          // the button under the mouse, or -1
 	down   int          // the button pressed, or -1
+	// its shadow (navShadow), made for a block of shadowFor: black, with its alpha
+	shadow           uintptr
+	shadowFor        [2]int32
+	shadowW, shadowH int32
+	shadowPad        int32
 }
 
 // navToolID is the tool of the first button of the navigation block (the others
@@ -164,6 +169,9 @@ func (v *docView) destroy() {
 	}
 	if v.tip != 0 {
 		pDestroyWindow.Call(v.tip)
+	}
+	if v.nav.shadow != 0 {
+		pDeleteObject.Call(v.nav.shadow)
 	}
 	delete(docViews, v.hwnd)
 }
@@ -817,8 +825,9 @@ func (v *docView) paint() {
 	pDeleteDC.Call(dc)
 }
 
-// drawNav draws the navigation block: a white box with a thin border and a shadow,
-// its buttons (greyed where they go nowhere, shaded under the mouse) and "pos / n".
+// drawNav draws the navigation block: a white box with a thin border and a soft
+// shadow, its buttons (greyed where they go nowhere, shaded under the mouse) and
+// "pos / n".
 func (v *docView) drawNav(dc uintptr) {
 	s := g.scale
 	nv := &v.nav
@@ -840,8 +849,8 @@ func (v *docView) drawNav(dc uintptr) {
 			pDeleteObject.Call(pen)
 		}
 	}
-	round(rect{b.Left + s(1), b.Top + s(2), b.Right + s(2), b.Bottom + s(3)}, rgb(218, 218, 218), rgb(218, 218, 218), s(12))
-	round(b, rgb(255, 255, 255), rgb(188, 188, 188), s(12))
+	v.drawNavShadow(dc)
+	round(b, rgb(255, 255, 255), rgb(200, 200, 200), s(12))
 	for i, r := range nv.btns {
 		on := navTo(i, nv.pos, nv.n) >= 0
 		if on && (i == nv.hover || i == nv.down) {
@@ -894,6 +903,38 @@ func (v *docView) drawNav(dc uintptr) {
 	x := (nv.text.Left + nv.text.Right - L.measure(f, t)) / 2
 	y := (nv.text.Top + nv.text.Bottom - f.height) / 2
 	pExtTextOutW.Call(dc, uintptr(x), uintptr(y), 0, 0, uintptr(unsafe.Pointer(&t[0])), uintptr(len(t)), 0)
+}
+
+// drawNavShadow draws the shadow of the navigation block, which darkens what is under
+// it: the white of the page, not the black of the commands.
+func (v *docView) drawNavShadow(dc uintptr) {
+	s := g.scale
+	nv := &v.nav
+	size := [2]int32{nv.box.Right - nv.box.Left, nv.box.Bottom - nv.box.Top}
+	if nv.shadow == 0 || nv.shadowFor != size {
+		if nv.shadow != 0 {
+			pDeleteObject.Call(nv.shadow)
+			nv.shadow = 0
+		}
+		aw, ah, pad, alpha := navShadow(int(size[0]), int(size[1]), int(s(6)), int(s(2)), int(s(4)), 70)
+		bih := bitmapInfoHeader{Size: uint32(unsafe.Sizeof(bitmapInfoHeader{})), Width: int32(aw), Height: -int32(ah), Planes: 1, BitCount: 32}
+		var bits unsafe.Pointer
+		bmp, _, _ := pCreateDIBSection.Call(0, uintptr(unsafe.Pointer(&bih)), 0, uintptr(unsafe.Pointer(&bits)), 0, 0)
+		if bmp == 0 || bits == nil {
+			return
+		}
+		px := unsafe.Slice((*byte)(bits), aw*ah*4)
+		for i, a := range alpha { // black, premultiplied: its alpha only
+			px[i*4+3] = a
+		}
+		nv.shadow, nv.shadowFor, nv.shadowW, nv.shadowH, nv.shadowPad = bmp, size, int32(aw), int32(ah), int32(pad)
+	}
+	src, _, _ := pCreateCompatibleDC.Call(dc)
+	old, _, _ := pSelectObject.Call(src, nv.shadow)
+	pGdiAlphaBlend.Call(dc, uintptr(nv.box.Left-nv.shadowPad), uintptr(nv.box.Top-nv.shadowPad), uintptr(nv.shadowW), uintptr(nv.shadowH),
+		src, 0, 0, uintptr(nv.shadowW), uintptr(nv.shadowH), 0x01FF0000 /* BLENDFUNCTION: AC_SRC_OVER, alpha 255, AC_SRC_ALPHA */)
+	pSelectObject.Call(src, old)
+	pDeleteDC.Call(src)
 }
 
 // drawCopyButton draws the copy button of a block of commands.

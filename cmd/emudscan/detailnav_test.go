@@ -32,3 +32,30 @@ func TestNavTo(t *testing.T) {
 		}
 	}
 }
+
+// The shadow is darkest under the middle of the block, lowered, fades out to nothing
+// at the edges of its area, and is symmetric from left to right.
+func TestNavShadow(t *testing.T) {
+	aw, ah, pad, a := navShadow(100, 30, 6, 2, 4, 70)
+	if pad != 12 || aw != 124 || ah != 54 {
+		t.Fatalf("area %d × %d, pad %d", aw, ah, pad)
+	}
+	at := func(x, y int) uint8 { return a[y*aw+x] }
+	mid := at(aw/2, ah/2+2)
+	if mid < 65 || mid > 70 {
+		t.Errorf("middle: %d", mid)
+	}
+	if at(0, 0) != 0 || at(aw-1, ah-1) > 1 {
+		t.Errorf("corners: %d %d", at(0, 0), at(aw-1, ah-1))
+	}
+	if top, bottom := at(aw/2, pad-2), at(aw/2, ah-pad+1); bottom <= top {
+		t.Errorf("not lowered: above %d, below %d", top, bottom)
+	}
+	for y := 0; y < ah; y++ {
+		for x := 0; x < aw/2; x++ {
+			if d := int(at(x, y)) - int(at(aw-1-x, y)); d > 1 || d < -1 {
+				t.Fatalf("not symmetric at %d,%d: %d", x, y, d)
+			}
+		}
+	}
+}
