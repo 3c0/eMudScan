@@ -90,8 +90,9 @@ shows its new version.
 
 With several items selected, each entry says how many things it acts on, and
 counts once what the items share: for three items in two folders,
-**Open 2 software folders**. The entries that open a window or a tab for each
-thing (**Open…** and **Search…**) ask first when there are more than two.
+**Open 2 software folders**. **Search on Google** searches once per software.
+The entries that open a window or a tab for each thing (**Open…** and
+**Search…**) ask first when there are more than two.
 
 ## The detailed information window
 
@@ -104,8 +105,9 @@ confirm (see [Fixing software](#fixing-software)).
 With several items selected, **Detailed information on 3 items…** (or Enter)
 opens one window that shows them one at a time. The block in its top right
 corner says which one is shown (**2 / 3**) and goes to the first, previous, next
-or last item; it stays in place as the page scrolls. Alt+Home, Alt+←, Alt+→ and Alt+End do the same. A
-link to another item opens that item on its own; closing it brings you back.
+or last item; it stays in place as the page scrolls. Alt+Home, Alt+←, Alt+→ and
+Alt+End do the same. A link to another item opens that item on its own; closing
+it brings you back.
 
 A path in your user folder is shown with the variable that names that folder, as
 File Explorer understands it: `%USERPROFILE%`, `%APPDATA%` or `%LOCALAPPDATA%`

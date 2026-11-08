@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // The menu counts each file, folder, homepage, search and path once: Inkscape's
 // certifi, and two findings of example-app-1 in the same folder.
@@ -11,11 +14,22 @@ func TestCountMenu(t *testing.T) {
 		ProductURL: "https://app1.example.org/", Recheck: true,
 		Copies: []Item{{Program: "example-app-1", File: `C:\scoop\apps\example-app-1\1.0.9\cacert.pem`, Folder: `C:\scoop\apps\example-app-1\1.0.9`}}}
 	exe := Item{Program: "example-app-1", File: `C:\scoop\apps\example-app-1\current\example-app-1.exe`, Folder: `C:\scoop\apps\example-app-1\current`,
-		ProductURL: "https://app1.example.org/"}
+		ProductURL: "https://app1.example.org/", Search: "Example App 1"} // the name in its file
 	got := countMenu([]Item{inkscape, bundle, exe})
 	want := menuCounts{rows: 3, files: 3, folders: 2, homepages: 2, searches: 2, rechecks: 2, paths: 7}
 	if got != want {
 		t.Errorf("got %+v, want %+v", got, want)
+	}
+	// one search per software: example-app-1's program and bundle search for its name; alone,
+	// an item searches for its own text
+	if q := strings.Join(searchQueries([]Item{inkscape, bundle, exe}), "|"); q != "Inkscape|example-app-1" {
+		t.Errorf("searches: %s", q)
+	}
+	if q := strings.Join(searchQueries([]Item{exe}), "|"); q != "Example App 1" {
+		t.Errorf("one item: %s", q)
+	}
+	if q := strings.Join(searchQueries([]Item{exe, {Program: "EXAMPLE-APP-1", Search: "Example App 1"}}), "|"); q != "Example App 1" {
+		t.Errorf("same text: %s", q)
 	}
 	defer func(l int) { Lang = l }(Lang)
 	Lang = 0

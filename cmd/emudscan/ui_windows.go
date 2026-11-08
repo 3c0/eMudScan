@@ -1487,7 +1487,7 @@ func (a *ui) runMenu(id int, h uintptr, items []Item) {
 			}
 		}
 	case menuSearch:
-		qs := unique(func(it Item) string { return it.SearchText() })
+		qs := searchQueries(items)
 		if a.confirmMany(len(qs)) {
 			for _, q := range qs {
 				openURL(a.hwnd, googleURL(q))
