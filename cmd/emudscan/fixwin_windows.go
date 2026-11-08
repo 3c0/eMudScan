@@ -215,8 +215,9 @@ func (a *ui) openFixDetails(d *fixDlg, row int) {
 }
 
 // rowsAgain shows each row of the list as its software is now, once the details that
-// the list opened are closed: fixed there, it loses its check box, as after a run;
-// restored there, it gets it back, unticked; its fixes, and the commands, follow.
+// the list opened are closed, or a scan from its menu is done: fixed there, it loses
+// its check box, as after a run; restored there, it gets it back, unticked; its fixes,
+// and the commands, follow, unless the console shows the results of the fixes.
 func (d *fixDlg) rowsAgain(a *ui) {
 	d.updating = true
 	setCell := func(row, col int, text string) {
@@ -243,6 +244,11 @@ func (d *fixDlg) rowsAgain(a *ui) {
 		a.setRow(d.list, i, it, []string{fixSoftware(it)}, false) // its status icon
 	}
 	d.updating = false
+	if d.results { // the results of the fixes stay; what is left to fix follows the rows
+		pEnableWindow.Call(d.bFix, boolArg(len(d.selected(a)) > 0))
+		d.showCount()
+		return
+	}
 	d.preview(a)
 }
 
