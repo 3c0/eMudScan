@@ -542,11 +542,11 @@ func TestFixReport(t *testing.T) {
 	}
 	for _, l := range []fixLine{{lineNote, "2026-11-04 11:05 · Fix A"}, {lineSoftware, "A"}, {lineCommand, "scoop update a"}, {lineOK, ""},
 		{lineOutput, "Updating a"}, {lineCommand, "scoop update b"}, {lineFailed, ""}, {lineCmdError, "Exit code 1"}, {lineCommand, "never"},
-		{lineNote, T("fix.checking")}, {lineFixed, Tf("fix.fixed", "A")}, {lineNote, T("fix.end")}} {
+		{lineNote, T("fix.checking")}, {lineFixed, Tf("fix.fixed", "A")}, {lineEnd, ""}} {
 		c.recordFix(l)
 	}
 	rep := strings.ReplaceAll(buildReport(c, "log"), "\r\n", "\n")
-	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✓ scoop update a\n      Updating a\n  ✗ scoop update b\n      Exit code 1\n    never\nChecking again…\nA: fixed.\nEnd of the fixes.\n\nLog\n"
+	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✓ scoop update a\n      Updating a\n  ✗ scoop update b\n      Exit code 1\n    never\nChecking again…\nA: fixed.\n" + fixBar + "\n\nLog\n"
 	if !strings.Contains(rep, want) {
 		t.Errorf("report without\n%s\nin\n%s", want, rep)
 	}

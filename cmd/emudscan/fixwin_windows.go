@@ -663,6 +663,9 @@ func (d *fixDlg) show(l fixLine) {
 	d.lineAt = append(d.lineAt, d.console.nextLine())
 	d.lines = append(d.lines, l)
 	d.console.append(consoleRuns(l), false)
+	if l.kind == lineEnd {
+		d.console.setBar(d.lineAt[len(d.lineAt)-1], rgb(0x76, 0x76, 0x76))
+	}
 	if l.kind == lineCommand && d.running {
 		d.cmdLine = d.lineAt[len(d.lineAt)-1]
 		d.console.setMark(d.cmdLine, "…", rgb(0x76, 0x76, 0x76))
@@ -761,6 +764,8 @@ func consoleRuns(l fixLine) []logRun {
 		color, bold = consoleFailed, true
 	case lineNote:
 		color = rgb(97, 214, 214)
+	case lineEnd:
+		text, color = fixBar, rgb(0x76, 0x76, 0x76) // drawn as a line (setBar), copied as text
 	}
 	return []logRun{{text + "\n", color, bold, false}}
 }
@@ -934,7 +939,7 @@ func (d *fixDlg) run(a *ui) {
 			if p := recover(); p != nil {
 				out(fixLine{lineError, fmt.Sprintf("Internal error: %v", p)})
 			}
-			out(fixLine{lineNote, T("fix.end")})
+			out(fixLine{lineEnd, ""})
 			postEvent(uiEvent{kind: 6})
 		}()
 		r.run(ids)

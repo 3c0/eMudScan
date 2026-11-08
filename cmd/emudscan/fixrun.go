@@ -68,7 +68,12 @@ const (
 	lineNotFixed                    // a software is still not fixed
 	lineCmdError                    // an error of a command, or its exit code
 	lineWarning                     // a warning of a command
+	lineEnd                         // the end of the fixes: a horizontal bar
 )
+
+// fixBar is the end of the fixes (lineEnd) as text: in the report, and when it is
+// copied from the console, which draws it as a line across its width.
+var fixBar = strings.Repeat("─", 40)
 
 // fixLine is a line of the console.
 type fixLine struct {
@@ -95,6 +100,8 @@ func (l fixLine) plain() string {
 		return "    " + l.text
 	case lineOK, lineFailed, lineOutput, lineCmdError, lineWarning:
 		return "      " + l.text
+	case lineEnd:
+		return fixBar
 	}
 	return l.text
 }

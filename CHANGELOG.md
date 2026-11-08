@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - When the fixes run in a different order from the one shown in the Fix window, a comment at the top of the commands and the warning explain the order. Ticking a software now scrolls the console only as much as needed to show its commands.
 - The fixes stop at the first download that fails, before its fix changes anything, and after an update that fails when the servers of its package manager cannot be reached (eMudScan then checks them): the next fixes would most likely fail too. A red line says why.
 - The console of the Fix window shows the result of each command in a column on its left (a green ✔ or a red ✘), its warnings in yellow and its errors in red below it, and its exit code when it failed; the report puts the ✓ or ✗ before each command.
+- The console of the Fix window ends with a horizontal bar instead of “End of the fixes.”
 
 ### Fixed
 

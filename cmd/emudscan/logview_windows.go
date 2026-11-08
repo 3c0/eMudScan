@@ -60,6 +60,9 @@ type logLine struct {
 	// in the left column (marks), on its first row: the result of a command
 	mark      string
 	markColor uint32
+	// bar: drawn as a horizontal line across the log, in barColor, in place of its text
+	bar      bool
+	barColor uint32
 }
 
 type logRowRef struct{ line, row int }
@@ -158,6 +161,15 @@ func (v *logView) gutter() int32 {
 func (v *logView) setMark(line int, mark string, color uint32) {
 	if line >= 0 && line < len(v.lines) {
 		v.lines[line].mark, v.lines[line].markColor = mark, color
+		pInvalidateRect.Call(v.hwnd, 0, 0)
+	}
+}
+
+// setBar draws a line of the log as a horizontal bar across its width, in color; its
+// text is still what a copy gives.
+func (v *logView) setBar(line int, color uint32) {
+	if line >= 0 && line < len(v.lines) {
+		v.lines[line].bar, v.lines[line].barColor = true, color
 		pInvalidateRect.Call(v.hwnd, 0, 0)
 	}
 }
@@ -676,6 +688,15 @@ func (v *logView) paint() {
 			pSelectObject.Call(dc, font)
 			pSetTextColor.Call(dc, uintptr(ln.markColor))
 			pExtTextOutW.Call(dc, uintptr(v.padX()), uintptr(y+top), 0, 0, uintptr(unsafe.Pointer(&s[0])), uintptr(len(s)), 0)
+		}
+		if ln := &v.lines[ref.line]; ln.bar { // across the text, in the middle of its row
+			if ref.row == 0 {
+				r := rect{px, y + v.pitch/2, w - v.padX(), y + v.pitch/2 + max(a.scale(1), 1)}
+				br, _, _ := pCreateSolidBrush.Call(uintptr(ln.barColor))
+				pFillRect.Call(dc, uintptr(unsafe.Pointer(&r)), br)
+				pDeleteObject.Call(br)
+			}
+			continue
 		}
 		for _, f := range v.lines[ref.line].rows[ref.row] {
 			if f.n == 0 {
