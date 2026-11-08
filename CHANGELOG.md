@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The packages of an application that pipx installed are updated with `pipx runpip`, which works whether or not its environment has pip of its own.
 - A file put back by **Restore the backup** has its original creation date again: eMudScan’s backups now keep it, where Windows gave them the date of the backup.
 - The summary of the certificate bundles is updated after fixes and restores: the files it lists are tested again, instead of keeping the results of the scan.
+- The color codes in the output of some commands, such as git when Scoop updates its buckets, no longer appear as garbage. The console of the Fix window shows these colors, and the report shows the text alone.
 
 ## [2.0.0] - 2026-11-05
 

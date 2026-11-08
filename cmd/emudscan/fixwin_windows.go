@@ -767,6 +767,19 @@ func consoleRuns(l fixLine) []logRun {
 	case lineEnd:
 		text, color = fixBar, rgb(0x76, 0x76, 0x76) // drawn as a line (setBar), copied as text
 	}
+	if l.kind == lineOutput || l.kind == lineOK || l.kind == lineFailed || l.kind == lineCmdError || l.kind == lineWarning {
+		// what a command showed, in its own colors when it has some (ansiPieces)
+		var runs []logRun
+		for _, p := range ansiPieces(text) {
+			c := color
+			if p.color >= 0 {
+				c = rgb(byte(p.color>>16), byte(p.color>>8), byte(p.color))
+			}
+			runs = append(runs, logRun{p.text, c, bold || p.bold, false})
+		}
+		runs[len(runs)-1].text += "\n"
+		return runs
+	}
 	return []logRun{{text + "\n", color, bold, false}}
 }
 

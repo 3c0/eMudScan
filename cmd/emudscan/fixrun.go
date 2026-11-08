@@ -99,7 +99,7 @@ func (l fixLine) plain() string {
 	case lineCommand:
 		return "    " + l.text
 	case lineOK, lineFailed, lineOutput, lineCmdError, lineWarning:
-		return "      " + l.text
+		return "      " + ansiStrip(l.text) // without the colors of the output
 	case lineEnd:
 		return fixBar
 	}
