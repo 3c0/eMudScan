@@ -211,11 +211,11 @@ func (r *fixRunner) run(ids []int) (stopped bool) {
 		})
 		switch {
 		case stop:
-			r.checkAgain(ran, ok, T("fix.checking"))
+			r.checkAgain(ran, ok, T("fix.checking"), false)
 		case update:
-			r.checkAgain(ran, ok, T("fix.checkingUpdates"))
+			r.checkAgain(ran, ok, T("fix.checkingUpdates"), true)
 		default:
-			r.checkAgain(ran, ok, T("fix.checkingFixes"))
+			r.checkAgain(ran, ok, T("fix.checkingFixes"), false)
 		}
 		if stop {
 			stopped = true
@@ -245,7 +245,7 @@ func (r *fixRunner) restore(ids []int) (stopped bool) {
 	}
 	r.titles = fixTitles(items)
 	ran, ok, stopped := r.round(ids, func(it Item) []fixAction { return it.Restores })
-	r.checkAgain(ran, ok, T("fix.checking"))
+	r.checkAgain(ran, ok, T("fix.checking"), false)
 	if r.fixedAny {
 		r.out(fixLine{lineNote, T("restore.restart")})
 	}
@@ -506,11 +506,17 @@ func haltReason(u fixUnit) string {
 
 // checkAgain checks again the elements that ran something, and reports each one:
 // fixed, or restored.
-func (r *fixRunner) checkAgain(ids []int, ok map[int]bool, title string) {
+func (r *fixRunner) checkAgain(ids []int, ok map[int]bool, title string, updates bool) {
 	if len(ids) == 0 {
 		return
 	}
 	r.out(fixLine{lineNote, title})
+	before := map[int]string{} // after the updates: the versions before them
+	for _, id := range ids {
+		if it, found := r.item(id); found && updates {
+			before[id] = versionOf(it)
+		}
+	}
 	r.recheck(ids)
 	for _, id := range ids {
 		it, found := r.item(id)
@@ -534,15 +540,27 @@ func (r *fixRunner) checkAgain(ids []int, ok map[int]bool, title string) {
 			r.simulated(id) // nothing changed on disk: the simulation shows what a fix would
 			it, _ = r.item(id)
 		}
-		if fixedStatus(it.Status) {
+		switch {
+		case fixedStatus(it.Status):
 			r.out(fixLine{lineFixed, Tf("fix.fixed", r.title(it))})
 			r.fixed(id)
 			r.fixedAny = true
-		} else {
+		case ok[id] && before[id] != "" && versionOf(it) == before[id]: // the update found nothing newer
+			r.out(fixLine{lineNotFixed, Tf("fix.notFixedSame", r.title(it))})
+		default:
 			r.out(fixLine{lineNotFixed, Tf("fix.notFixed", r.title(it))})
 		}
 	}
 	r.checked = true
+}
+
+// versionOf is the version of a software and of its component, as an update changes
+// them; "" when neither is known.
+func versionOf(it Item) string {
+	if it.ProgVersion == "" && it.Version == "" {
+		return ""
+	}
+	return it.ProgVersion + " / " + it.Version
 }
 
 // checkResultOf is the element that a line of a check after the fixes is about
@@ -552,7 +570,7 @@ func checkResultOf(l fixLine, titles map[int]string) int {
 		return 0
 	}
 	for id, t := range titles {
-		if l.text == Tf("fix.fixed", t) || l.text == Tf("fix.notFixed", t) {
+		if l.text == Tf("fix.fixed", t) || l.text == Tf("fix.notFixed", t) || l.text == Tf("fix.notFixedSame", t) {
 			return id
 		}
 	}

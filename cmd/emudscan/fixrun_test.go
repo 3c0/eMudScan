@@ -151,6 +151,7 @@ func TestFixRunner(t *testing.T) {
 		it        Item
 		fixedWhen string // the command after which a check finds it fixed
 	}
+	upgradeTo := map[*state]string{} // the version that a check finds, if any
 	setup := func() map[int]*state {
 		return map[int]*state{
 			1: {Item{ID: 1, Name: "A", Status: StWarn, Fixes: []fixAction{pkg("scoop update a", false), file("replace a", true)}}, "replace a"},
@@ -200,6 +201,9 @@ func TestFixRunner(t *testing.T) {
 				for _, id := range ids {
 					if s := items[id]; ranCmds[s.fixedWhen] {
 						s.it.Status = StOK
+					}
+					if s := items[id]; upgradeTo[s] != "" {
+						s.it.ProgVersion = upgradeTo[s]
 					}
 				}
 			},
@@ -256,6 +260,21 @@ func TestFixRunner(t *testing.T) {
 	// stage ended
 	if !strings.Contains(text, Tf("fix.notFixed", "D")+"\n\n"+T("fix.adminPrompt")) || strings.Count(text, T("fix.checkingFixes")) != 1 {
 		t.Errorf("console: no blank line after the check:\n%s", text)
+	}
+	// an update that installed no newer version: its result says so, when the version is
+	// known (not for D above); not when a newer version is installed, still not fixed
+	same := setup()
+	same[4].it.ProgVersion = "4.2.0"
+	if _, _, console, _ := run(same, true, 0, 4); !slices.Contains(console, Tf("fix.notFixedSame", "D")) {
+		t.Errorf("no newer version: console:\n%s", strings.Join(console, "\n"))
+	}
+	if checkResultOf(fixLine{lineNotFixed, Tf("fix.notFixedSame", "D")}, map[int]string{4: "D"}) != 4 {
+		t.Errorf("no newer version: no link")
+	}
+	newer := setup()
+	newer[4].it.ProgVersion, upgradeTo[newer[4]] = "4.2.0", "4.2.1"
+	if _, _, console, _ := run(newer, true, 0, 4); !slices.Contains(console, Tf("fix.notFixed", "D")) {
+		t.Errorf("newer version: console:\n%s", strings.Join(console, "\n"))
 	}
 	// nothing fixed: no reminder to restart
 	if _, _, console, _ := run(setup(), true, 0, 4); strings.Contains(strings.Join(console, "\n"), T("fix.restart")) {

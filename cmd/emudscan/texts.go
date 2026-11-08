@@ -350,6 +350,7 @@ var tr = map[string][2]string{
 	"fix.checking":       {"Checking again whether the software is still vulnerable…", "Nouvelle vérification de la vulnérabilité des logiciels…"},
 	"fix.fixed":          {"%s: fixed.", "%s\u00a0: corrigé."},
 	"fix.notFixed":       {"%s: still not fixed.", "%s\u00a0: toujours pas corrigé."},
+	"fix.notFixedSame":   {"%s: still not fixed (no newer version installed).", "%s\u00a0: toujours pas corrigé (aucune version plus récente installée)."},
 	"fix.interrupted":    {"Fix interrupted!", "Correction interrompue\u00a0!"},
 	"conda.fix":          {"Recommended action: update the certificates of this environment with conda.", "Action recommandée\u00a0: mettez à jour les certificats de cet environnement avec conda."},
 	"version.unknown":    {"Unknown version", "Version non déterminée"},

@@ -250,13 +250,16 @@ Once you accept:
    fails when the servers of its package manager cannot be reached (see
    [Privacy](privacy.md#what-a-fix-connects-to)). A red line says why.
 4. Each software is checked again: the console and the **Result** column say
-   whether it is fixed, and the lists show its new status. In the console of
-   the **Fix software** window, each result ends with a link to the detailed
-   information of that software (**Detailed information on Inkscape…**). A
-   fixed software loses its check box, so that it is not fixed twice:
-   **Select All** leaves it out, and the count of selected software no longer
-   includes it. The summary of the certificate bundles is updated too: the files
-   it lists are tested again.
+   whether it is fixed, and the lists show its new status. In the console of the
+   **Fix software** window, each result ends with a link to the detailed
+   information of that software (**Detailed information on Inkscape…**). A fixed
+   software loses its check box, so that it is not fixed twice: **Select All**
+   leaves it out, and the count of selected software no longer includes it. A
+   software still not fixed after all its fixes ran is unticked, so that they do
+   not run again by mistake: tick it to run them again. When an update installed
+   no newer version, its result says so (“still not fixed (no newer version
+   installed)”). The summary of the certificate bundles is updated too: the
+   files it lists are tested again.
 5. A last line reminds you to restart any fixed software that was open: the fix
    takes effect the next time it starts.
 

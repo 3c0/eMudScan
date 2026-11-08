@@ -67,6 +67,7 @@ type fixDlg struct {
 	asking                       bool // the warning is shown
 	frontTries                   int  // after the administrator prompt: how long to keep the window in front
 	stop                         atomic.Bool
+	early                        atomic.Bool // the last run ended before all its fixes ran: Stop, a failed connection, an error
 
 	// from the main window: the list of the software that can be fixed
 	list, bAll, bNone uintptr
@@ -1147,14 +1148,16 @@ func (d *fixDlg) run(a *ui) {
 	fixPromptOwner = d.hwnd
 	fixPromptClosed = func() { postEvent(uiEvent{kind: 7}) }
 	go func() {
+		early := true
 		defer func() {
 			if p := recover(); p != nil {
 				out(fixLine{lineError, fmt.Sprintf("Internal error: %v", p)})
 			}
+			d.early.Store(early)
 			out(fixLine{lineEnd, ""})
 			postEvent(uiEvent{kind: 6})
 		}()
-		r.run(ids)
+		early = r.run(ids)
 	}()
 }
 
@@ -1248,8 +1251,9 @@ func bringToFront(hwnd uintptr) bool {
 }
 
 // rowResults shows in the list which rows are fixed, unticked; at the end, also those
-// that are not. A row has nothing left to run once its fixes have, or once the other
-// row of its software (fixParts) has fixed it.
+// that are not, unticked too once all their fixes ran (the box stays, to run them
+// again). A row has nothing left to run once its fixes have, or once the other row of
+// its software (fixParts) has fixed it.
 func (d *fixDlg) rowResults(a *ui, end bool) {
 	if d.list == 0 {
 		return
@@ -1282,6 +1286,9 @@ func (d *fixDlg) rowResults(a *ui, end bool) {
 			}
 		} else if end && d.ranRows[i] {
 			result = T("fix.resultNotFixed")
+			if !d.early.Load() { // all its fixes ran: unticked, so that they do not run again by mistake
+				d.check(i, false)
+			}
 		}
 		if result != "" {
 			sub := lvItem{SubItem: 4, Text: u16(result)}
