@@ -614,7 +614,7 @@ func (a *ui) fixContextMenu(d *fixDlg, lParam uintptr) {
 	add(grayed(it.File != ""), menuOpenFile, "menu.openFile")
 	add(grayed(it.Folder != ""), menuOpenFolder, "menu.openFolder")
 	add(grayed(it.Homepage() != ""), menuHomepage, "menu.homepage")
-	add(0, menuSearch, "menu.search")
+	pAppendMenuW.Call(menu, 0, menuSearch, up(searchLabel(searchQueries([]Item{it})))) // what it searches for
 	sep()
 	add(grayed(it.Recheck && !a.running && a.current != nil && !d.running), menuRecheck, "menu.recheck")
 	sep()

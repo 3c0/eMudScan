@@ -90,12 +90,14 @@ shows its new version.
 
 With several items selected, each entry says how many things it acts on, and
 counts once what the items share: for three items in two folders,
-**Open 2 software folders**. **Search on Google** searches once per software.
-For a certificate bundle of a software that eMudScan does not know, it searches
-for the software and the file’s name; for a bundle that belongs to no software,
-for the file’s name alone. Several homepages or searches open in one start of
-your default browser, as tabs. The entries that open a window or a tab for each
-thing (**Open…** and **Search…**) ask first when there are more than two.
+**Open 2 software folders**. **Search on Google** searches once per software,
+and names what it searches for (the first three, then how many more), such as
+**Search on Google: “cacert.pem”**. For a certificate bundle of a software that
+eMudScan does not know, it searches for the software and the file’s name; for a
+bundle that belongs to no software, for the file’s name alone. Several homepages
+or searches open in one start of your default browser, as tabs. The entries that
+open a window or a tab for each thing (**Open…** and **Search…**) ask first when
+there are more than two.
 
 ## The detailed information window
 

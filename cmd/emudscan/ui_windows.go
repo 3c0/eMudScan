@@ -1419,7 +1419,7 @@ func (a *ui) contextMenu(h uintptr, lParam uintptr) {
 		add(grayedUnless(func(it Item) bool { return it.File != "" }), menuOpenFile, menuLabel("menu.openFile", "menu.openFileN", n.files))
 		add(grayedUnless(func(it Item) bool { return it.Folder != "" }), menuOpenFolder, menuLabel("menu.openFolder", "menu.openFolderN", n.folders))
 		add(grayedUnless(func(it Item) bool { return it.Homepage() != "" }), menuHomepage, menuLabel("menu.homepage", "menu.homepageN", n.homepages))
-		add(0, menuSearch, menuLabel("menu.search", "menu.searchN", n.searches))
+		add(0, menuSearch, searchLabel(searchQueries(items)))
 		sep()
 	}
 	recheck := grayedUnless(func(it Item) bool { return it.Recheck })

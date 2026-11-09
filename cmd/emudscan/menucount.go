@@ -3,7 +3,8 @@ package main
 // The right-click menu of the lists says how many things each action acts on, once
 // several items are selected: "Open 3 file locations". What appears several times
 // (two items in the same folder) is counted once, as the action opens or copies it
-// once; Search on Google searches once per software (searchQueries).
+// once; Search on Google searches once per software (searchQueries), and says for
+// what (searchLabel).
 
 import "strings"
 
@@ -13,7 +14,6 @@ type menuCounts struct {
 	files     int // the different files: Open file location
 	folders   int // the different folders: Open software folder
 	homepages int // the different homepages: Open homepage
-	searches  int // the software to search for: Search on Google (searchQueries)
 	rechecks  int // the items that can be scanned again: Scan again
 	paths     int // the different files and folders, with the other places of a finding: Copy paths
 }
@@ -35,7 +35,6 @@ func countMenu(items []Item) menuCounts {
 	n.files = distinct(func(it Item) []string { return []string{it.File} }, items)
 	n.folders = distinct(func(it Item) []string { return []string{it.Folder} }, items)
 	n.homepages = distinct(func(it Item) []string { return []string{it.Homepage()} }, items)
-	n.searches = len(searchQueries(items))
 	n.paths = distinct(func(it Item) []string { return []string{it.File, it.Folder} }, append(append([]Item(nil), items...), copiesOf(items)...))
 	for _, it := range items {
 		if it.Recheck {
@@ -93,6 +92,22 @@ func searchQueries(items []Item) []string {
 		}
 	}
 	return out
+}
+
+// searchLabel is the label of Search on Google: what it searches for (searchQueries),
+// up to three, then how many more. A & would underline the next letter in a menu.
+func searchLabel(qs []string) string {
+	q := make([]any, 0, 3)
+	for _, s := range qs[:min(len(qs), 3)] {
+		q = append(q, strings.ReplaceAll(s, "&", "&&"))
+	}
+	switch len(qs) {
+	case 0:
+		return T("menu.search")
+	case 1, 2, 3:
+		return Tf([]string{"", "menu.search1", "menu.search2", "menu.search3"}[len(qs)], q...)
+	}
+	return Tf("menu.searchMore", append(q, len(qs)-3)...)
 }
 
 // menuLabel is the label of a menu entry that acts on n things: the label for one
