@@ -1,13 +1,14 @@
 #!/bin/sh
 # Publishes a version: run it in Git Bash (or a Linux or macOS terminal) at the
 # root of eMudScan, on main, as docs/building.md says ("Publishing a version"):
-#   sh scripts/release.sh 2.1.0
+#   sh scripts/release.sh 3.1.0
 #
 # Before running it, list the version's changes under "## [Unreleased]" in
 # CHANGELOG.md. The script then:
-# 1. checks that the version follows the current one (2.0.1, 2.1.0 or 3.0.0 after
-#    2.0.0), that nothing is left uncommitted, that main is up to date with
-#    GitHub, and that the changelog has changes to publish;
+# 1. checks that the version follows the current one (3.0.1, 3.1.0 or 4.0.0 after
+#    3.0.0), or, in a repository without any version yet, that it is the one
+#    appVersion gives; that nothing is left uncommitted, that main is up to date
+#    with GitHub, and that the changelog has changes to publish;
 # 2. shows the commit the version is based on, the commits it brings, the changes
 #    of the changelog, and asks for your confirmation: until you answer "y",
 #    nothing changes;
@@ -18,16 +19,16 @@
 #    them);
 # 4. runs the checks and the tests: if they fail, it puts the files back as they
 #    were and stops;
-# 5. commits "chore(release): 2.1.0", pushes it, creates the tag 2.1.0 and pushes
+# 5. commits "chore(release): 3.1.0", pushes it, creates the tag 3.1.0 and pushes
 #    it. GitHub then builds the exe and creates the draft release.
 #
-# On a hotfix branch (hotfix-2.1.1, see "Publishing a hotfix"), it pushes only the
+# On a hotfix branch (hotfix-3.1.1, see "Publishing a hotfix"), it pushes only the
 # tag, not the branch.
 set -e
 fail() { echo "Error: $*" >&2; exit 1; }
 
 v=$1
-echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || fail "usage: sh scripts/release.sh <version>, such as 2.1.0"
+echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || fail "usage: sh scripts/release.sh <version>, such as 3.1.0"
 cd "$(dirname "$0")/.."
 model=cmd/emudscan/model.go
 
@@ -41,17 +42,24 @@ esac
 [ -z "$(git status --porcelain --untracked-files=no)" ] || fail "there are changes that are not committed: commit or stash them first."
 prev=$(sed -n 's/^const appVersion = "\(.*\)"$/\1/p' "$model")
 [ -n "$prev" ] || fail "no appVersion in $model."
-git rev-parse -q --verify "refs/tags/$prev" >/dev/null || fail "there is no tag $prev, the current version."
-pM=${prev%%.*} pr=${prev#*.} pm=${pr%%.*} ph=${pr#*.}
-case "$v" in
-"$pM.$pm.$((ph + 1))" | "$pM.$((pm + 1)).0" | "$((pM + 1)).0.0") ;;
-*) fail "$v does not follow $prev: the next version is $pM.$pm.$((ph + 1)) (hotfix), $pM.$((pm + 1)).0 (minor) or $((pM + 1)).0.0 (major)." ;;
-esac
-git merge-base --is-ancestor "$prev" HEAD || fail "this branch does not contain $prev, the current version."
-if [ "$branch" != main ] && [ "$v" != "$pM.$pm.$((ph + 1))" ]; then
-	fail "on a hotfix branch, the version is $pM.$pm.$((ph + 1))."
+first="" # the first version of a repository without any version yet
+if [ -z "$(git tag -l)" ]; then
+	[ "$v" = "$prev" ] || fail "this repository has no version yet: its first one is $prev, the version in $model."
+	[ "$branch" = main ] || fail "the first version is published from main."
+	first=y
+else
+	git rev-parse -q --verify "refs/tags/$prev" >/dev/null || fail "there is no tag $prev, the current version."
+	pM=${prev%%.*} pr=${prev#*.} pm=${pr%%.*} ph=${pr#*.}
+	case "$v" in
+	"$pM.$pm.$((ph + 1))" | "$pM.$((pm + 1)).0" | "$((pM + 1)).0.0") ;;
+	*) fail "$v does not follow $prev: the next version is $pM.$pm.$((ph + 1)) (hotfix), $pM.$((pm + 1)).0 (minor) or $((pM + 1)).0.0 (major)." ;;
+	esac
+	git merge-base --is-ancestor "$prev" HEAD || fail "this branch does not contain $prev, the current version."
+	if [ "$branch" != main ] && [ "$v" != "$pM.$pm.$((ph + 1))" ]; then
+		fail "on a hotfix branch, the version is $pM.$pm.$((ph + 1))."
+	fi
+	[ -n "$(git rev-list "$prev..HEAD")" ] || fail "there is no commit since $prev: nothing to publish."
 fi
-[ -n "$(git rev-list "$prev..HEAD")" ] || fail "there is no commit since $prev: nothing to publish."
 ! git rev-parse -q --verify "refs/tags/$v" >/dev/null || fail "the tag $v already exists."
 echo "Checking GitHub…"
 git fetch -q origin
@@ -61,19 +69,32 @@ if [ "$branch" = main ]; then
 	[ -z "$(git rev-list HEAD..origin/main)" ] || fail "GitHub's main has commits that yours does not: git pull first."
 	unpushed=$(git log --oneline origin/main..HEAD)
 fi
-changes=$(awk '/^## \[Unreleased\]$/ {on = 1; next} on && /^## \[/ {exit} on' CHANGELOG.md)
+changes=$(awk '/^## \[Unreleased\]$/ {on = 1; next} on && /^(## |\[[^]]*\]: )/ {exit} on' CHANGELOG.md)
 echo "$changes" | grep -q '[^[:space:]]' || fail "CHANGELOG.md has no changes under \"## [Unreleased]\": list the changes of $v there first."
-grep -q '^\[unreleased\]: .*/compare/'"$prev"'\.\.\.HEAD$' CHANGELOG.md || fail "the [unreleased] link at the end of CHANGELOG.md does not compare $prev with HEAD."
+if [ -n "$first" ]; then
+	grep -q '^\[unreleased\]: .*/commits/main$' CHANGELOG.md || fail "the [unreleased] link at the end of CHANGELOG.md does not give the commits of main."
+else
+	grep -q '^\[unreleased\]: .*/compare/'"$prev"'\.\.\.HEAD$' CHANGELOG.md || fail "the [unreleased] link at the end of CHANGELOG.md does not compare $prev with HEAD."
+fi
 
 # 2. what it will publish
 date=$(date +%Y%m%d)
 day=$(date +%Y-%m-%d)
 echo
-echo "Version $v ($date), after $prev, on the branch $branch, based on:"
+if [ -n "$first" ]; then
+	echo "Version $v ($date), the first of this repository, on the branch $branch, based on:"
+else
+	echo "Version $v ($date), after $prev, on the branch $branch, based on:"
+fi
 git log --oneline -n 1 | sed 's/^/  /'
 echo
-echo "Commits since $prev:"
-git log --oneline "$prev..HEAD" | sed 's/^/  /'
+if [ -n "$first" ]; then
+	echo "Commits ($(git rev-list --count HEAD), the last ten):"
+	git log --oneline -n 10 | sed 's/^/  /'
+else
+	echo "Commits since $prev:"
+	git log --oneline "$prev..HEAD" | sed 's/^/  /'
+fi
 if [ -n "$unpushed" ]; then
 	echo
 	echo "Not on GitHub yet, so published with it (check that they are finished):"
@@ -100,12 +121,16 @@ awk -v v="$v" -v d="$date" '
 	/^const appDate = "/ { print "const appDate = \"" d "\""; next }
 	{ print }
 ' "$model" >"$tmp/model" && cp "$tmp/model" "$model"
-awk -v v="$v" -v p="$prev" -v day="$day" '
+# the first version links to its release, the others to their changes since the previous one
+p=$prev
+[ -z "$first" ] || p=""
+awk -v v="$v" -v p="$p" -v day="$day" '
 	$0 == "## [Unreleased]" { print; print ""; print "## [" v "] - " day; next }
 	/^\[unreleased\]: / {
-		base = $0; sub(/^\[unreleased\]: /, "", base); sub(/\/compare\/.*$/, "", base)
+		base = $0; sub(/^\[unreleased\]: /, "", base); sub(/\/(compare|commits)\/.*$/, "", base)
 		print "[unreleased]: " base "/compare/" v "...HEAD"
-		print "[" v "]: " base "/compare/" p "..." v
+		if (p == "") print "[" v "]: " base "/releases/tag/" v
+		else print "[" v "]: " base "/compare/" p "..." v
 		next
 	}
 	{ print }

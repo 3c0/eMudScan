@@ -93,7 +93,7 @@ third-party site:
 - your IP address;
 - the request address, which names eMudScan (`client=emudscan`);
 - a User-Agent that describes eMudScan and your Windows, for example:
-  `eMudScan/2.0.0 (20261105; Windows 11 Pro 25H2 26200.1234; +https://github.com/3c0/eMudScan)`
+  `eMudScan/3.0.0 (20261109; Windows 11 Pro 25H2 26200.1234; +https://github.com/3c0/eMudScan)`
 
 The site’s author sees all three, and the User-Agent may appear verbatim in the
 site’s [public statistics](https://statistics-emudhra.we-have-a-problem.com/).

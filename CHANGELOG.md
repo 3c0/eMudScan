@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Changes since 2.0.0, where this repository starts.
+
 ### Added
 
 - Checks jetbrainsd, the background service of the JetBrains Toolbox App and IDEs, which has its own list of trusted certificates: version 0.9.9728 or later is fixed.
@@ -59,7 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The summary of the certificate bundles is updated after fixes and restores: the files it lists are tested again, instead of keeping the results of the scan.
 - The color codes in the output of some commands, such as git when Scoop updates its buckets, no longer appear as garbage. The console of the Fix window shows these colors, and the report shows the text alone.
 
-## [2.0.0] - 2026-11-05
+## 2.0.0 - 2026-11-05
 
 First public version.
 
@@ -73,5 +75,4 @@ First public version.
 - A report to copy or save. English and French.
 - Changes nothing on your PC until you confirm a fix. Clear the online test, and a scan makes no internet connection at all.
 
-[unreleased]: https://github.com/3c0/eMudScan/compare/2.0.0...HEAD
-[2.0.0]: https://github.com/3c0/eMudScan/releases/tag/2.0.0
+[unreleased]: https://github.com/3c0/eMudScan/commits/main

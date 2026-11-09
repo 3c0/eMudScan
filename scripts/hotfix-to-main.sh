@@ -2,12 +2,12 @@
 # Copies a published hotfix into main, whose history stays linear (no merge
 # commits). Run it on main once the hotfix's tag is pushed, as docs/building.md
 # says ("Publishing a hotfix"):
-#   sh scripts/hotfix-to-main.sh 2.1.1
+#   sh scripts/hotfix-to-main.sh 3.1.1
 #
-# 1. It copies the commits of the hotfix, except "chore(release): 2.1.1", without
+# 1. It copies the commits of the hotfix, except "chore(release): 3.1.1", without
 #    their changes to CHANGELOG.md, which keeps the unreleased changes of main.
 # 2. It adds to CHANGELOG.md the version's section and links, and to model.go its
-#    appVersion and appDate, as in the tag, in a commit "chore(release): add 2.1.1
+#    appVersion and appDate, as in the tag, in a commit "chore(release): add 3.1.1
 #    to main".
 #
 # If a commit conflicts with main elsewhere than in CHANGELOG.md, it stops and says
@@ -18,7 +18,7 @@ fail() { echo "Error: $*" >&2; exit 1; }
 v=$1
 case "$v" in
 [0-9]*.[0-9]*.[0-9]*) ;;
-*) fail "usage: sh scripts/hotfix-to-main.sh <version>, such as 2.1.1" ;;
+*) fail "usage: sh scripts/hotfix-to-main.sh <version>, such as 3.1.1" ;;
 esac
 cd "$(dirname "$0")/.."
 n=${v##*.}

@@ -40,18 +40,21 @@ Its history is linear (no merge commits):
    page, where GitHub keeps line breaks: write each paragraph and each item on a
    single line.
 2. In Git Bash, at the root of eMudScan, on an up-to-date `main` (`git pull`),
-   run `sh scripts/release.sh 2.1.0` with the new version (three numbers, as
+   run `sh scripts/release.sh 3.1.0` with the new version (three numbers, as
    explained at the top of [CHANGELOG.md](../CHANGELOG.md)).
 
-The script first checks that the version follows the current one, that nothing
-is left uncommitted, that `main` is up to date with GitHub, and that the
-changelog has changes to publish. It shows the commit the version is based on,
+The script first checks that the version follows the current one (in a
+repository without any version yet, that it is the one `appVersion` already
+gives, such as 3.0.0, and that the `[unreleased]` link at the end of
+`CHANGELOG.md` gives the commits of `main`), that nothing is left uncommitted,
+that `main` is up to date with GitHub, and that the changelog has changes to
+publish. It shows the commit the version is based on,
 the commits it brings (and those not pushed yet, which it would publish too),
 and the changes, then asks for your confirmation. Only then does it set
 `appVersion` and `appDate` (today) in `cmd/emudscan/model.go`, turn
-`## [Unreleased]` into `## [2.1.0] - <date>` with its links, run the checks and
+`## [Unreleased]` into `## [3.1.0] - <date>` with its links, run the checks and
 the tests (putting the files back if they fail), commit
-`chore(release): 2.1.0`, push it, and create and push the tag `2.1.0`.
+`chore(release): 3.1.0`, push it, and create and push the tag `3.1.0`.
 
 GitHub then builds the exe and checks that the tag matches `appVersion` and that
 `CHANGELOG.md` has a section for this version. It creates a **draft release**
@@ -81,50 +84,50 @@ reused, even after the release is deleted.
 If the GitHub build fails, no draft is created. Fix the problem in a new
 commit and push it, then move the tag to it: the **Version tags** ruleset
 protects tags, so set it to **Disabled** meanwhile, run
-`git push origin :refs/tags/2.1.0`, `git tag -f 2.1.0` and
-`git push origin 2.1.0`, then set it back to **Active**.
+`git push origin :refs/tags/3.1.0`, `git tag -f 3.1.0` and
+`git push origin 3.1.0`, then set it back to **Active**.
 
 ## Publishing a hotfix
 
-A hotfix brings only an urgent fix to the latest version, such as 2.1.1 after
-2.1.0; an older version gets none.
+A hotfix brings only an urgent fix to the latest version, such as 3.1.1 after
+3.1.0; an older version gets none.
 
 - When the commits on `main` since that version can be published with the fix,
   such as documentation changes, commit the fix on `main` and publish it as
-  above: `sh scripts/release.sh 2.1.1`.
+  above: `sh scripts/release.sh 3.1.1`.
 - When `main` holds changes for the next version, publish them with the fix as
-  the next minor version (2.2.0) instead, if they are ready.
+  the next minor version (3.2.0) instead, if they are ready.
 
 Otherwise, publish the hotfix from a branch:
 
 1. Put your work in progress aside: `git stash` the changes not committed, and
    move the commits not pushed yet to a branch (`git branch wip`, then
    `git reset --hard origin/main`).
-2. Create a branch from the version’s tag: `git switch -c hotfix-2.1.1 2.1.0`.
+2. Create a branch from the version’s tag: `git switch -c hotfix-3.1.1 3.1.0`.
 3. Commit the fix there, with its changelog entry, then run
-   `sh scripts/release.sh 2.1.1`: on this branch, it pushes only the tag.
+   `sh scripts/release.sh 3.1.1`: on this branch, it pushes only the tag.
 4. Copy the hotfix into `main`: `git switch main`, then
-   `sh scripts/hotfix-to-main.sh 2.1.1`. It copies the commits of the fix,
+   `sh scripts/hotfix-to-main.sh 3.1.1`. It copies the commits of the fix,
    without merge commits, and leaves the unreleased changes in `CHANGELOG.md` as
-   they are. Then it adds the 2.1.1 section and its links to `CHANGELOG.md`, and
+   they are. Then it adds the 3.1.1 section and its links to `CHANGELOG.md`, and
    its version to `model.go`, as in the tag, in a commit
-   `chore(release): add 2.1.1 to main`. If a commit of the fix conflicts with
+   `chore(release): add 3.1.1 to main`. If a commit of the fix conflicts with
    `main`, it stops and says how to go on.
 5. Finish in `main`:
    - `git push`: sends to GitHub what `hotfix-to-main.sh` added to your `main`,
-     the fix and `chore(release): add 2.1.1 to main`, so that the next version
+     the fix and `chore(release): add 3.1.1 to main`, so that the next version
      includes the fix. No tag to create: `release.sh` already created and pushed
-     `2.1.1`, on the hotfix branch.
-   - `git branch -D hotfix-2.1.1`: deletes the branch, which is no longer
+     `3.1.1`, on the hotfix branch.
+   - `git branch -D hotfix-3.1.1`: deletes the branch, which is no longer
      needed. `-D` because Git sees that its commits are not in `main` (only
-     copies of them are) and would refuse `-d`. Nothing is lost: the tag `2.1.1`
+     copies of them are) and would refuse `-d`. Nothing is lost: the tag `3.1.1`
      keeps them.
    - If you moved commits to `wip` at the start, put them back on `main`, after
      the fix:
      - `git switch wip`, then `git rebase main`: replays your commits on top of
        the fix, as if you had started them after it. Where `CHANGELOG.md`
        conflicts, keep both sides: your entries under `## [Unreleased]`, the
-       2.1.1 section below.
+       3.1.1 section below.
      - `git switch main`, then `git merge --ff-only wip`: moves `main` forward
        to your commits, without a merge commit.
      - `git branch -d wip`: deletes `wip`, whose commits are now in `main`.
@@ -132,7 +135,7 @@ Otherwise, publish the hotfix from a branch:
 
 A build that is not of a release, that is of a commit other than the one tagged
 with `appVersion`, or with changes not yet committed, shows “+dev” and its commit
-instead of the date: “2.0.0+dev (ae7832d)”, or “2.0.0+dev (ae7832d-modified)”. It
+instead of the date: “3.0.0+dev (ae7832d)”, or “3.0.0+dev (ae7832d-modified)”. It
 does so in the window title, the report and the User-Agent of the online test,
 so that a report tells which code produced it. The build scripts set it from git
 (`-ldflags "-X main.buildRev=…"`); the GitHub build of a version tag is a release.
