@@ -1,4 +1,4 @@
-eMudScan checks whether Windows and the software installed on your PC still trust the eight eMudhra intermediate CA certificates compromised in October 2026, tells you what to do about each one, and fixes what it can, once you confirm.
+eMudScan checks whether Windows and the software installed on your PC still trust the eight eMudhra intermediate CA certificates compromised in October 2026, tells you what to do about each one, and helps you fix them: once you confirm, it runs the fixes for you.
 
 **Download `eMudScan.exe` below and run it:** nothing to install. It runs without administrator rights; for a fix that needs them, Windows asks your permission. It is not code-signed, so Windows SmartScreen may show it as an unrecognized app: select **More info**, then **Run anyway**.
 
