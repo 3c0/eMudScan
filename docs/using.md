@@ -269,7 +269,7 @@ Once you accept:
    takes effect the next time it starts.
 
 <p align="center">
-  <img src="images/fix-results.png" width="860" alt="The Fix software window after the fix of Inkscape: each command with “✓ Done” at the end of its line, Inkscape checked again and fixed, and the report saved in the Downloads folder">
+  <img src="images/fix-results.png" width="860" alt="The Fix software window after the fix of Inkscape: a green ✓ before each command, Inkscape checked again and fixed, with a link to its detailed information, and the link to the report saved in the Downloads folder">
 </p>
 
 The **Fix software** window then saves the report in your Downloads folder, and
