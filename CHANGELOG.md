@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-11-10
+
 ### Changed
 
 - In the main window, when a border between two frames is released over a line of the log or a row of a list, that line or row is shown whole if at least half of it was shown, and hidden otherwise, instead of always hidden.
@@ -86,4 +88,5 @@ First public version.
 - A report to copy or save. English and French.
 - Changes nothing on your PC until you confirm a fix. Clear the online test, and a scan makes no internet connection at all.
 
-[unreleased]: https://github.com/3c0/eMudScan/commits/main
+[unreleased]: https://github.com/3c0/eMudScan/compare/3.0.1...HEAD
+[3.0.1]: https://github.com/3c0/eMudScan/releases/tag/3.0.1
