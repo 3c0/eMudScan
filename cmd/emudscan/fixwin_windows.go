@@ -1008,6 +1008,14 @@ func (d *fixDlg) layout(a *ui) {
 			part = .3
 		}
 		d.listH = max(a.listHeight(d.list, 1), min(int32(float64(d.room)*part), d.room-s(170)))
+		// whole rows, as in the lists of the main window: the height is rounded down so
+		// that no row is cut at the bottom; not while the bar is dragged, which follows
+		// the mouse until it is released (then it goes to the nearest row: see release)
+		if base := a.listHeight(d.list, 0); !d.drag {
+			if row := a.listHeight(d.list, 1) - base; row > 0 {
+				d.listH = base + max((d.listH-base)/row, 1)*row
+			}
+		}
 		listH := d.listH
 		lw := rc.Right - 2*m
 		a.move(d.list, m, top, lw, listH)
@@ -1040,6 +1048,20 @@ func (d *fixDlg) layout(a *ui) {
 		x -= s(8)
 	}
 	pInvalidateRect.Call(d.hwnd, 0, 1)
+}
+
+// release ends the drag of the bar below the list, whose height is rounded to the
+// nearest whole row: the row under the bar is shown whole when at least half of it
+// shows, and hidden otherwise; layout rounds down again if the console would not keep
+// its room.
+func (d *fixDlg) release(a *ui) {
+	d.drag = false
+	base := a.listHeight(d.list, 0)
+	if row := a.listHeight(d.list, 1) - base; row > 0 && d.room > 0 {
+		n := max((2*(d.listH-base)+row)/(2*row), 1)
+		d.part = (float64(base+n*row) + .5) / float64(d.room) // .5: layout's int32() rounds down
+	}
+	d.layout(a)
 }
 
 // paint draws the black frame of the console and a thin line above the buttons.
@@ -1426,7 +1448,9 @@ func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			}
 			return 0
 		case wmCaptureChanged:
-			d.drag = false
+			if d.drag {
+				d.release(a)
+			}
 			return 0
 		case wmTimer:
 			if wParam == timerFront {
