@@ -10,8 +10,10 @@
 
 <p align="center">
   <b>Does your PC still trust the compromised eMudhra certificates?</b><br>
-  eMudScan checks Windows and the software installed on your PC, tells you what to do about each one, and runs the fixes you select.<br>
-  Intended for administrators, developers and advanced users.
+  eMudScan checks Windows and the software installed on your PC,<br>
+  tells you what to do about each one,<br>
+  and runs the fixes you select.<br>
+  It is a technical tool for advanced users: security researchers, administrators and developers.
 </p>
 
 <p align="center">
