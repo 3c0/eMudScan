@@ -14,9 +14,7 @@
 #    nothing changes;
 # 3. sets appVersion and appDate (today) in cmd/emudscan/model.go, turns
 #    "## [Unreleased]" into the version's section in CHANGELOG.md, with its links,
-#    and regenerates the Windows resources (except on Windows, where
-#    scripts\build.ps1 uses the committed file and the GitHub build regenerates
-#    them);
+#    and regenerates the Windows resources;
 # 4. runs the checks and the tests: if they fail, it puts the files back as they
 #    were and stops;
 # 5. commits "chore(release): 3.1.0", pushes it, creates the tag 3.1.0 and pushes
@@ -135,10 +133,7 @@ awk -v v="$v" -v p="$p" -v day="$day" '
 	}
 	{ print }
 ' CHANGELOG.md >"$tmp/changelog" && cp "$tmp/changelog" CHANGELOG.md
-case "$(uname -s)" in
-MINGW* | MSYS* | CYGWIN*) echo "Windows: the Windows resources are not regenerated (the GitHub build does it)." ;;
-*) go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso || restore "the Windows resources could not be regenerated." ;;
-esac
+go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso || restore "the Windows resources could not be regenerated."
 
 # 4. checks and tests
 echo "Checking and testing…"

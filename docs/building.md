@@ -4,7 +4,7 @@
 
 | Path | Contents |
 |---|---|
-| `cmd/emudscan/` | The program (Go, one package), its tests, and `rsrc_windows_amd64.syso` (icon, manifest, version information) |
+| `cmd/emudscan/` | The program (Go, one package), its tests, and `rsrc_windows_amd64.syso` (icon, manifest, version information), with `icon256.png`, the 256-pixel icon it contains |
 | `data/` | The reference data from emudhra.we-have-a-problem.com, with its notice and license, Go’s license and a copy of `LICENSE`, all embedded in the program, except the two chains of `chains/rollover`, which only the tests use |
 | `docs/` | This documentation; `docs/images/` holds the screenshots and icons shown here and in the README (the icons are drawn by eMudScan’s own code, `cmd/emudscan/icons.go`) |
 | `scripts/` | Build scripts for your own PC, and the scripts that publish a version (`release.sh`) and copy a hotfix into `main` (`hotfix-to-main.sh`) |
@@ -169,9 +169,21 @@ none). Its window title and its report say SIMULATION. The normal build contains
 none of this: the simulation is compiled only with the `simulate` build tag,
 which the GitHub build never sets.
 
-`scripts/build.sh` and the GitHub build also regenerate the Windows resources
-(`rsrc_windows_amd64.syso`), so that the file’s properties show the version set
-in `model.go`. `scripts/build.ps1` uses the committed file.
+Every build also regenerates the Windows resources (`rsrc_windows_amd64.syso`:
+the icon, the manifest and the version information), so that the file’s
+properties show the version set in `model.go`: `scripts/build.ps1`,
+`scripts/build.sh`, `scripts/release.sh` and the GitHub build. The result is the
+same with any Go version and on any system, so the committed file never shows
+as changed and the exe does not say it was built from modified files; a test
+checks that the committed file is up to date.
+
+The 256-pixel icon is the only part that needs care: Go’s PNG compression
+changes from one Go version to another, so the resources take it as it is from
+`cmd/emudscan/icon256.png`, compressed once. If you change the drawing of the
+application icon (`icons.go`), a test fails until you write it again:
+`go run ./cmd/emudscan --make-icon256 cmd/emudscan/icon256.png`, then compress
+it with a PNG optimizer that keeps 8-bit RGBA, the exact pixels (no alpha
+optimization), no interlacing and no metadata, and regenerate the resources.
 
 ## Notes
 

@@ -1,5 +1,3 @@
-//go:build !windows
-
 package main
 
 // Generates rsrc_windows_amd64.syso: a COFF object holding the Windows
@@ -8,10 +6,14 @@ package main
 //
 //   go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso
 //
-// (from the root of the repository; scripts/build.sh does it before each build)
+// (from the root of the repository, on any system). Every build regenerates it:
+// scripts/build.sh, scripts\build.ps1, scripts/release.sh and the GitHub build. The
+// result is the same with any Go version, so the committed file never shows as
+// changed; TestSysoUpToDate checks that it is up to date.
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/binary"
 	"fmt"
 	"image"
@@ -21,6 +23,19 @@ import (
 	"strings"
 	"unicode/utf16"
 )
+
+// icon256PNG is the 256-pixel application icon, as renderIcon draws it, compressed
+// once: Go's PNG compression changes from one Go version to another, which would
+// change the Windows resources, and the exe would say it was built from modified
+// files. TestIcon256 checks that it is still the icon of renderIcon; when the
+// drawing changes, write it again with
+//
+//	go run ./cmd/emudscan --make-icon256 cmd/emudscan/icon256.png
+//
+// then compress it, as docs/building.md says.
+//
+//go:embed icon256.png
+var icon256PNG []byte
 
 // manifestXML is the application manifest; {{version}} is replaced by the version
 // in four numbers ("1.0.0.0").
@@ -71,7 +86,7 @@ const (
 func le16(b *bytes.Buffer, v uint16) { binary.Write(b, binary.LittleEndian, v) }
 func le32(b *bytes.Buffer, v uint32) { binary.Write(b, binary.LittleEndian, v) }
 
-func utf16z(s string) []byte {
+func utf16zLE(s string) []byte {
 	u := append(utf16.Encode([]rune(s)), 0)
 	b := make([]byte, len(u)*2)
 	for i, c := range u {
@@ -86,16 +101,13 @@ func pad4(b *bytes.Buffer) {
 	}
 }
 
-// iconImage encodes one icon image: PNG for 256 px, otherwise a 32-bit DIB with AND mask.
+// iconImage encodes one icon image: the PNG of icon256PNG for 256 px, otherwise a
+// 32-bit DIB with AND mask.
 func iconImage(size int) []byte {
-	px := renderIcon(iconApp, size)
-	if size >= 256 {
-		img := image.NewNRGBA(image.Rect(0, 0, size, size))
-		copy(img.Pix, px)
-		var b bytes.Buffer
-		png.Encode(&b, img)
-		return b.Bytes()
+	if size == 256 {
+		return icon256PNG
 	}
+	px := renderIcon(iconApp, size)
 	var b bytes.Buffer
 	maskRow := ((size + 31) / 32) * 4
 	le32(&b, 40)
@@ -133,7 +145,7 @@ func versionNode(key string, typ uint16, value []byte, valueLen uint16, children
 	le16(&b, 0) // wLength, patched below
 	le16(&b, valueLen)
 	le16(&b, typ)
-	b.Write(utf16z(key))
+	b.Write(utf16zLE(key))
 	pad4(&b)
 	b.Write(value)
 	for _, c := range children {
@@ -165,7 +177,7 @@ func versionResource() []byte {
 		le32(&ffi, x)
 	}
 	str := func(k, val string) []byte {
-		return versionNode(k, 1, utf16z(val), uint16(len(utf16.Encode([]rune(val)))+1))
+		return versionNode(k, 1, utf16zLE(val), uint16(len(utf16.Encode([]rune(val)))+1))
 	}
 	table := versionNode("040904b0", 1, nil, 0,
 		str("FileDescription", "eMudScan"), // the name Task Manager, SmartScreen and the UAC prompt show
@@ -284,7 +296,10 @@ func buildResourceSection(items []resItem) ([]byte, []uint32) {
 	return sec, relocs
 }
 
-func writeSyso(path string) error {
+func writeSyso(path string) error { return os.WriteFile(path, sysoBytes(), 0o644) }
+
+// sysoBytes is the content of rsrc_windows_amd64.syso.
+func sysoBytes() []byte {
 	sec, relocs := buildResourceSection(resourceItems())
 	var b bytes.Buffer
 	const hdr, shdr = 20, 40
@@ -323,7 +338,44 @@ func writeSyso(path string) error {
 	b.WriteByte(3)
 	b.WriteByte(0)
 	le32(&b, 4) // empty string table
-	return os.WriteFile(path, b.Bytes(), 0o644)
+	return b.Bytes()
+}
+
+// icon256Encoded is the 256-pixel application icon as renderIcon draws it, encoded
+// by Go's PNG encoder: what --make-icon256 writes, to be compressed.
+func icon256Encoded() []byte {
+	img := image.NewNRGBA(image.Rect(0, 0, 256, 256))
+	copy(img.Pix, renderIcon(iconApp, 256))
+	var b bytes.Buffer
+	png.Encode(&b, img)
+	return b.Bytes()
+}
+
+// toolCommand runs the commands that make files from the source, on any system:
+// --make-syso (the Windows resources), --make-ico (the icon as a .ico file) and
+// --make-icon256 (the 256-pixel icon, to compress into icon256.png), each followed
+// by the path of the file to write. It reports whether args is one of them; it
+// exits with status 1 if the file cannot be written.
+func toolCommand(args []string) bool {
+	if len(args) != 2 {
+		return false
+	}
+	var err error
+	switch args[0] {
+	case "--make-syso":
+		err = writeSyso(args[1])
+	case "--make-ico":
+		err = writeICO(args[1])
+	case "--make-icon256":
+		err = os.WriteFile(args[1], icon256Encoded(), 0o644)
+	default:
+		return false
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	return true
 }
 
 // writeICO saves the application icon as a .ico file (for documentation and checks).

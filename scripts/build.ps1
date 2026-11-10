@@ -1,7 +1,7 @@
 # Builds dist\eMudScan.exe on Windows (PowerShell): .\scripts\build.ps1
-# Checks and tests the code, then compiles it. The Windows resources
-# (cmd\emudscan\rsrc_windows_amd64.syso) can only be regenerated on Linux or macOS, by
-# scripts/build.sh or the GitHub build; this script uses the file as it is.
+# Checks and tests the code, regenerates the Windows resources
+# (cmd\emudscan\rsrc_windows_amd64.syso), as scripts/build.sh and the GitHub
+# build do, then compiles it.
 # .\scripts\build.ps1 -Simulate builds dist\eMudScan-simulation.exe instead, whose
 # Fix function runs nothing (see cmd\emudscan\fixsim_on.go).
 param([switch]$Simulate)
@@ -31,6 +31,8 @@ if ($Simulate) { $tags, $out = 'simulate', 'dist\eMudScan-simulation.exe' }
 go vet -tags "$tags" ./...
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 go test -tags "$tags" ./...
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+go run ./cmd/emudscan --make-syso cmd\emudscan\rsrc_windows_amd64.syso
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 go build -trimpath -tags "$tags" -ldflags $ldflags -o $out ./cmd/emudscan
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

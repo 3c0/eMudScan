@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The exe built by GitHub no longer says, in its Go build information, that it was built from modified files (“+dirty”): the Windows resources (icon, manifest, version information) now come out the same with any Go version.
+
 ## [3.0.1] - 2026-11-10
 
 ### Changed

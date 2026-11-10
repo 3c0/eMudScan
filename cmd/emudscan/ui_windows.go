@@ -2577,6 +2577,9 @@ func registerClass(inst uintptr, name string, proc uintptr, icon, iconSm, cursor
 }
 
 func main() {
+	if toolCommand(os.Args[1:]) { // --make-syso…, run by the build scripts: no window
+		return
+	}
 	runtime.LockOSThread()
 	// language: Windows display language, unless --en or --fr is given (nothing is saved)
 	setLangFromCode(userUILanguage())

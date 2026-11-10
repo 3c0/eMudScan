@@ -1,7 +1,9 @@
 package main
 
 // Tiny vector rasterizer for the status icons and the application icon, so the
-// program needs no image files and icons stay sharp at every DPI.
+// program needs no image files and icons stay sharp at every DPI. The only image
+// file is icon256.png, the 256-pixel icon of the Windows resources, drawn here and
+// compressed once (see icon256PNG in mkrsrc.go).
 
 import "math"
 

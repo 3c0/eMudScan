@@ -5,7 +5,8 @@ package main
 // Command-line runner used to test the checks on other systems (from the root of
 // the repository):
 //   go run ./cmd/emudscan [--fr] [folders to scan...]
-//   go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso
+// The commands that make files from the source (--make-syso…) work on any system:
+// see toolCommand in mkrsrc.go.
 
 import (
 	"fmt"
@@ -68,18 +69,7 @@ func main() {
 		}
 		return
 	}
-	if len(args) == 2 && (args[0] == "--make-syso" || args[0] == "--make-ico") {
-		loadData()
-		var err error
-		if args[0] == "--make-syso" {
-			err = writeSyso(args[1])
-		} else {
-			err = writeICO(args[1])
-		}
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	if toolCommand(args) {
 		return
 	}
 	for _, a := range args {
