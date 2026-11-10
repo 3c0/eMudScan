@@ -153,7 +153,9 @@ You need Go 1.24 or later, and nothing else. From the root of the repository:
 - Windows (PowerShell): `.\scripts\build.ps1`
 - Linux or macOS: `./scripts/build.sh`
 
-Both run the checks and the tests, then write `dist/eMudScan.exe`.
+Both run the checks and the tests, regenerate the Windows resources, then write
+`dist/eMudScan.exe`. Each line they show starts with the time since the line
+before it and since the start, such as `[+02.40 06.90]`.
 
 To test the Fix function without changing anything, `.\scripts\build.ps1 -Simulate`
 (or `./scripts/build.sh --simulate`) writes `dist/eMudScan-simulation.exe`

@@ -28,12 +28,30 @@ $ldflags = '-s -w -H windowsgui'
 if ($rev) { $ldflags += " -X main.buildRev=$rev" }
 $tags, $out = '', 'dist\eMudScan.exe'
 if ($Simulate) { $tags, $out = 'simulate', 'dist\eMudScan-simulation.exe' }
-go vet -tags "$tags" ./...
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-go test -tags "$tags" ./...
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-go run ./cmd/emudscan --make-syso cmd\emudscan\rsrc_windows_amd64.syso
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-go build -trimpath -tags "$tags" -ldflags $ldflags -o $out ./cmd/emudscan
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-Write-Host $out
+
+# Each line starts with the time since the line before it and since the start, such
+# as "[+02.40 06.90]": each stage says what it does, and the times show which one
+# takes long.
+$clock = [Diagnostics.Stopwatch]::StartNew()
+$script:last = $null
+function Say([string]$text) {
+    $now = $clock.Elapsed.TotalSeconds
+    $sign, $delta = '+', ($now - $script:last)
+    if ($null -eq $script:last) { $sign, $delta = ' ', 0.0 }
+    $script:last = $now
+    $inv = [Globalization.CultureInfo]::InvariantCulture # 02.40, not 02,40
+    Write-Host ('[' + $sign + $delta.ToString('00.00', $inv) + ' ' + $now.ToString('00.00', $inv) + '] ' + $text)
+}
+# Run says the stage, runs its command and says each line that the command writes;
+# it stops the script if the command fails.
+function Run([string]$stage, [scriptblock]$command) {
+    Say $stage
+    $ErrorActionPreference = 'Continue' # what a command writes to stderr is a line like the others
+    & $command 2>&1 | ForEach-Object { Say "$_" }
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+Run 'Checking the code (go vet)...' { go vet -tags "$tags" ./... }
+Run 'Running the tests (go test)...' { go test -tags "$tags" ./... }
+Run 'Regenerating the Windows resources...' { go run ./cmd/emudscan --make-syso cmd\emudscan\rsrc_windows_amd64.syso }
+Run "Building $out..." { go build -trimpath -tags "$tags" -ldflags $ldflags -o $out ./cmd/emudscan }
+Say "Done: $out"
