@@ -60,9 +60,13 @@ GitHub then builds the exe and checks that the tag matches `appVersion` and that
 `CHANGELOG.md` has a section for this version. It creates a **draft release**
 with `eMudScan.exe` and a page made from `.github/release-notes.md`: the text
 around `@CHANGES@` is the same for every version, `@CHANGES@` is replaced by the
-changelog section, and the SHA-256 and the build log are filled in. It also
-records a build attestation proving that GitHub built the exe from this tag.
-Anyone can verify a copy with
+changes since the previous version published in this repository (its highest
+version tag below this one): the version’s section of the changelog, then, each
+under its own heading, the sections of the versions in between that have no
+release here. Without such a tag, the previous version is the one this
+repository starts from, the `appVersion` of its first commit. The SHA-256 and
+the build log are filled in too. It also records a build attestation proving
+that GitHub built the exe from this tag. Anyone can verify a copy with
 `gh attestation verify eMudScan.exe -R <owner>/<repository>`.
 
 Download `eMudScan.exe` from the draft and scan it with
