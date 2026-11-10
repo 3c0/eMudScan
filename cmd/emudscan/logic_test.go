@@ -442,15 +442,19 @@ func TestProgramVersionFromOnePlace(t *testing.T) {
 	}
 }
 
-// The top of the report: eMudScan's version and the date, Windows, then who made
-// eMudScan.
+// The top of the report: eMudScan's version and the date, the name of the PC and its
+// Windows (Windows alone when the name is unknown), then who made eMudScan.
 func TestReportHeader(t *testing.T) {
-	rep := strings.ReplaceAll(buildReport(newChecker(nopReporter{}, nil), ""), "\r\n", "\n")
-	lines := strings.SplitN(rep, "\n", 6)
-	line := strings.Repeat("=", 78)
-	if len(lines) < 6 || lines[0] != line || lines[4] != line ||
-		!strings.HasPrefix(lines[1], T("report.title")+" "+appVersionDate()+simulationMark+" · ") ||
-		lines[2] != windowsVersionString() || lines[3] != Tf("report.by", appAuthor, appURL) {
-		t.Errorf("top of the report:\n%s", strings.Join(lines[:min(5, len(lines))], "\n"))
+	defer func(f func() string) { computerName = f }(computerName)
+	for name, want := range map[string]string{"MY-PC": "MY-PC · " + windowsVersionString(), "": windowsVersionString()} {
+		computerName = func() string { return name }
+		rep := strings.ReplaceAll(buildReport(newChecker(nopReporter{}, nil), ""), "\r\n", "\n")
+		lines := strings.SplitN(rep, "\n", 6)
+		line := strings.Repeat("=", 78)
+		if len(lines) < 6 || lines[0] != line || lines[4] != line ||
+			!strings.HasPrefix(lines[1], T("report.title")+" "+appVersionDate()+simulationMark+" · ") ||
+			lines[2] != want || lines[3] != Tf("report.by", appAuthor, appURL) {
+			t.Errorf("top of the report (PC %q):\n%s", name, strings.Join(lines[:min(5, len(lines))], "\n"))
+		}
 	}
 }

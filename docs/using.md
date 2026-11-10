@@ -306,8 +306,11 @@ are back; if it needs fixing, its detailed information offers
 
 **Copy report** and **Save report** (UTF-8 text) include every item, with the
 same explanations as the detailed information windows and, after fixes, the
-commands that ran and what they showed. Apart from the fixes, saving a report is
-the only time eMudScan writes a file.
+commands that ran and what they showed. Its top gives eMudScan’s version, the
+date, the name of your PC and its Windows version. Before you share a report,
+remove what you want to keep private, such as the name of your PC or your user
+name in the paths. Apart from the fixes, saving a report is the only time
+eMudScan writes a file.
 
 ## Keyboard shortcuts
 

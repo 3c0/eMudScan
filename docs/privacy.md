@@ -122,3 +122,7 @@ you select to scan, and a certificate bundle on a network share that one of your
 certificate settings names, as the software that uses that setting reads it.
 Links in the detailed information windows (homepages, web searches, test pages)
 open in your browser only when you click them.
+
+A report that you copy or save names your PC and its Windows version, and gives
+the paths of the files found: remove what you want to keep private before you
+share it.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
@@ -85,13 +86,27 @@ func reportMark(m string) string {
 	return m
 }
 
+// computerName is the name of this PC, shown at the top of the report so that one
+// can tell on which PC a report was made; empty when Windows does not give it.
+var computerName = func() string {
+	name, err := os.Hostname()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(name)
+}
+
 // buildReport renders all results and the log as plain text (CRLF line ends).
 func buildReport(c *checker, logText string) string {
 	var b strings.Builder
 	line := strings.Repeat("=", 78)
-	// eMudScan's version and the date, Windows, then who made eMudScan
+	// eMudScan's version and the date, the PC and its Windows, then who made eMudScan
+	pc := windowsVersionString()
+	if name := computerName(); name != "" {
+		pc = name + " · " + pc
+	}
 	fmt.Fprintf(&b, "%s\n%s %s · %s\n%s\n%s\n%s\n\n", line, T("report.title"), appVersionDate()+simulationMark, time.Now().Format("2006-01-02 15:04"),
-		windowsVersionString(), Tf("report.by", appAuthor, appURL), line)
+		pc, Tf("report.by", appAuthor, appURL), line)
 	// the sections are separated by the bar of the fixes (fixBar), with one empty line
 	// before and after it; once, after the fixes, which end with it
 	separate := func() {

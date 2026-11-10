@@ -8,7 +8,7 @@ body:
     attributes:
       value: |
         Thank you. Open the software’s item in eMudScan (double-click), click **Copy all** and paste the text below: it contains everything eMudScan knows about that software.
-        Before pasting, remove what you want to keep private (your user name in folder names, for example).
+        Before pasting, remove what you want to keep private (the name of your PC at the top of the report, or your user name in folder names, for example).
   - type: input
     id: version
     attributes:

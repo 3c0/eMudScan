@@ -8,7 +8,7 @@ body:
     attributes:
       value: |
         Thank you for the report. If eMudScan judges software incorrectly, please use the **False detection** form instead.
-        Before pasting anything, remove what you want to keep private (your user name in folder names, for example).
+        Before pasting anything, remove what you want to keep private (the name of your PC at the top of the report, or your user name in folder names, for example).
   - type: input
     id: version
     attributes:

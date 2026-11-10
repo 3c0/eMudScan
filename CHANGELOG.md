@@ -24,6 +24,7 @@ Changes since 2.0.0, where this repository starts.
 - **Fix**, in the right-click menu of the lists, opens the Fix software window for the selected items that can be fixed, such as “Fix 3 items…”.
 - After the fixes, each result of the checks in the console of the Fix software window ends with a link to the detailed information of its software, such as “Detailed information on Inkscape…”.
 - The PowerShell commands, in the detailed information and in the Fix window, are shown in the colors that PowerShell 7 gives them.
+- The top of the report names the PC it was made on.
 
 ### Changed
 
