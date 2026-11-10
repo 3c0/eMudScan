@@ -64,16 +64,18 @@ changes since the previous version published in this repository (its highest
 version tag below this one): the version’s section of the changelog, then, each
 under its own heading, the sections of the versions in between that have no
 release here. Without such a tag, the previous version is the one this
-repository starts from, the `appVersion` of its first commit. The SHA-256 and
-the build log are filled in too. It also records a build attestation proving
-that GitHub built the exe from this tag. Anyone can verify a copy with
-`gh attestation verify eMudScan.exe -R <owner>/<repository>`.
+repository starts from, the `appVersion` of its first commit. The SHA-256, the
+build log and the date of the release are filled in too. It also records a build
+attestation proving that GitHub built the exe from this tag. Anyone can verify a
+copy with `gh attestation verify eMudScan.exe -R <owner>/<repository>`.
 
 Download `eMudScan.exe` from the draft and scan it with
-[Jotti’s malware scan](https://virusscan.jotti.org/en-US). In the draft, replace
-the comment under the first paragraph with the line that it gives, completed
-with the date of the scan, the number of antivirus engines and the link to the
-results, so that the release page shows that the exe was tested clean.
+[Jotti’s malware scan](https://virusscan.jotti.org/en-US). In the draft,
+complete the **Tested clean** line under the first paragraph, so that the
+release page shows that the exe was tested clean: replace `JOTTI_SCAN_ID` (a
+double-click selects it) with the ID at the end of the address of the results,
+and the number of antivirus engines if Jotti used another one. Its date is the
+date of the release: change it if you scan on another day.
 
 Antivirus engines update their detections all the time: scan the exe again a day
 or more after the release, then edit the notes of the published release with the

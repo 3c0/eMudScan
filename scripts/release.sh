@@ -159,7 +159,7 @@ echo
 echo "Done: $v is committed, tagged and pushed."
 echo "Next, as docs/building.md says:"
 echo "  1. Wait for the build: $repo/actions"
-echo "  2. Check the draft release, scan its eMudScan.exe on Jotti and add the line: $repo/releases"
+echo "  2. Check the draft release, scan its eMudScan.exe on Jotti and complete its Tested clean line: $repo/releases"
 echo "  3. Publish it."
 if [ "$branch" != main ]; then
 	echo "  4. Copy the hotfix into main: git switch main, then sh scripts/hotfix-to-main.sh $v"

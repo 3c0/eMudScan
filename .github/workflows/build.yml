@@ -101,12 +101,14 @@ jobs:
             exit 1
           fi
           # The release page: .github/release-notes.md, with the version's changes,
-          # the SHA-256 of the exe, the build log and the repository filled in.
+          # the SHA-256 of the exe, the build log, the repository and the date of the
+          # release (for the line of the Jotti scan) filled in.
           sha=$(sha256sum dist/eMudScan.exe | cut -d ' ' -f 1)
           log="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          awk -v sha="$sha" -v url="$log" -v repo="$GITHUB_REPOSITORY" '
+          day="${date:0:4}-${date:4:2}-${date:6:2}"
+          awk -v sha="$sha" -v url="$log" -v repo="$GITHUB_REPOSITORY" -v day="$day" '
             $0 == "@CHANGES@" { while ((getline line < "changes.md") > 0) print line; next }
-            { gsub(/@SHA256@/, sha); gsub(/@BUILD_LOG@/, url); gsub(/@REPOSITORY@/, repo); print }
+            { gsub(/@SHA256@/, sha); gsub(/@BUILD_LOG@/, url); gsub(/@REPOSITORY@/, repo); gsub(/@DATE@/, day); print }
           ' .github/release-notes.md > notes.md
           echo "TITLE=eMudScan $version ($date)" >> "$GITHUB_ENV"
 
