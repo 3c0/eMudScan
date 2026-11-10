@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 $env:CGO_ENABLED = '0'
 # A build that is not of a release (the commit tagged with appVersion, unchanged)
-# shows its commit instead of the date: "3.0.0+dev (ae7832d)", "3.0.0+dev (ae7832d-modified)".
+# shows its commit instead of the date: "3.0.1+dev (ae7832d)", "3.0.1+dev (ae7832d-modified)".
 $rev = ''
 if (Get-Command git -ErrorAction SilentlyContinue) {
     $ErrorActionPreference = 'Continue' # git writes to stderr when there is no tag

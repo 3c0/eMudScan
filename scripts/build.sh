@@ -11,7 +11,7 @@ if [ "$1" = "--simulate" ]; then
 	tags=simulate out=dist/eMudScan-simulation.exe
 fi
 # A build that is not of a release (the commit tagged with appVersion, unchanged)
-# shows its commit instead of the date: "3.0.0+dev (ae7832d)", "3.0.0+dev (ae7832d-modified)".
+# shows its commit instead of the date: "3.0.1+dev (ae7832d)", "3.0.1+dev (ae7832d-modified)".
 # The GitHub build of a tag is a release (the workflow checks the tag).
 rev=""
 if [ "$GITHUB_REF_TYPE" != "tag" ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then

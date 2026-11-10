@@ -19,4 +19,4 @@ Click **Report a vulnerability** on the [Security tab](https://github.com/3c0/eM
 
 ## Supported versions
 
-Only the latest version receives security fixes. They are published as a new version: a minor version (3.1.0) or a hotfix version (3.0.1).
+Only the latest version receives security fixes. They are published as a new version: a minor version (3.1.0) or a hotfix version (3.0.2).

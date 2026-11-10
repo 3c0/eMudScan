@@ -13,8 +13,8 @@ body:
     id: version
     attributes:
       label: eMudScan version
-      description: As shown in the window title, for example “3.0.0 (20261109)”.
-      placeholder: "3.0.0 (20261109)"
+      description: As shown in the window title, for example “3.0.1 (20261110)”.
+      placeholder: "3.0.1 (20261110)"
     validations:
       required: true
   - type: input

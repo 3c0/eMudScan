@@ -44,8 +44,8 @@ Its history is linear (no merge commits):
    explained at the top of [CHANGELOG.md](../CHANGELOG.md)).
 
 The script first checks that the version follows the current one (in a
-repository without any version yet, that it is the one `appVersion` already
-gives, such as 3.0.0, and that the `[unreleased]` link at the end of
+repository without any version tag yet, that it is the one `appVersion`
+already gives, such as 3.0.1, and that the `[unreleased]` link at the end of
 `CHANGELOG.md` gives the commits of `main`), that nothing is left uncommitted,
 that `main` is up to date with GitHub, and that the changelog has changes to
 publish. It shows the commit the version is based on,
@@ -139,7 +139,7 @@ Otherwise, publish the hotfix from a branch:
 
 A build that is not of a release, that is of a commit other than the one tagged
 with `appVersion`, or with changes not yet committed, shows “+dev” and its commit
-instead of the date: “3.0.0+dev (ae7832d)”, or “3.0.0+dev (ae7832d-modified)”. It
+instead of the date: “3.0.1+dev (ae7832d)”, or “3.0.1+dev (ae7832d-modified)”. It
 does so in the window title, the report and the User-Agent of the online test,
 so that a report tells which code produced it. The build scripts set it from git
 (`-ldflags "-X main.buildRev=…"`); the GitHub build of a version tag is a release.

@@ -3,7 +3,7 @@
 What is planned for the next versions of eMudScan. Plans can change: the
 [changelog](../CHANGELOG.md) lists what each version actually brings.
 
-## After 3.0.0
+## After 3.0.1
 
 Possible minor versions, in no fixed order:
 

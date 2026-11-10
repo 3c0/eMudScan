@@ -5,10 +5,10 @@
 #
 # Before running it, list the version's changes under "## [Unreleased]" in
 # CHANGELOG.md. The script then:
-# 1. checks that the version follows the current one (3.0.1, 3.1.0 or 4.0.0 after
-#    3.0.0), or, in a repository without any version yet, that it is the one
-#    appVersion gives; that nothing is left uncommitted, that main is up to date
-#    with GitHub, and that the changelog has changes to publish;
+# 1. checks that the version follows the current one (3.0.2, 3.1.0 or 4.0.0 after
+#    3.0.1), or, in a repository without any version tag yet, that it is the
+#    one appVersion gives; that nothing is left uncommitted, that main is up to
+#    date with GitHub, and that the changelog has changes to publish;
 # 2. shows the commit the version is based on, the commits it brings, the changes
 #    of the changelog, and asks for your confirmation: until you answer "y",
 #    nothing changes;
@@ -42,9 +42,9 @@ esac
 [ -z "$(git status --porcelain --untracked-files=no)" ] || fail "there are changes that are not committed: commit or stash them first."
 prev=$(sed -n 's/^const appVersion = "\(.*\)"$/\1/p' "$model")
 [ -n "$prev" ] || fail "no appVersion in $model."
-first="" # the first version of a repository without any version yet
+first="" # the first version tag of a repository without any yet
 if [ -z "$(git tag -l)" ]; then
-	[ "$v" = "$prev" ] || fail "this repository has no version yet: its first one is $prev, the version in $model."
+	[ "$v" = "$prev" ] || fail "this repository has no version tag yet: the first one is $prev, the version in $model."
 	[ "$branch" = main ] || fail "the first version is published from main."
 	first=y
 else
@@ -82,7 +82,7 @@ date=$(date +%Y%m%d)
 day=$(date +%Y-%m-%d)
 echo
 if [ -n "$first" ]; then
-	echo "Version $v ($date), the first of this repository, on the branch $branch, based on:"
+	echo "Version $v ($date), the first tag of this repository, on the branch $branch, based on:"
 else
 	echo "Version $v ($date), after $prev, on the branch $branch, based on:"
 fi
