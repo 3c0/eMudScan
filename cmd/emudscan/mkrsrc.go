@@ -296,7 +296,18 @@ func buildResourceSection(items []resItem) ([]byte, []uint32) {
 	return sec, relocs
 }
 
-func writeSyso(path string) error { return os.WriteFile(path, sysoBytes(), 0o644) }
+func writeSyso(path string) error { return writeIfChanged(path, sysoBytes()) }
+
+// writeIfChanged writes data to path, unless the file already holds exactly this
+// data: every build regenerates the Windows resources, and rewriting the file would
+// change its modification time, so that go test would run again the tests that
+// read it (TestSysoUpToDate), all of them, instead of reusing their results.
+func writeIfChanged(path string, data []byte) error {
+	if old, err := os.ReadFile(path); err == nil && bytes.Equal(old, data) {
+		return nil
+	}
+	return os.WriteFile(path, data, 0o644)
+}
 
 // sysoBytes is the content of rsrc_windows_amd64.syso.
 func sysoBytes() []byte {

@@ -6,7 +6,9 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 )
 
 // The 256-pixel icon of the Windows resources is the icon that renderIcon draws, in
@@ -53,5 +55,30 @@ func TestSysoUpToDate(t *testing.T) {
 	}
 	if !bytes.Equal(b, sysoBytes()) {
 		t.Error("rsrc_windows_amd64.syso is not up to date: regenerate it with go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso")
+	}
+}
+
+// writeIfChanged leaves a file that already holds the data untouched, with its
+// modification time, and rewrites one that does not.
+func TestWriteIfChanged(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "f")
+	if err := writeIfChanged(path, []byte("one")); err != nil {
+		t.Fatal(err)
+	}
+	past := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	if err := os.Chtimes(path, past, past); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeIfChanged(path, []byte("one")); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(path); err != nil || !fi.ModTime().Equal(past) {
+		t.Errorf("same data: the file was rewritten (%v, %v)", fi.ModTime(), err)
+	}
+	if err := writeIfChanged(path, []byte("two")); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "two" {
+		t.Errorf("new data: the file holds %q", b)
 	}
 }
