@@ -528,21 +528,14 @@ func (a *ui) layout() {
 		top + pad + a.listHeight(a.net.h, 2) + s(17), top + pad + a.listHeight(a.app.h, 2) + s(17)}
 	// whole lines: each frame is fitted so that its log or list shows whole lines
 	// (rounded down), none cut at the bottom; not while a frame border is dragged,
-	// which follows the mouse
+	// which follows the mouse until it is released (then it goes to the nearest
+	// line: see wmLButtonUp)
 	whole := func(i int, fh int32) int32 {
-		var base, line int32
-		if i == 0 {
-			base, line = ncHeight(a.hLog)+2*a.log.padY(), a.log.pitch
-		} else {
-			l := []uintptr{a.hListWin, a.net.h, a.app.h}[i-1]
-			base = a.listHeight(l, 0)
-			line = a.listHeight(l, 1) - a.listHeight(l, 0)
-		}
+		base, line := a.frameLines(i)
 		if line <= 0 || a.dragging >= 0 {
 			return fh
 		}
-		n := max((fh-top-pad-base)/line, 1)
-		return top + pad + base + n*line
+		return base + max((fh-base)/line, 1)*line
 	}
 	h := a.heights
 	if h[0] == 0 {
@@ -738,6 +731,18 @@ func (a *ui) splitAt(x, y int32) int {
 func (a *ui) frameHeight(i int) int32 {
 	r := a.frames[i].rc
 	return r.Bottom - r.Top
+}
+
+// frameLines gives the height of frame i without the lines of its log or list (its
+// caption, its padding, and the border and header of its list), and the height of
+// one line.
+func (a *ui) frameLines(i int) (base, line int32) {
+	base = a.scale(22) + a.scale(10) // the caption above, the padding below (layout)
+	if i == 0 {
+		return base + ncHeight(a.hLog) + 2*a.log.padY(), a.log.pitch
+	}
+	l := []uintptr{a.hListWin, a.net.h, a.app.h}[i-1]
+	return base + a.listHeight(l, 0), a.listHeight(l, 1) - a.listHeight(l, 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -2345,10 +2350,18 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			return 0
 		}
 	case wmLButtonUp:
-		if a.dragging >= 0 {
+		if d := a.dragging; d >= 0 {
+			// the frame above the border is rounded to the nearest whole line: the line
+			// under the border is shown whole when at least half of it shows, and hidden
+			// otherwise. It is laid out while still dragged, so that it gives way first if
+			// there is not enough room; then all the frames show whole lines again.
+			if base, line := a.frameLines(d); line > 0 {
+				a.heights[d] = base + max((2*(a.heights[d]-base)+line)/(2*line), 1)*line
+				a.relayout()
+			}
 			a.dragging = -1
 			pReleaseCapture.Call()
-			a.relayout() // the frames show whole lines again
+			a.relayout()
 			return 0
 		}
 	case wmCaptureChanged:

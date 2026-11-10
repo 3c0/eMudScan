@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- In the main window, when a border between two frames is released over a line of the log or a row of a list, that line or row is shown whole if at least half of it was shown, and hidden otherwise, instead of always hidden.
+
 ### Fixed
 
 - The list of the Fix software window shows whole rows, as the lists of the main window do: when the window is resized, its height is rounded down to whole rows, and when the bar below the list is released over a row, that row is shown whole if at least half of it was shown, and hidden otherwise.
