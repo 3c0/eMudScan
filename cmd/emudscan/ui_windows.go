@@ -2619,18 +2619,16 @@ func main() {
 		return
 	}
 	runtime.LockOSThread()
-	// language: Windows display language, unless --en or --fr is given (nothing is saved)
+	// language: Windows display language, unless --lang is given (nothing is saved)
 	setLangFromCode(userUILanguage())
-	for _, arg := range os.Args[1:] {
-		switch strings.ToLower(strings.TrimLeft(arg, "-/")) {
-		case "fr", "lang=fr":
-			Lang, g.langSel = 1, 2
-		case "en", "lang=en":
-			Lang, g.langSel = 0, 1
-		case "offline": // start with the online test turned off
-			g.onlineOff = true
-		}
+	o, _ := parseArgs(os.Args[1:])
+	switch o.lang {
+	case 0:
+		Lang, g.langSel = 0, 1
+	case 1:
+		Lang, g.langSel = 1, 2
 	}
+	g.onlineOff = o.offline // start with the online test turned off
 	// Windows 10 version 1809 or Windows Server 2019 at least, checked before anything
 	// that needs them
 	if major, build := windowsBuild(); !windowsRecentEnough(major, build) {

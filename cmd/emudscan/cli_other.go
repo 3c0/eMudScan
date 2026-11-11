@@ -4,7 +4,7 @@ package main
 
 // Command-line runner used to test the checks on other systems (from the root of
 // the repository):
-//   go run ./cmd/emudscan [--fr] [folders to scan...]
+//   go run ./cmd/emudscan [--lang fr] [folders to scan...]
 // The commands that make files from the source (--make-syso…) work on any system:
 // see toolCommand in mkrsrc.go.
 
@@ -73,13 +73,15 @@ func main() {
 	if toolCommand(args) {
 		return
 	}
-	for _, a := range args {
-		switch a {
-		case "--fr":
-			Lang = 1
-		default:
-			roots = append(roots, a)
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--lang" && i+1 < len(args) {
+			i++
+			if l, ok := langOption(args[i]); ok {
+				Lang = l
+			}
+			continue
 		}
+		roots = append(roots, args[i])
 	}
 	if err := loadData(); err != nil {
 		fmt.Println(Tf("err.data", err))

@@ -415,7 +415,7 @@ disclaimer. **Licenses and notices** shows the full license texts.
 
 ## Command line
 
-- `--en`, `--fr`: the language for this session.
+- `--lang en`, `--lang fr`: the language for this session.
 - `--offline`: start with **Allow the online test** cleared.
 
 ## If your antivirus flags eMudScan.exe
