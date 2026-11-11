@@ -17,4 +17,4 @@ Administrators can scan from the command line with `eMudScan-cli.exe`, a console
 - SHA-256 of `eMudScan.exe`: `@SHA256@`
 - SHA-256 of `eMudScan-cli.exe`: `@SHA256_CLI@`
 - Both built by GitHub from this version’s source code ([build log](@BUILD_LOG@)). To verify that a copy comes from this build, with the GitHub CLI: `gh attestation verify eMudScan.exe -R @REPOSITORY@` (or `eMudScan-cli.exe`)
-- The build is reproducible: you can [rebuild this version](https://github.com/@REPOSITORY@/blob/main/docs/building.md#rebuilding-a-release) from its source code and get the same two files
+- The build is reproducible: anyone can [rebuild this version](https://github.com/@REPOSITORY@/blob/main/docs/building.md#rebuilding-a-release) from its source code and get the same two files, byte for byte. So anyone can check that these files contain exactly the public source code and nothing else, without trusting GitHub or eMudScan’s author.
