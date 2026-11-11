@@ -219,7 +219,7 @@ func finishScan(c *checker, logText string, o cliOptions, stdout, stderr io.Writ
 		if err != nil {
 			return scanFailed(stderr, Tf("saveError", err))
 		}
-		fmt.Fprintf(stderr, "%s\r\n", Tf("cli.saved", path))
+		fmt.Fprintf(stderr, "%s\r\n", Tf("saved.note", path))
 	}
 	if len(o.reports) == 0 {
 		// in a console, the report comes right after the log: an empty line sets them

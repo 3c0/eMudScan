@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- When a report is saved, a note at the end of the log gives its path, as a link that shows the file in File Explorer, to find the reports again. The notes are shown in the window only: the reports do not have them.
+
 ### Changed
 
 - The name of a saved report has the name of the PC, such as `eMudScan-report-MY-PC-20261201-101548.txt`, so that the reports of several PCs can be kept in one folder.

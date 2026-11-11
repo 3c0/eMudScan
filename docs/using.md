@@ -316,6 +316,11 @@ A saved report is named after your PC, the date and the time, such as
 `eMudScan-report-MY-PC-20261201-101548.txt`: the reports of several PCs can be
 kept in one folder. In the dialog of **Save report**, you can change this name.
 
+Each time a report is saved, by **Save report** or by the **Fix software**
+window, a note at the end of the log gives its path, as a link that shows the
+file in File Explorer: you find your reports again there, until the next scan.
+The reports do not have these notes.
+
 **Save report** lets you choose the type of the file, in the list of types of
 its dialog:
 

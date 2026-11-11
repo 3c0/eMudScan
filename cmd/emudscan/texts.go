@@ -703,7 +703,6 @@ var tr = map[string][2]string{
 	"cli.badLang":    {"Not a language, en or fr: %s", "Ce n’est pas une langue, en ou fr\u00a0: %s"},
 	"cli.noDrive":    {"The drive %s was not found", "Le disque %s est introuvable"},
 	"cli.noFolder":   {"The folder of this report does not exist: %s", "Le dossier de ce rapport n’existe pas\u00a0: %s"},
-	"cli.saved":      {"Report saved: %s", "Rapport enregistré\u00a0: %s"},
 	"cli.seeHelp":    {"For the options: eMudScan-cli.exe --help", "Pour les options\u00a0: eMudScan-cli.exe --help"},
 	"cli.usage": {`eMudScan-cli.exe [--report FILE]... [--drives C:,D:|none] [--online] [--lang en|fr]
 
@@ -747,6 +746,7 @@ Code de sortie\u00a0: 0 OK ou information seule, 1 avertissement, 2 mise à jour
 	"save.filterAll":   {"All files", "Tous les fichiers"},
 	"saved.title":      {"Report saved", "Rapport enregistré"},
 	"saved.in":         {"The report was saved in this file:", "Le rapport a été enregistré dans ce fichier\u00a0:"},
+	"saved.note":       {"Report saved: %s", "Rapport enregistré\u00a0: %s"}, // in the log, and by eMudScan-cli.exe
 	"saveError":        {"The report could not be saved: %v", "Le rapport n’a pas pu être enregistré\u00a0: %v"},
 	"dlg.copyBlock":    {"Copy these commands", "Copier ces commandes"},
 	"dlg.copiedBlock":  {"Commands copied to the clipboard.", "Commandes copiées dans le presse-papiers."},

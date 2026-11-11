@@ -109,7 +109,11 @@ type ui struct {
 
 	logPending bool
 	logText    strings.Builder
-	saveFormat reportFormat // the type of the last report saved: Save report offers it first
+	// the notes of the reports saved (noteSaved), which only the window shows: the
+	// files that their links show, and whether the log ends with one
+	savedReports []string
+	logNoted     bool
+	saveFormat   reportFormat // the type of the last report saved: Save report offers it first
 
 	detailSet  []Item // the items of the details window opened for several: it shows one at a time (detailsGo)
 	dlg        *detailsDlg
@@ -313,6 +317,7 @@ func (a *ui) createControls() {
 	a.fixedTips = append(a.fixedTips, a.addTip([]uintptr{a.hInfo}, T("tip.about")), a.addTip([]uintptr{a.hFix}, T("tip.fix")))
 	a.hSpin = a.child(0, "eMudScanSpinner", "", 0, 0)
 	a.log = a.newLogView(a.hwnd, idLog)
+	a.log.onLink = a.showSavedReport
 	a.hLog = a.log.hwnd
 	// LVS_REPORT|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS (the image lists are shared and kept across resets)
 	a.hListWin = a.child(wsExClientEdge, "SysListView32", "", 0x1|0x8|0x40|0x8000|wsTabStop, idListWin)
@@ -762,6 +767,10 @@ func (a *ui) appendLog(runs []logRun, forceScroll bool) {
 	if len(runs) == 0 {
 		return
 	}
+	if a.logNoted { // an empty line after the notes of the reports saved
+		a.log.append([]logRun{{"\r\n", rgb(32, 32, 32), false, false}}, false)
+		a.logNoted = false
+	}
 	a.log.append(runs, forceScroll)
 	for _, r := range runs {
 		saved := r.text
@@ -769,6 +778,35 @@ func (a *ui) appendLog(runs []logRun, forceScroll bool) {
 			saved = reportMark(r.text)
 		}
 		a.logText.WriteString(saved)
+	}
+}
+
+// noteSaved adds to the log, after an empty line, a note that says where a report
+// was saved: its path is a link that shows the file in File Explorer. The notes of
+// reports saved one after the other follow each other. They are for the window only,
+// to find the reports again: a report does not have them in its log.
+func (a *ui) noteSaved(path string) {
+	if a.log == nil {
+		return
+	}
+	normal := rgb(32, 32, 32)
+	if !a.logNoted {
+		a.log.append([]logRun{{"\r\n", normal, false, false}}, true)
+	}
+	shown := shownPath(path)
+	before := strings.TrimSuffix(Tf("saved.note", shown), shown) // the path ends the note
+	line := a.log.nextLine()
+	a.log.append([]logRun{{text: logMark(StInfo), color: statusColor(StInfo), bold: true, sym: true},
+		{" " + before, normal, false, false}, {shown + "\r\n", rgb(0, 102, 204), false, false}}, true)
+	a.savedReports = append(a.savedReports, path)
+	a.log.setLink(line, len(utf16.Encode([]rune(shown))), len(a.savedReports))
+	a.logNoted = true
+}
+
+// showSavedReport shows in File Explorer the report of a note of the log (noteSaved).
+func (a *ui) showSavedReport(id int) {
+	if id >= 1 && id <= len(a.savedReports) {
+		openPath(a.hwnd, a.savedReports[id-1])
 	}
 }
 
@@ -1609,6 +1647,7 @@ func (a *ui) start() {
 	a.logText.Reset()
 	a.log.clear()
 	a.logPending = false
+	a.savedReports, a.logNoted = nil, false
 	c := newChecker(guiReporter{}, func() bool { return a.cancel.Load() })
 	c.offline = a.onlineOff
 	a.current = c
@@ -1833,6 +1872,7 @@ func (a *ui) saveReport() {
 		return
 	}
 	a.saveFormat = format
+	a.noteSaved(path)
 	a.showSaved(a.hwnd, T("saved.in"), path)
 }
 
@@ -1936,6 +1976,7 @@ func (a *ui) reset() {
 	a.activity, a.spinText = "", ""
 	a.logText.Reset()
 	a.logPending = false
+	a.savedReports, a.logNoted = nil, false
 	a.detailSet, a.detailBack = nil, nil
 	a.createControls()
 	a.layout()

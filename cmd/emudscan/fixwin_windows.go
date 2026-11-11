@@ -1329,6 +1329,7 @@ func (a *ui) saveFixReport(d *fixDlg) {
 		return
 	}
 	d.report = path
+	a.noteSaved(path)
 	d.show(fixLine{lineNote, Tf("fix.reportSaved", shownPath(path))})
 	d.console.setLink(d.lineAt[len(d.lineAt)-1], len(utf16.Encode([]rune(shownPath(path)))), fixReportLink) // the path, at the end of the line
 	a.showSaved(d.hwnd, T("fix.reportSavedIn"), path)
