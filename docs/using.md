@@ -312,6 +312,10 @@ you want to keep private, such as the name of your PC or your user name in the
 paths. Apart from the fixes, saving a report is the only time eMudScan writes a
 file.
 
+A saved report is named after your PC, the date and the time, such as
+`eMudScan-report-MY-PC-20261201-101548.txt`: the reports of several PCs can be
+kept in one folder. In the dialog of **Save report**, you can change this name.
+
 **Save report** lets you choose the type of the file, in the list of types of
 its dialog:
 

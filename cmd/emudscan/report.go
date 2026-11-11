@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // runAllChecks runs every check. extraRoots is a test hook (additional folders to scan).
@@ -104,9 +105,27 @@ var computerName = func() string {
 }
 
 // reportFileName is the name of a report saved at t, without its extension: with the
-// seconds, so that two reports saved in the same minute have different names.
+// name of the PC, so that the reports of several PCs can be kept together, and with
+// the seconds, so that two reports saved in the same minute have different names.
 func reportFileName(t time.Time) string {
-	return "eMudScan-report-" + t.Format("20060102-150405")
+	name := "eMudScan-report-"
+	if pc := fileNamePart(computerName()); pc != "" {
+		name += pc + "-"
+	}
+	return name + t.Format("20060102-150405")
+}
+
+// fileNamePart is the name of a PC as a file name has it. Windows allows only
+// letters, digits and "-" in the name of a PC, so it is nearly always the name itself.
+// Any other character becomes "-", as Windows does when it registers the name on
+// the network, and no "-" is left at the start or at the end.
+func fileNamePart(pc string) string {
+	return strings.Trim(strings.Map(func(r rune) rune {
+		if unicode.IsLetter(r) || unicode.IsMark(r) || unicode.IsDigit(r) {
+			return r
+		}
+		return '-'
+	}, pc), "-")
 }
 
 // buildReport renders all results and the log as plain text (CRLF line ends).

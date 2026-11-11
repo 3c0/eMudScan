@@ -128,4 +128,4 @@ open in your browser only when you click them.
 
 A report that you copy or save names your PC and its Windows version, and gives
 the paths of the files found: remove what you want to keep private before you
-share it.
+share it. The name of a saved report also has the name of your PC.

@@ -30,10 +30,41 @@ func TestPythonVersionFromFile(t *testing.T) {
 	}
 }
 
+// The name of a saved report has the name of the PC, then the date and the time with
+// the seconds; without a name of the PC, only the date and the time.
 func TestReportFileName(t *testing.T) {
+	defer func(f func() string) { computerName = f }(computerName)
 	at := time.Date(2026, 12, 1, 10, 15, 48, 0, time.Local)
-	if got := reportFileName(at); got != "eMudScan-report-20261201-101548" {
-		t.Errorf("got %q", got)
+	for pc, want := range map[string]string{
+		"MY-PC":   "eMudScan-report-MY-PC-20261201-101548",
+		"Zoé-PC":  "eMudScan-report-Zoé-PC-20261201-101548",
+		"":        "eMudScan-report-20261201-101548",
+		"-. /\\-": "eMudScan-report-20261201-101548", // nothing left
+	} {
+		computerName = func() string { return pc }
+		if got := reportFileName(at); got != want {
+			t.Errorf("PC %q: got %q, want %q", pc, got, want)
+		}
+	}
+}
+
+// In a file name, the name of a PC keeps its letters, with their accents, its digits
+// and "-"; a character that Windows does not allow in the name of a PC becomes "-".
+func TestFileNamePart(t *testing.T) {
+	for in, want := range map[string]string{
+		"MY-PC":               "MY-PC",
+		"pc42":                "pc42",
+		"Zoé-PC":              "Zoé-PC",
+		"Zoe\u0301-PC":        "Zoe\u0301-PC", // the accent as a separate character
+		"my_pc.example":       "my-pc-example",
+		`a\b/c:d*e?f"g<h>i|j`: "a-b-c-d-e-f-g-h-i-j",
+		"-MY-PC-":             "MY-PC",
+		" ":                   "",
+		"":                    "",
+	} {
+		if got := fileNamePart(in); got != want {
+			t.Errorf("fileNamePart(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 
