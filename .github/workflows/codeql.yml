@@ -1,0 +1,57 @@
+# Looks for security problems in the code with CodeQL, GitHub's code analysis: for
+# each push to main, each pull request, and once a week. The results are on GitHub,
+# under "Security and quality", "Code scanning".
+#
+# It replaces the default setup of GitHub, which analyses the Go code as it is
+# built for Linux: without the *_windows.go files, where the windows and the fixes
+# are. Here the Go code is analysed as it is built for Windows (GOOS), like
+# eMudScan.exe. The default setup must stay off in the settings of the repository.
+#
+# The actions are pinned to exact commits (a version tag can be moved, a commit
+# cannot); Dependabot proposes their updates (.github/dependabot.yml).
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 4 * * 1'  # every Monday, 04:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write  # upload the results
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go  # the program
+            build-mode: autobuild
+          - language: actions  # the workflows
+            build-mode: none
+    env:  # for the Go analysis: the Windows build, as scripts/build.sh makes it
+      GOOS: windows
+      GOARCH: amd64
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066  # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066  # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
