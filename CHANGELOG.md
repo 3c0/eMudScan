@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- No longer takes the version of a program for the version of its Python or Node.js. A program can start its own copy through a `python.exe` or `node.exe` of its own, which carries the version of the program: a high number passed for a fixed version, and the copy was shown as OK. eMudScan now reads the version of Python from Python’s own files, and finds its ssl library in the folder where the program keeps it.
 - The exe built by GitHub no longer says, in its Go build information, that it was built from modified files (“+dirty”): the Windows resources (icon, manifest, version information) now come out the same with any Go version.
 
 ## [3.0.1] - 2026-11-10

@@ -13,13 +13,36 @@ func TestPythonVersionFromFile(t *testing.T) {
 		fv   fileVersion
 		want string
 	}{
-		{fileVersion{Fixed: Version{3, 13, 17150, 1013}}, "3.13.17"},
-		{fileVersion{Fixed: Version{3, 12, 7150, 1013}, Product: "3.12.7"}, "3.12.7"},
-		{fileVersion{Product: "3.14.9"}, "3.14.9"},
+		{fileVersion{Name: "Python", Fixed: Version{3, 13, 17150, 1013}}, "3.13.17"},
+		{fileVersion{Name: "Python", Fixed: Version{3, 12, 7150, 1013}, Product: "3.12.7"}, "3.12.7"},
+		{fileVersion{Name: "Python", Product: "3.14.9"}, "3.14.9"},
+		{fileVersion{Name: "python", Product: "4.0.1", Fixed: Version{4, 0, 1150, 1013}}, "4.0.1"}, // whatever its major version
 		{fileVersion{}, ""},
+		// the python.exe of a program that starts its own copy of Python carries the
+		// name and the version of that program: not a Python version
+		{fileVersion{Name: "Example App 5", Product: "7.3.1.2", Fixed: Version{7, 3, 1, 2}}, ""},
+		{fileVersion{Product: "7.3.1.2", Fixed: Version{7, 3, 1, 2}}, ""}, // no product name: not known to be Python's
 	}
 	for _, c := range cases {
 		if got := pythonVersionFromFile(c.fv); got != c.want {
+			t.Errorf("%+v: got %q want %q", c.fv, got, c.want)
+		}
+	}
+}
+
+// The version of a node.exe counts only when its version information is Node.js's.
+func TestNodeVersionFromFile(t *testing.T) {
+	cases := []struct {
+		fv   fileVersion
+		want string
+	}{
+		{fileVersion{Name: "Node.js", Product: "v24.3.0", Fixed: Version{24, 3, 0, 0}}, "24.3.0"},
+		{fileVersion{Name: "Node.js", Fixed: Version{22, 5, 1, 0}}, "22.5.1.0"},
+		{fileVersion{Name: "Example App 6", Product: "2026.4.1", Fixed: Version{2026, 4, 1, 0}}, ""}, // would pass for a fixed Node.js
+		{fileVersion{}, ""},
+	}
+	for _, c := range cases {
+		if got := nodeVersionFromFile(c.fv).String(); got != c.want {
 			t.Errorf("%+v: got %q want %q", c.fv, got, c.want)
 		}
 	}

@@ -1199,13 +1199,21 @@ func pythonEnvFor(exe string) pyEnv {
 	return e
 }
 
+// pythonVersionFromFile is the version of Python in the version information of one of
+// its files (python.exe, python3*.dll): "" for a file of another product. A program
+// can start its own copy of Python through a python.exe of its own, which carries the
+// name and the version of that program: taken for a Python version, a high number
+// would pass for a fixed Python.
 // Python encodes the micro version as micro*1000+level*10+serial in its file version.
 func pythonVersionFromFile(fv fileVersion) string {
+	if !ownVersionInfo(fv, "python") {
+		return ""
+	}
 	if fv.Product != "" && len(ParseVersion(fv.Product)) >= 3 && ParseVersion(fv.Product)[2] < 1000 {
 		return ParseVersion(fv.Product).String()
 	}
 	f := fv.Fixed
-	if len(f) >= 3 && f[0] == 3 {
+	if len(f) >= 3 {
 		micro := f[2]
 		if micro >= 1000 {
 			micro /= 1000
@@ -1213,6 +1221,14 @@ func pythonVersionFromFile(fv fileVersion) string {
 		return fmt.Sprintf("%d.%d.%d", f[0], f[1], micro)
 	}
 	return ""
+}
+
+// ownVersionInfo tells whether the version information of a file is that of the
+// product it is checked as: its product name contains product ("python" for
+// "Python", "node" for "Node.js"), whatever the case. Without it, the version is
+// that of something else, and says nothing about the product.
+func ownVersionInfo(fv fileVersion, product string) bool {
+	return strings.Contains(lower(fv.Name), product)
 }
 
 func pyvenvVersion(cfg string) string { return plain(pyvenvValue(cfg, "version", "version_info")) }
@@ -1275,7 +1291,15 @@ func (tp *appsContext) pythonFix(env pyEnv) pyFix {
 	}
 	f.state, f.fixed = fixStatus("python", ParseVersion(f.version))
 	if base != "" {
-		for _, lib := range []string{filepath.Join(base, "DLLs", "_ssl.pyd"), filepath.Join(base, "_ssl.pyd")} {
+		libs := []string{filepath.Join(base, "DLLs", "_ssl.pyd"), filepath.Join(base, "_ssl.pyd")}
+		// behind a python.exe of the program it belongs to, Python is in a folder of
+		// its own, one level below: its ssl module's library, when there is only one
+		for _, sub := range []string{"lib", "DLLs"} {
+			if m, _ := filepath.Glob(filepath.Join(base, "*", sub, "_ssl.pyd")); len(m) == 1 {
+				libs = append(libs, m[0])
+			}
+		}
+		for _, lib := range libs {
 			if exists(lib) {
 				f.sslLib = lib
 				if found, err := tp.scan(lib, scanRoots); err == nil && found.Blocklist {
@@ -1537,13 +1561,27 @@ func (tp *appsContext) checkNode() {
 	}
 }
 
+// nodeVersionFromFile is the version of Node.js in the version information of a
+// node.exe: none for a file of another product, such as a node.exe that starts
+// something else and carries its version (see pythonVersionFromFile).
+func nodeVersionFromFile(fv fileVersion) Version {
+	if !ownVersionInfo(fv, "node") {
+		return nil
+	}
+	if v := ParseVersion(fv.Product); len(v) >= 3 {
+		return v
+	}
+	return fv.Fixed
+}
+
 func (tp *appsContext) nodeOne(it *Item, exe string) {
 	fv, _ := getFileVersion(exe)
-	v := fv.Fixed
-	if len(ParseVersion(fv.Product)) >= 3 {
-		v = ParseVersion(fv.Product)
+	v := nodeVersionFromFile(fv)
+	shown := ""
+	if v != nil {
+		shown = trimZeros(displayVersion(fv))
 	}
-	r := result{Version: trimZeros(displayVersion(fv)), File: exe, Exe: exe, Folder: filepath.Dir(exe), ProductURL: "https://nodejs.org/en/download"}
+	r := result{Version: shown, File: exe, Exe: exe, Folder: filepath.Dir(exe), ProductURL: "https://nodejs.org/en/download"}
 	o := tp.withOwner(&r, exe)
 	bundled := bundledIn(o.Name, kwNode...)
 	r.Bundled = bundled

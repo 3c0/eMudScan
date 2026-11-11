@@ -91,10 +91,15 @@ var pySSLShapes = []struct{ replace, added []string }{
 // sslLib, outdated (its version is outdated, fixed is the version that fixes it), from
 // the release pinned for its line, that version or a later one: none for another
 // processor than x64, a layout that is not one of the two, a free-threaded Python, or
-// a minor version without a fixed build.
+// a minor version without a fixed build; none either for a library that is not in the
+// folder of python.exe or in its DLLs folder, where the two layouts have it: a Python
+// laid out otherwise is another build, which these files were not made for.
 func pySSLPlanFor(env pyEnv, sslLib string, fixed string) (pySSLPlan, bool) {
 	v := ParseVersion(fixed)
 	if sslLib == "" || len(v) < 2 || peMachine(env.exe) != 0x8664 /* x64 */ {
+		return pySSLPlan{}, false
+	}
+	if d := pathKey(filepath.Dir(sslLib)); d != pathKey(env.home) && d != pathKey(filepath.Join(env.home, "DLLs")) {
 		return pySSLPlan{}, false
 	}
 	minor := fmt.Sprintf("%d.%d", v[0], v[1])

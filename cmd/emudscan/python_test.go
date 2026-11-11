@@ -404,3 +404,41 @@ func TestPythonUnknownWithoutLists(t *testing.T) {
 		t.Errorf("%v %q:\n%s", got.Status, got.Summary, got.Details)
 	}
 }
+
+// A program can keep its Python in a folder of its own, behind a python.exe of the
+// program: the ssl module's library is found there, the block list in it counts, and
+// eMudScan offers no replacement of the ssl files, which are made for the layouts of
+// python.org and python-build-standalone.
+func TestPythonBehindLauncher(t *testing.T) {
+	tp := testApps(t)
+	for _, blocklist := range []bool{false, true} {
+		home := filepath.Join(t.TempDir(), "Example App 5", "program")
+		core := filepath.Join(home, "runtime-3.13.5", "lib")
+		if err := os.MkdirAll(core, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for name, data := range map[string][]byte{
+			filepath.Join(home, "python.exe"):      []byte("MZ"),
+			filepath.Join(home, "python3.dll"):     []byte("MZ"),
+			filepath.Join(core, "_ssl.pyd"):        sslLibWith(blocklist),
+			filepath.Join(core, "_hashlib.pyd"):    []byte("MZ"),
+			filepath.Join(core, "libssl-3.dll"):    []byte("MZ"),
+			filepath.Join(core, "libcrypto-3.dll"): []byte("MZ"),
+		} {
+			if err := os.WriteFile(name, data, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		env := pyEnv{exe: filepath.Join(home, "python.exe"), home: home, version: "3.13.5"}
+		fx := tp.pythonFix(env)
+		if fx.sslLib != filepath.Join(core, "_ssl.pyd") {
+			t.Fatalf("ssl library: got %q, want the one of the folder below", fx.sslLib)
+		}
+		if fx.state != FixOutdated || fx.inSSL != blocklist || fx.protected() != blocklist {
+			t.Errorf("block list %v: state %v, inSSL %v, protected %v", blocklist, fx.state, fx.inSSL, fx.protected())
+		}
+		if _, ok := pySSLPlanFor(env, fx.sslLib, fx.fixed); ok {
+			t.Error("a replacement of the ssl files is offered for a Python laid out otherwise")
+		}
+	}
+}
