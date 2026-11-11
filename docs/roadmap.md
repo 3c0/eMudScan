@@ -3,9 +3,10 @@
 What is planned for the next versions of eMudScan. Plans can change: the
 [changelog](../CHANGELOG.md) lists what each version actually brings.
 
-## Version 3.1.0
+## Next version
 
-- Fixed versions published since 3.0.0, and new checks where a reliable one is
-  possible.
+- Newly fixed software: programs exposed to the compromised eMudhra certificates
+  whose publisher releases a fix.
+- New checks, where a reliable one is possible.
 
 Version numbers are explained at the top of the [changelog](../CHANGELOG.md).
