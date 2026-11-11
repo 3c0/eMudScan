@@ -697,6 +697,8 @@ var tr = map[string][2]string{
 		"Changer de langue réinitialise eMudScan comme s’il venait d’être lancé\u00a0: les résultats actuels seront perdus.\n\nChanger de langue\u00a0?"},
 	"btn.save":         {"Save report", "Enregistrer le rapport"},
 	"save.filterTxt":   {"Text files (*.txt)", "Fichiers texte (*.txt)"},
+	"save.filterJson":  {"JSON files (*.json)", "Fichiers JSON (*.json)"},
+	"save.filterCsv":   {"CSV files (*.csv)", "Fichiers CSV (*.csv)"},
 	"save.filterAll":   {"All files", "Tous les fichiers"},
 	"saved.title":      {"Report saved", "Rapport enregistré"},
 	"saved.in":         {"The report was saved in this file:", "Le rapport a été enregistré dans ce fichier\u00a0:"},

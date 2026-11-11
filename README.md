@@ -45,7 +45,7 @@ The [latest release](https://github.com/3c0/eMudScan/releases/latest) links to t
 1. Select the drives to scan (local drives are selected by default).
 2. Leave **Allow the online test** checked, or clear it to scan without any internet connection.
 3. Click **Scan**.
-4. Double-click an item to see the recommended action. **Save report** saves the results to a text file.
+4. Double-click an item to see the recommended action. **Save report** saves the results to a text, JSON or CSV file.
 5. Click **Fix** to fix the software that eMudScan can fix, once you accept a warning.
 
 Each item gets a colored shield:

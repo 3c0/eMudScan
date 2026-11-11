@@ -22,7 +22,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -1361,32 +1360,13 @@ func downloadsDir() string {
 	return ""
 }
 
-// saveReportIn saves the report in dir, under a name that no file there has yet.
+// saveReportIn saves the report, as text, in dir, under a name that no file there
+// has yet.
 func (a *ui) saveReportIn(dir string) (string, error) {
 	if dir == "" {
 		return "", errors.New("no Downloads folder")
 	}
-	base := reportFileName(time.Now())
-	for i := 1; i < 100; i++ {
-		name := base + ".txt"
-		if i > 1 {
-			name = fmt.Sprintf("%s-%d.txt", base, i)
-		}
-		path := filepath.Join(dir, name)
-		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
-		if errors.Is(err, fs.ErrExist) {
-			continue
-		}
-		if err != nil {
-			return "", err
-		}
-		_, err = f.Write(a.reportData())
-		if cerr := f.Close(); err == nil {
-			err = cerr
-		}
-		return path, err
-	}
-	return "", fs.ErrExist
+	return writeNewFile(dir, reportFileName(time.Now()), formatText.ext(), a.reportData())
 }
 
 func (a *ui) closeFix() {

@@ -9,6 +9,5 @@ What is planned for the next versions of eMudScan. Plans can change: the
   possible.
 - A command-line scan for administrators: no window, a report file, and an exit
   code that gives the worst status. It never runs a fix.
-- The report as JSON and CSV files, in addition to the text.
 
 Version numbers are explained at the top of the [changelog](../CHANGELOG.md).

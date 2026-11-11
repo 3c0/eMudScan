@@ -304,13 +304,89 @@ are back; if it needs fixing, its detailed information offers
 
 ## The report
 
-**Copy report** and **Save report** (UTF-8 text) include every item, with the
-same explanations as the detailed information windows and, after fixes, the
-commands that ran and what they showed. Its top gives eMudScan’s version, the
-date, the name of your PC and its Windows version. Before you share a report,
-remove what you want to keep private, such as the name of your PC or your user
-name in the paths. Apart from the fixes, saving a report is the only time
-eMudScan writes a file.
+**Copy report** and **Save report** include every item, with the same
+explanations as the detailed information windows and, after fixes, the commands
+that ran and what they showed. Its top gives eMudScan’s version, the date, the
+name of your PC and its Windows version. Before you share a report, remove what
+you want to keep private, such as the name of your PC or your user name in the
+paths. Apart from the fixes, saving a report is the only time eMudScan writes a
+file.
+
+**Save report** lets you choose the type of the file, in the list of types of
+its dialog:
+
+| Type | File | Use |
+|---|---|---|
+| Text | `.txt` | To read: it is what **Copy report** copies |
+| JSON | `.json` | For other programs: every item with all its fields |
+| CSV | `.csv` | For a spreadsheet: one row for each item |
+
+The type you chose is offered first the next time, until you close eMudScan.
+The content of a file is always what its name says: a name that you type with
+one of these extensions gets its type.
+
+The files are in UTF-8; the text and the CSV start with a byte order mark, for
+Notepad and Excel. In the JSON and CSV files, the names of the fields and the
+keywords are in English in both languages. The texts (summary, details, log)
+are in the language of the window, and the paths are written as in the text
+report.
+
+### The JSON file
+
+| Field | Content |
+|---|---|
+| `format`, `format_version` | `emudscan-report` and `1`. The version changes when a field is removed or changes meaning, not when a field is added |
+| `tool` | eMudScan: `name`, `version`, `date` and `url`. A build that is not a release has `commit` instead of `date` |
+| `created` | When the report was made, such as `2026-12-01T10:15:48+01:00` |
+| `language` | `en` or `fr`: the language of the texts |
+| `pc` | `name` and `windows`: the name of the PC and its Windows version |
+| `scan` | `online_test`: the online test was allowed. `drives`: the drives scanned. `seconds`: how long the scan took. `complete`: `false` when the scan was stopped |
+| `worst_status` | The worst status of the items |
+| `counts` | The number of items of each status |
+| `items` | The items, in the order of the text report |
+| `fixes_run` | After fixes: the lines of the Fixes section of the text report |
+| `log` | The lines of the log |
+
+Each item has these fields; a field without a value is left out:
+
+| Field | Content |
+|---|---|
+| `group` | Its list: `windows`, `internet` or `other` |
+| `status` | `ok`, `information`, `warning`, `update_needed` or `critical` |
+| `program`, `program_version` | The software. For a check of Windows: `Windows` |
+| `component`, `component_version` | The part that is checked, when it is not the program itself. For a check of Windows: the name of the check |
+| `summary` | The Details column of the lists |
+| `details` | The explanation of the detailed information window, as text |
+| `software_date` | The Software date column, such as `2026-03-02` |
+| `file`, `folder` | The outdated file, or the file checked when the item is OK, and the software folder |
+| `homepage` | The homepage of the software |
+| `packages` | The packages of the software: `manager`, `id` and `page` |
+| `copies` | When the same finding is in several places, the other places: `file` and `folder` |
+| `fixes` | What **Fix** can run: `kind`, `manager` (for an update), `optional` (not ticked when the Fix window opens), `administrator` (needs administrator rights) and `commands` |
+
+The kinds of fixes are `update` (with the package manager), `pip`, `conda`,
+`tool`, `replace_bundle`, `java_block_list`, `replace_node` and
+`replace_python_ssl`. An item whose check did not end has the status `unknown`,
+which is also the worst status of a report without items.
+
+### The CSV file
+
+The CSV file has one row of column names, then one row for each item. The
+values are separated by commas, whatever the regional settings of Windows. Its
+columns:
+
+`pc`, `windows`, `created`, `tool_version`, `group`, `status`, `program`,
+`program_version`, `component`, `component_version`, `summary`,
+`software_date`, `file`, `folder`, `copies`, `fix`
+
+The values are those of the JSON fields. `copies` gives the other places of the
+finding, and `fix` the kinds of its fixes, separated by ` | `. The explanations,
+the commands and the log are only in the text and JSON files.
+
+A value that starts with `=`, `+`, `-` or `@` gets an apostrophe before it, so
+that a spreadsheet does not run it as a formula. If Excel shows each row in one
+cell (its list separator is not the comma, as with French regional settings),
+import the file with **Data** > **From Text/CSV**.
 
 ## Keyboard shortcuts
 

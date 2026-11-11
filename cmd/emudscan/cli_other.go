@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 type cliReporter struct {
@@ -87,8 +88,16 @@ func main() {
 	r := &cliReporter{}
 	c := newChecker(r, nil)
 	runAllChecks(c, nil, roots)
-	if os.Getenv("REPORT") != "" {
-		os.WriteFile(os.Getenv("REPORT"), []byte(buildReport(c, r.log.String())), 0o644)
+	if path := os.Getenv("REPORT"); path != "" { // text, JSON or CSV, by its extension
+		_, format, _ := saveTarget(path, formatText, noFormat)
+		data, err := reportFile(c, r.log.String(), format, time.Now())
+		if err == nil {
+			err = os.WriteFile(path, data, 0o644)
+		}
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
 

@@ -367,6 +367,7 @@ type checker struct {
 	where       map[int]string // location shown in the log for each item
 	cancel      func() bool
 	fixes       []fixLine // what the fixes showed, for the report
+	scan        scanRun   // how the whole scan ran, for the JSON report
 }
 
 func newChecker(r Reporter, cancel func() bool) *checker {

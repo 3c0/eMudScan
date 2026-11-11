@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -108,6 +109,7 @@ type ui struct {
 
 	logPending bool
 	logText    strings.Builder
+	saveFormat reportFormat // the type of the last report saved: Save report offers it first
 
 	detailSet  []Item // the items of the details window opened for several: it shows one at a time (detailsGo)
 	dlg        *detailsDlg
@@ -1765,22 +1767,44 @@ func (a *ui) copyReport() {
 	}
 }
 
-// reportData is the report as a file: UTF-8 text, with a byte order mark (for Notepad).
+// reportData is the report as a text file: UTF-8, with a byte order mark (for Notepad).
 func (a *ui) reportData() []byte {
-	return append([]byte{0xEF, 0xBB, 0xBF}, buildReport(a.current, a.logText.String())...)
+	data, _ := reportFile(a.current, a.logText.String(), formatText, time.Now())
+	return data
 }
 
-// saveReport asks for a file name and writes the report as UTF-8 text.
+// filterName names a type of report in the list of types of the Save report dialog.
+func filterName(f reportFormat) string {
+	switch f {
+	case formatJSON:
+		return T("save.filterJson")
+	case formatCSV:
+		return T("save.filterCsv")
+	}
+	return T("save.filterTxt")
+}
+
+// saveReport asks for a file name and a type (text, JSON or CSV), and writes the
+// report in the file and the type that saveTarget gives. The type is offered first
+// the next time, until eMudScan is closed.
 func (a *ui) saveReport() {
 	if a.current == nil {
 		return
 	}
+	offered := a.saveFormat
 	buf := make([]uint16, 1024)
-	copy(buf, utf16z(reportFileName(time.Now())+".txt"))
-	// the filter is a list of NUL-separated strings ending with two NULs
-	filter := utf16.Encode([]rune(T("save.filterTxt") + "\x00*.txt\x00" + T("save.filterAll") + "\x00*.*\x00\x00"))
-	defExt := utf16z("txt")
-	ofn := openFileName{Owner: a.hwnd, Filter: &filter[0], File: &buf[0], MaxFile: uint32(len(buf)), DefExt: &defExt[0],
+	copy(buf, utf16z(reportFileName(time.Now())+"."+offered.ext()))
+	// the filter is a list of NUL-separated strings ending with two NULs: the types
+	// (reportFormats), then all files
+	types := ""
+	for _, f := range reportFormats {
+		types += filterName(f) + "\x00*." + f.ext() + "\x00"
+	}
+	filter := utf16.Encode([]rune(types + T("save.filterAll") + "\x00*.*\x00\x00"))
+	// with a default extension, the dialog gives a name typed without one the extension
+	// of the type chosen
+	defExt := utf16z(offered.ext())
+	ofn := openFileName{Owner: a.hwnd, Filter: &filter[0], FilterIndex: uint32(offered) + 1, File: &buf[0], MaxFile: uint32(len(buf)), DefExt: &defExt[0],
 		Flags: 0x2 | 0x800 | 0x8 | 0x80000 /* OVERWRITEPROMPT|PATHMUSTEXIST|NOCHANGEDIR|EXPLORER */}
 	ofn.StructSize = uint32(unsafe.Sizeof(ofn))
 	r, _, _ := pGetSaveFileNameW.Call(uintptr(unsafe.Pointer(&ofn)))
@@ -1790,11 +1814,25 @@ func (a *ui) saveReport() {
 	if r == 0 {
 		return
 	}
-	path := syscall.UTF16ToString(buf)
-	if err := os.WriteFile(path, a.reportData(), 0o644); err != nil {
+	chosen := noFormat // "All files"
+	if i := int(ofn.FilterIndex) - 1; i >= 0 && i < len(reportFormats) {
+		chosen = reportFormats[i]
+	}
+	path, format, renamed := saveTarget(syscall.UTF16ToString(buf), offered, chosen)
+	data, err := reportFile(a.current, a.logText.String(), format, time.Now())
+	switch {
+	case err != nil:
+	case renamed: // a name that the dialog did not ask about: it never replaces a file
+		name := filepath.Base(path)
+		path, err = writeNewFile(filepath.Dir(path), strings.TrimSuffix(name, filepath.Ext(name)), format.ext(), data)
+	default:
+		err = os.WriteFile(path, data, 0o644)
+	}
+	if err != nil {
 		msgBox(a.hwnd, Tf("saveError", err), 0x10)
 		return
 	}
+	a.saveFormat = format
 	a.showSaved(a.hwnd, T("saved.in"), path)
 }
 

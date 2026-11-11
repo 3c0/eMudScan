@@ -10,6 +10,7 @@ import (
 // runAllChecks runs every check. extraRoots is a test hook (additional folders to scan).
 func runAllChecks(c *checker, drives []string, extraRoots []string) {
 	start := time.Now()
+	c.setScan(scanRun{drives: drives})
 	c.line(StPending, Tf("log.start", appName, appVersionDate(), windowsVersionString(), time.Now().Format("2006-01-02 15:04")))
 	if defaultEmbedScanner == nil {
 		defaultEmbedScanner = buildEmbedScanner()
@@ -19,10 +20,13 @@ func runAllChecks(c *checker, drives []string, extraRoots []string) {
 		runThirdPartyChecks(c, drives, blocked, risk, extraRoots)
 	}
 	if c.cancel() {
+		c.setScan(scanRun{drives: drives, took: time.Since(start)})
 		c.line(StInfo, T("log.cancelled"))
 		return
 	}
-	c.section(c.counts().text("log.done", fmtElapsed(time.Since(start))))
+	took := time.Since(start)
+	c.setScan(scanRun{drives: drives, took: took, complete: true})
+	c.section(c.counts().text("log.done", fmtElapsed(took)))
 }
 
 func fmtElapsed(d time.Duration) string {

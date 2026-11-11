@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Save report** can save the report as a JSON or a CSV file, for other programs and spreadsheets: choose the type in the list of types of its dialog. The JSON file has every item with all its fields, the fixes and the log; the CSV file has one row for each item, with commas. Their field names and keywords are in English in both languages. “The report”, in `docs/using.md`, describes the fields. **Copy report** still copies the text.
+
 ### Changed
 
 - The name of a saved report has the seconds, such as `eMudScan-report-20261201-101548.txt`, so that two reports saved in the same minute have different names.
