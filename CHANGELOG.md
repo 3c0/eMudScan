@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The name of a saved report has the seconds, such as `eMudScan-report-20261201-101548.txt`, so that two reports saved in the same minute have different names.
 - The About box, like the README, says that eMudScan is a technical tool for advanced users: security researchers, administrators and developers.
 
 ### Fixed

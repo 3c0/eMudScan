@@ -96,6 +96,12 @@ var computerName = func() string {
 	return strings.TrimSpace(name)
 }
 
+// reportFileName is the name of a report saved at t, without its extension: with the
+// seconds, so that two reports saved in the same minute have different names.
+func reportFileName(t time.Time) string {
+	return "eMudScan-report-" + t.Format("20060102-150405")
+}
+
 // buildReport renders all results and the log as plain text (CRLF line ends).
 func buildReport(c *checker, logText string) string {
 	var b strings.Builder

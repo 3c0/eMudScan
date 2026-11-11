@@ -30,6 +30,13 @@ func TestPythonVersionFromFile(t *testing.T) {
 	}
 }
 
+func TestReportFileName(t *testing.T) {
+	at := time.Date(2026, 12, 1, 10, 15, 48, 0, time.Local)
+	if got := reportFileName(at); got != "eMudScan-report-20261201-101548" {
+		t.Errorf("got %q", got)
+	}
+}
+
 // The version of a node.exe counts only when its version information is Node.js's.
 func TestNodeVersionFromFile(t *testing.T) {
 	cases := []struct {

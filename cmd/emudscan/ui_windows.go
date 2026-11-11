@@ -1776,7 +1776,7 @@ func (a *ui) saveReport() {
 		return
 	}
 	buf := make([]uint16, 1024)
-	copy(buf, utf16z("eMudScan-report-"+time.Now().Format("20060102-1504")+".txt"))
+	copy(buf, utf16z(reportFileName(time.Now())+".txt"))
 	// the filter is a list of NUL-separated strings ending with two NULs
 	filter := utf16.Encode([]rune(T("save.filterTxt") + "\x00*.txt\x00" + T("save.filterAll") + "\x00*.*\x00\x00"))
 	defExt := utf16z("txt")

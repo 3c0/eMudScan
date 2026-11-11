@@ -1366,7 +1366,7 @@ func (a *ui) saveReportIn(dir string) (string, error) {
 	if dir == "" {
 		return "", errors.New("no Downloads folder")
 	}
-	base := "eMudScan-report-" + time.Now().Format("20060102-1504")
+	base := reportFileName(time.Now())
 	for i := 1; i < 100; i++ {
 		name := base + ".txt"
 		if i > 1 {
