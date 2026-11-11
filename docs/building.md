@@ -4,7 +4,7 @@
 
 | Path | Contents |
 |---|---|
-| `cmd/emudscan/` | The program (Go, one package), its tests, and `rsrc_windows_amd64.syso` (icon, manifest, version information), with `icon256.png`, the 256-pixel icon it contains |
+| `cmd/emudscan/` | The program (Go, one package) and its tests. It builds as `eMudScan.exe`, the window program, and, with the `cli` build tag, as `eMudScan-cli.exe`, the console program that scans from the command line. `winres/gui` and `winres/cli` hold their Windows resources, `rsrc_windows_amd64.syso` (icon, manifest, version information); `icon256.png` is the 256-pixel icon they contain |
 | `data/` | The reference data from emudhra.we-have-a-problem.com, with its notice and license, Go’s license and a copy of `LICENSE`, all embedded in the program, except the two chains of `chains/rollover`, which only the tests use |
 | `docs/` | This documentation; `docs/images/` holds the screenshots and icons shown here and in the README (the icons are drawn by eMudScan’s own code, `cmd/emudscan/icons.go`) |
 | `scripts/` | Build scripts for your own PC, and the scripts that publish a version (`release.sh`) and copy a hotfix into `main` (`hotfix-to-main.sh`) |
@@ -13,8 +13,8 @@
 ## GitHub builds the program
 
 Each push to `main` and each pull request runs the checks and the tests, then
-builds `eMudScan.exe`. The exe can be downloaded from the run’s page on the
-**Actions** tab, under **Artifacts** (a zip file).
+builds `eMudScan.exe` and `eMudScan-cli.exe`. Both can be downloaded from the
+run’s page on the **Actions** tab, under **Artifacts** (a zip file).
 
 ## Branches
 
@@ -56,30 +56,33 @@ and the changes, then asks for your confirmation. Only then does it set
 the tests (putting the files back if they fail), commit
 `chore(release): 3.1.0`, push it, and create and push the tag `3.1.0`.
 
-GitHub then builds the exe and checks that the tag matches `appVersion` and that
-`CHANGELOG.md` has a section for this version. It creates a **draft release**
-with `eMudScan.exe` and a page made from `.github/release-notes.md`: the text
+GitHub then builds the two exes and checks that the tag matches `appVersion` and
+that `CHANGELOG.md` has a section for this version. It creates a **draft
+release** with `eMudScan.exe`, `eMudScan-cli.exe` and a page made from
+`.github/release-notes.md`: the text
 around `@CHANGES@` is the same for every version, `@CHANGES@` is replaced by the
 changes since the previous version published in this repository (its highest
 version tag below this one): the version’s section of the changelog, then, each
 under its own heading, the sections of the versions in between that have no
 release here. Without such a tag, the previous version is the one this
-repository starts from, the `appVersion` of its first commit. The SHA-256, the
-build log and the date of the release are filled in too. It also records a build
-attestation proving that GitHub built the exe from this tag. Anyone can verify a
-copy with `gh attestation verify eMudScan.exe -R <owner>/<repository>`.
+repository starts from, the `appVersion` of its first commit. The SHA-256 of
+each exe, the build log and the date of the release are filled in too. It also
+records a build attestation proving that GitHub built the two exes from this
+tag. Anyone can verify a copy with
+`gh attestation verify eMudScan.exe -R <owner>/<repository>`.
 
-Download `eMudScan.exe` from the draft and scan it with
-[Jotti’s malware scan](https://virusscan.jotti.org/en-US). In the draft,
-complete the **Tested clean** line under the first paragraph, so that the
-release page shows that the exe was tested clean: replace `JOTTI_SCAN_ID` (a
-double-click selects it) with the ID at the end of the address of the results,
-and the number of antivirus engines if Jotti used another one. Its date is the
-date of the release: change it if you scan on another day.
+Download `eMudScan.exe` and `eMudScan-cli.exe` from the draft and scan each one
+with [Jotti’s malware scan](https://virusscan.jotti.org/en-US). In the draft,
+complete the two **Tested clean** lines, so that the release page shows that
+each exe was tested clean: replace `JOTTI_SCAN_ID` (for `eMudScan.exe`) and
+`JOTTI_SCAN_ID_CLI` (for `eMudScan-cli.exe`; a double-click selects each) with
+the ID at the end of the address of its results, and the number of antivirus
+engines if Jotti used another one. Their date is the date of the release: change
+it if you scan on another day.
 
-Antivirus engines update their detections all the time: scan the exe again a day
+Antivirus engines update their detections all the time: scan the exes again a day
 or more after the release, then edit the notes of the published release with the
-new date and link. GitHub allows editing the notes of a published release, even
+new date and links. GitHub allows editing the notes of a published release, even
 an immutable one.
 
 Check the draft, then click **Publish release**. GitHub adds the source code to
@@ -154,11 +157,18 @@ You need Go 1.24 or later, and nothing else. From the root of the repository:
 - Linux or macOS: `./scripts/build.sh`
 
 Both run the checks and the tests, regenerate the Windows resources, then write
-`dist/eMudScan.exe`. Each line they show starts with the time since the line
-before it and since the start, such as `[+02.40 06.90]`.
+`dist/eMudScan.exe` and `dist/eMudScan-cli.exe`. Each line they show starts with
+the time since the line before it and since the start, such as `[+02.40 06.90]`.
+
+The two exes are the same code. `eMudScan.exe` is built as a window program
+(`-H windowsgui`). `eMudScan-cli.exe` is built with the `cli` build tag and
+without that flag, as a console program: Windows reads this type in the exe, and
+a command prompt waits only for a console program, gives it its outputs and gets
+its exit code. The tag selects its entry point (`main_cli_windows.go` instead of
+`main_gui_windows.go`) and its resources.
 
 To test the Fix function without changing anything, `.\scripts\build.ps1 -Simulate`
-(or `./scripts/build.sh --simulate`) writes `dist/eMudScan-simulation.exe`
+(or `./scripts/build.sh --simulate`) writes only `dist/eMudScan-simulation.exe`
 instead. It runs Windows PowerShell and asks for administrator rights as usual,
 but runs nothing in place of each command, which then shows ✓ and “Done
 (simulated)”, after a second for each software, as its commands would take some
@@ -171,13 +181,16 @@ none). Its window title and its report say SIMULATION. The normal build contains
 none of this: the simulation is compiled only with the `simulate` build tag,
 which the GitHub build never sets.
 
-Every build also regenerates the Windows resources (`rsrc_windows_amd64.syso`:
-the icon, the manifest and the version information), so that the file’s
-properties show the version set in `model.go`: `scripts/build.ps1`,
-`scripts/build.sh`, `scripts/release.sh` and the GitHub build. The result is the
-same with any Go version and on any system, so the committed file never shows
-as changed and the exe does not say it was built from modified files; a test
-checks that the committed file is up to date.
+Every build also regenerates the Windows resources of the two exes (the
+`rsrc_windows_amd64.syso` of `cmd/emudscan/winres/gui` and of
+`cmd/emudscan/winres/cli`: the icon, the manifest and the version information,
+which names each exe), so that the files’ properties show the version set in
+`model.go`: `scripts/build.ps1`, `scripts/build.sh`, `scripts/release.sh` and the
+GitHub build. Go links into each exe the resources of the package that its entry
+point imports. The result is the same with any Go version and on any system, so
+the committed files never show as changed and the exes do not say they were
+built from modified files; a test checks that the committed files are up to
+date.
 
 The 256-pixel icon is the only part that needs care: Go’s PNG compression
 changes from one Go version to another, so the resources take it as it is from

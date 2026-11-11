@@ -107,6 +107,7 @@ func (tp *appsContext) scanAll(paths []string, what scanWhat) []scanEntry {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer guardWorker()
 			for {
 				i := int(next.Add(1) - 1)
 				if i >= len(paths) || tp.c.cancel() {

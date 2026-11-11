@@ -188,6 +188,7 @@ func (tp *appsContext) resolveIdentifiers(ids []string) map[string]ownerDir {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				defer guardWorker()
 				for i := int(next.Add(1) - 1); i < len(programs); i = int(next.Add(1) - 1) {
 					hits[i] = fileHits(programs[i].exe, w)
 				}

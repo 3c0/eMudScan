@@ -1,14 +1,15 @@
 #!/bin/sh
-# Builds dist/eMudScan.exe from Linux or macOS, like the GitHub build: checks and
-# tests the code, regenerates the Windows resources (icon, manifest, version
-# information), then compiles for Windows.
-# scripts/build.sh --simulate builds dist/eMudScan-simulation.exe instead, whose Fix
-# function runs nothing (see cmd/emudscan/fixsim_on.go).
+# Builds dist/eMudScan.exe (the window program) and dist/eMudScan-cli.exe (the console
+# program that scans from the command line) from Linux or macOS, like the GitHub
+# build: checks and tests the code, regenerates the Windows resources (icon, manifest,
+# version information), then compiles for Windows.
+# scripts/build.sh --simulate builds only dist/eMudScan-simulation.exe instead, whose
+# Fix function runs nothing (see cmd/emudscan/fixsim_on.go).
 set -e
 cd "$(dirname "$0")/.."
-tags="" out=dist/eMudScan.exe
+tags="" out=dist/eMudScan.exe cli=dist/eMudScan-cli.exe
 if [ "$1" = "--simulate" ]; then
-	tags=simulate out=dist/eMudScan-simulation.exe
+	tags=simulate out=dist/eMudScan-simulation.exe cli=""
 fi
 # A build that is not of a release (the commit tagged with appVersion, unchanged)
 # shows its commit instead of the date: "3.0.1+dev (ae7832d)", "3.0.1+dev (ae7832d-modified)".
@@ -22,20 +23,29 @@ if [ "$GITHUB_REF_TYPE" != "tag" ] && command -v git >/dev/null 2>&1 && git rev-
 		[ -n "$modified" ] && rev="$rev-modified"
 	fi
 fi
-ldflags="-s -w -H windowsgui"
+ldflags="-s -w"
 [ -n "$rev" ] && ldflags="$ldflags -X main.buildRev=$rev"
 
 build() {
 	echo "Checking the code (go vet)..."
 	go vet -tags "$tags" ./...
 	GOOS=windows GOARCH=amd64 go vet -tags "$tags" ./...
+	if [ -n "$cli" ]; then
+		GOOS=windows GOARCH=amd64 go vet -tags cli ./...
+	fi
 	echo "Running the tests (go test)..."
 	go test -tags "$tags" ./...
 	echo "Regenerating the Windows resources..."
-	go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso
+	go run ./cmd/emudscan --make-syso cmd/emudscan/winres/gui/rsrc_windows_amd64.syso
+	go run ./cmd/emudscan --make-syso-cli cmd/emudscan/winres/cli/rsrc_windows_amd64.syso
+	# the window program: -H windowsgui; the console program: the tag cli, without it
 	echo "Building $out..."
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -tags "$tags" -ldflags "$ldflags" -o "$out" ./cmd/emudscan
-	echo "Done: $out"
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -tags "$tags" -ldflags "$ldflags -H windowsgui" -o "$out" ./cmd/emudscan
+	if [ -n "$cli" ]; then
+		echo "Building $cli..."
+		GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -tags cli -ldflags "$ldflags" -o "$cli" ./cmd/emudscan
+	fi
+	echo "Done: $out${cli:+ and $cli}"
 }
 
 # Each line starts with the time since the line before it and since the start, such

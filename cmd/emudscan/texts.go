@@ -695,11 +695,52 @@ var tr = map[string][2]string{
 	"lang.auto":       {"Automatic (Windows)", "Automatique (Windows)"},
 	"lang.reset": {"Changing the language resets eMudScan as if it had just started: the current results will be lost.\n\nChange the language?",
 		"Changer de langue réinitialise eMudScan comme s’il venait d’être lancé\u00a0: les résultats actuels seront perdus.\n\nChanger de langue\u00a0?"},
-	"btn.save":         {"Save report", "Enregistrer le rapport"},
-	"cli.unknown":      {"Unknown option: %s", "Option inconnue\u00a0: %s"},
-	"cli.unexpected":   {"Unexpected argument: %s", "Argument inattendu\u00a0: %s"},
-	"cli.noValue":      {"The option %s needs a value", "L’option %s demande une valeur"},
-	"cli.badLang":      {"Not a language, en or fr: %s", "Ce n’est pas une langue, en ou fr\u00a0: %s"},
+	"btn.save":       {"Save report", "Enregistrer le rapport"},
+	"cli.unknown":    {"Unknown option: %s", "Option inconnue\u00a0: %s"},
+	"cli.unexpected": {"Unexpected argument: %s", "Argument inattendu\u00a0: %s"},
+	"cli.noValue":    {"The option %s needs a value", "L’option %s demande une valeur"},
+	"cli.badDrives":  {"Not a list of drives, such as C:,D: or none: %s", "Ce n’est pas une liste de disques, comme C:,D: ou none\u00a0: %s"},
+	"cli.badLang":    {"Not a language, en or fr: %s", "Ce n’est pas une langue, en ou fr\u00a0: %s"},
+	"cli.noDrive":    {"The drive %s was not found", "Le disque %s est introuvable"},
+	"cli.noFolder":   {"The folder of this report does not exist: %s", "Le dossier de ce rapport n’existe pas\u00a0: %s"},
+	"cli.saved":      {"Report saved: %s", "Rapport enregistré\u00a0: %s"},
+	"cli.seeHelp":    {"For the options: eMudScan-cli.exe --help", "Pour les options\u00a0: eMudScan-cli.exe --help"},
+	"cli.usage": {`eMudScan-cli.exe [--report FILE]... [--drives C:,D:|none] [--online] [--lang en|fr]
+
+Scans this PC without the window of eMudScan. It never runs a fix.
+
+  --report FILE   Write the report in FILE. Its extension gives the type: .txt,
+                  .json or .csv. Can be given several times. Without it, the
+                  text report goes to the standard output.
+  --drives LIST   The drives to scan, such as C:,D: (none: no drive). Without it,
+                  the local drives.
+  --online        Run the online test (3 connections to
+                  emudhra.we-have-a-problem.com). Without it, no connection.
+  --lang en|fr    The language of the log and the reports.
+  --help          Show this help.
+
+The log goes to the standard error output.
+
+Exit code: 0 OK or information only, 1 warning, 2 update needed, 3 critical,
+           10 the scan could not run.`, `eMudScan-cli.exe [--report FICHIER]... [--drives C:,D:|none] [--online] [--lang en|fr]
+
+Scanne ce PC sans la fenêtre d’eMudScan. N’exécute jamais de correction.
+
+  --report FICHIER  Écrit le rapport dans FICHIER. Son extension donne le type\u00a0:
+                    .txt, .json ou .csv. Peut être donnée plusieurs fois. Sans
+                    elle, le rapport texte va sur la sortie standard.
+  --drives LISTE    Les disques à scanner, comme C:,D: (none\u00a0: aucun disque).
+                    Sans elle, les disques locaux.
+  --online          Exécute le test en ligne (3 connexions à
+                    emudhra.we-have-a-problem.com). Sans elle, aucune connexion.
+  --lang en|fr      La langue du journal et des rapports.
+  --help            Affiche cette aide.
+
+Le journal va sur la sortie d’erreur standard.
+
+Code de sortie\u00a0: 0 OK ou information seule, 1 avertissement, 2 mise à jour
+                 requise, 3 critique, 10 le scan n’a pas pu s’exécuter.`},
+	"cli.noResult":     {"The scan gave no result", "Le scan n’a donné aucun résultat"},
 	"save.filterTxt":   {"Text files (*.txt)", "Fichiers texte (*.txt)"},
 	"save.filterJson":  {"JSON files (*.json)", "Fichiers JSON (*.json)"},
 	"save.filterCsv":   {"CSV files (*.csv)", "Fichiers CSV (*.csv)"},

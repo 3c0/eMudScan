@@ -1,9 +1,11 @@
-# Builds dist\eMudScan.exe on Windows (PowerShell): .\scripts\build.ps1
+# Builds dist\eMudScan.exe (the window program) and dist\eMudScan-cli.exe (the
+# console program that scans from the command line) on Windows (PowerShell):
+# .\scripts\build.ps1
 # Checks and tests the code, regenerates the Windows resources
-# (cmd\emudscan\rsrc_windows_amd64.syso), as scripts/build.sh and the GitHub
-# build do, then compiles it.
-# .\scripts\build.ps1 -Simulate builds dist\eMudScan-simulation.exe instead, whose
-# Fix function runs nothing (see cmd\emudscan\fixsim_on.go).
+# (rsrc_windows_amd64.syso in cmd\emudscan\winres\gui and cli), as scripts/build.sh
+# and the GitHub build do, then compiles them.
+# .\scripts\build.ps1 -Simulate builds only dist\eMudScan-simulation.exe instead,
+# whose Fix function runs nothing (see cmd\emudscan\fixsim_on.go).
 param([switch]$Simulate)
 $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
@@ -24,10 +26,10 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     }
     $ErrorActionPreference = 'Stop'
 }
-$ldflags = '-s -w -H windowsgui'
+$ldflags = '-s -w'
 if ($rev) { $ldflags += " -X main.buildRev=$rev" }
-$tags, $out = '', 'dist\eMudScan.exe'
-if ($Simulate) { $tags, $out = 'simulate', 'dist\eMudScan-simulation.exe' }
+$tags, $out, $cli = '', 'dist\eMudScan.exe', 'dist\eMudScan-cli.exe'
+if ($Simulate) { $tags, $out, $cli = 'simulate', 'dist\eMudScan-simulation.exe', '' }
 
 # Each line starts with the time since the line before it and since the start, such
 # as "[+02.40 06.90]": each stage says what it does, and the times show which one
@@ -51,7 +53,15 @@ function Run([string]$stage, [scriptblock]$command) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 Run 'Checking the code (go vet)...' { go vet -tags "$tags" ./... }
+if ($cli) { Run 'Checking the code of the console program (go vet)...' { go vet -tags cli ./... } }
 Run 'Running the tests (go test)...' { go test -tags "$tags" ./... }
-Run 'Regenerating the Windows resources...' { go run ./cmd/emudscan --make-syso cmd\emudscan\rsrc_windows_amd64.syso }
-Run "Building $out..." { go build -trimpath -tags "$tags" -ldflags $ldflags -o $out ./cmd/emudscan }
-Say "Done: $out"
+Run 'Regenerating the Windows resources...' { go run ./cmd/emudscan --make-syso cmd\emudscan\winres\gui\rsrc_windows_amd64.syso }
+Run 'Regenerating the Windows resources of the console program...' { go run ./cmd/emudscan --make-syso-cli cmd\emudscan\winres\cli\rsrc_windows_amd64.syso }
+# the window program: -H windowsgui; the console program: the tag cli, without it
+Run "Building $out..." { go build -trimpath -tags "$tags" -ldflags "$ldflags -H windowsgui" -o $out ./cmd/emudscan }
+if ($cli) {
+    Run "Building $cli..." { go build -trimpath -tags cli -ldflags $ldflags -o $cli ./cmd/emudscan }
+    Say "Done: $out and $cli"
+} else {
+    Say "Done: $out"
+}

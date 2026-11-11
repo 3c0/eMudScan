@@ -2614,7 +2614,8 @@ func registerClass(inst uintptr, name string, proc uintptr, icon, iconSm, cursor
 	pRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 }
 
-func main() {
+// guiMain runs eMudScan.exe: it shows the window (main_gui_windows.go).
+func guiMain() {
 	if toolCommand(os.Args[1:]) { // --make-syso…, run by the build scripts: no window
 		return
 	}

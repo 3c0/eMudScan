@@ -415,8 +415,57 @@ disclaimer. **Licenses and notices** shows the full license texts.
 
 ## Command line
 
+`eMudScan.exe` opens the window. It has two options:
+
 - `--lang en`, `--lang fr`: the language for this session.
 - `--offline`: start with **Allow the online test** cleared.
+
+### Scanning without the window
+
+`eMudScan-cli.exe` is a second program, for administrators who scan from a
+script or a deployment tool. It is the same scanner, as a console program: it
+works alone, without `eMudScan.exe`, and command prompts wait for it. It scans,
+then exits. It asks nothing, never runs a fix, and needs no administrator
+rights.
+
+| Option | Effect |
+|---|---|
+| `--report FILE` | Write the report in FILE. Its extension gives the type: `.txt`, `.json` or `.csv` (text with another extension). Give the option several times to get several files. A file that exists is replaced |
+| `--drives C:,D:` | The drives to scan. Without this option: the local drives, as the window ticks them. `--drives none`: no drive, only the checks that need none |
+| `--online` | Run the online test. Without this option, the scan makes no internet connection |
+| `--lang en`, `--lang fr` | The language of the log and the reports |
+| `--help` | Show the options |
+
+The log is written to the standard error output while the scan runs. Without
+`--report`, the text report is then written to the standard output. A wrong
+option stops the scan before it starts.
+
+The exit code gives the worst status found:
+
+| Exit code | Meaning |
+|:-:|---|
+| 0 | OK, or information only |
+| 1 | Warning |
+| 2 | Update needed |
+| 3 | Critical |
+| 10 | The scan could not run, or a report could not be written. The reason is on the standard error output |
+
+In cmd:
+
+```bat
+eMudScan-cli.exe --report "%TEMP%\eMudScan-%COMPUTERNAME%.json"
+echo %ERRORLEVEL%
+```
+
+In PowerShell:
+
+```powershell
+.\eMudScan-cli.exe --report "$env:TEMP\eMudScan.json"
+$LASTEXITCODE
+```
+
+To keep a report, prefer `--report` to redirecting the standard output: the
+file is then written by eMudScan itself, and no shell changes its characters.
 
 ## If your antivirus flags eMudScan.exe
 

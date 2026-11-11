@@ -38,7 +38,7 @@ Download `eMudScan.exe` from the [latest release](https://github.com/3c0/eMudSca
 
 eMudScan is not code-signed, so Windows SmartScreen may show it as an unrecognized app: select **More info**, then **Run anyway**.
 
-The [latest release](https://github.com/3c0/eMudScan/releases/latest) links to the antivirus test results of its `eMudScan.exe`. If your antivirus flags it anyway, see [If your antivirus flags eMudScan.exe](docs/using.md#if-your-antivirus-flags-emudscanexe).
+The [latest release](https://github.com/3c0/eMudScan/releases/latest) links to the antivirus test results of its exes. If your antivirus flags it anyway, see [If your antivirus flags eMudScan.exe](docs/using.md#if-your-antivirus-flags-emudscanexe).
 
 ## 🧭 Use
 
@@ -47,6 +47,8 @@ The [latest release](https://github.com/3c0/eMudScan/releases/latest) links to t
 3. Click **Scan**.
 4. Double-click an item to see the recommended action. **Save report** saves the results to a text, JSON or CSV file.
 5. Click **Fix** to fix the software that eMudScan can fix, once you accept a warning.
+
+Administrators can scan from the command line with `eMudScan-cli.exe`, from the same release: see [Scanning without the window](docs/using.md#scanning-without-the-window).
 
 Each item gets a colored shield:
 
@@ -90,11 +92,11 @@ See [What eMudScan checks](docs/checks.md) for details.
 
 ## 🔒 Privacy
 
-A scan connects to the internet only when **Allow the online test** is checked: 3 connections to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version. Nothing else is sent. A fix connects once you accept it: package managers download their updates from their own sources, and Mozilla’s certificate bundle comes from curl.se. See [Privacy](docs/privacy.md).
+A scan connects to the internet only when **Allow the online test** is checked (`--online` for `eMudScan-cli.exe`): 3 connections to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version. Nothing else is sent. A fix connects once you accept it: package managers download their updates from their own sources, and Mozilla’s certificate bundle comes from curl.se. See [Privacy](docs/privacy.md).
 
 ## 📖 Documentation
 
-- [Using eMudScan](docs/using.md): the window, the statuses, the detailed information, fixes and the report
+- [Using eMudScan](docs/using.md): the window, the statuses, the detailed information, fixes, the report and the command line
 - [What eMudScan checks](docs/checks.md)
 - [Software listed by we-have-a-problem.com](docs/coverage.md): how eMudScan checks each one
 - [Privacy](docs/privacy.md)

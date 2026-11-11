@@ -194,6 +194,7 @@ func walkTree(root string, stop func() bool, visit func(p string, e fs.DirEntry)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer guardWorker()
 			for {
 				mu.Lock()
 				for len(todo) == 0 && pending > 0 {

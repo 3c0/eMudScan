@@ -1,15 +1,18 @@
 package main
 
-// Generates rsrc_windows_amd64.syso: a COFF object holding the Windows
-// resources (application icon, manifest, version information). The Go linker
-// picks it up automatically when building for windows/amd64.
+// Generates the rsrc_windows_amd64.syso of each of the two programs (exeFile): a
+// COFF object holding its Windows resources (application icon, manifest, version
+// information). The Go linker picks up, when building for windows/amd64, the one of
+// the package that the program imports (winres/gui for eMudScan.exe, winres/cli for
+// eMudScan-cli.exe).
 //
-//   go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso
+//   go run ./cmd/emudscan --make-syso cmd/emudscan/winres/gui/rsrc_windows_amd64.syso
+//   go run ./cmd/emudscan --make-syso-cli cmd/emudscan/winres/cli/rsrc_windows_amd64.syso
 //
-// (from the root of the repository, on any system). Every build regenerates it:
+// (from the root of the repository, on any system). Every build regenerates them:
 // scripts/build.sh, scripts\build.ps1, scripts/release.sh and the GitHub build. The
-// result is the same with any Go version, so the committed file never shows as
-// changed; TestSysoUpToDate checks that it is up to date.
+// result is the same with any Go version, so the committed files never show as
+// changed; TestSysoUpToDate checks that they are up to date.
 
 import (
 	"bytes"
@@ -166,7 +169,20 @@ func version4() string {
 	return fmt.Sprintf("%d.%d.%d.%d", v[0], v[1], v[2], v[3])
 }
 
-func versionResource() []byte {
+// exeFile is one of the two programs built from this code, as its Windows resources
+// name it. They have the same icon and manifest.
+type exeFile struct {
+	file        string // its file name ("OriginalFilename")
+	name        string // its internal name
+	description string // the name that Task Manager, SmartScreen and the UAC prompt show
+}
+
+var (
+	exeWindow = exeFile{"eMudScan.exe", "eMudScan", "eMudScan"}                        // the window program
+	exeCLI    = exeFile{"eMudScan-cli.exe", "eMudScan-cli", "eMudScan (command line)"} // the console program (cliscan.go)
+)
+
+func versionResource(exe exeFile) []byte {
 	v := ParseVersion(appVersion)
 	for len(v) < 4 {
 		v = append(v, 0)
@@ -180,10 +196,10 @@ func versionResource() []byte {
 		return versionNode(k, 1, utf16zLE(val), uint16(len(utf16.Encode([]rune(val)))+1))
 	}
 	table := versionNode("040904b0", 1, nil, 0,
-		str("FileDescription", "eMudScan"), // the name Task Manager, SmartScreen and the UAC prompt show
+		str("FileDescription", exe.description),
 		str("FileVersion", appVersionDate()),
-		str("InternalName", "eMudScan"),
-		str("OriginalFilename", "eMudScan.exe"),
+		str("InternalName", exe.name),
+		str("OriginalFilename", exe.file),
 		str("ProductName", "eMudScan"),
 		str("ProductVersion", appVersionDate()),
 		str("CompanyName", appAuthor),
@@ -200,7 +216,7 @@ func versionResource() []byte {
 	return versionNode("VS_VERSION_INFO", 0, ffi.Bytes(), 52, sfi, vfi)
 }
 
-func resourceItems() []resItem {
+func resourceItems(exe exeFile) []resItem {
 	var items []resItem
 	sizes := []int{16, 20, 24, 32, 40, 48, 64, 256}
 	var grp bytes.Buffer
@@ -221,7 +237,7 @@ func resourceItems() []resItem {
 		le16(&grp, uint16(i+1))
 	}
 	items = append(items, resItem{rtGroupIcon, 1, grp.Bytes()})
-	items = append(items, resItem{rtVersion, 1, versionResource()})
+	items = append(items, resItem{rtVersion, 1, versionResource(exe)})
 	items = append(items, resItem{rtManifest, 1, []byte(strings.Replace(manifestXML, "{{version}}", version4(), 1))})
 	return items
 }
@@ -296,7 +312,7 @@ func buildResourceSection(items []resItem) ([]byte, []uint32) {
 	return sec, relocs
 }
 
-func writeSyso(path string) error { return writeIfChanged(path, sysoBytes()) }
+func writeSyso(path string, exe exeFile) error { return writeIfChanged(path, sysoBytes(exe)) }
 
 // writeIfChanged writes data to path, unless the file already holds exactly this
 // data: every build regenerates the Windows resources, and rewriting the file would
@@ -309,9 +325,9 @@ func writeIfChanged(path string, data []byte) error {
 	return os.WriteFile(path, data, 0o644)
 }
 
-// sysoBytes is the content of rsrc_windows_amd64.syso.
-func sysoBytes() []byte {
-	sec, relocs := buildResourceSection(resourceItems())
+// sysoBytes is the content of the rsrc_windows_amd64.syso of a program.
+func sysoBytes(exe exeFile) []byte {
+	sec, relocs := buildResourceSection(resourceItems(exe))
 	var b bytes.Buffer
 	const hdr, shdr = 20, 40
 	relocOff := hdr + shdr + len(sec)
@@ -363,10 +379,11 @@ func icon256Encoded() []byte {
 }
 
 // toolCommand runs the commands that make files from the source, on any system:
-// --make-syso (the Windows resources), --make-ico (the icon as a .ico file) and
-// --make-icon256 (the 256-pixel icon, to compress into icon256.png), each followed
-// by the path of the file to write. It reports whether args is one of them; it
-// exits with status 1 if the file cannot be written.
+// --make-syso and --make-syso-cli (the Windows resources of eMudScan.exe and of
+// eMudScan-cli.exe), --make-ico (the icon as a .ico file) and --make-icon256 (the
+// 256-pixel icon, to compress into icon256.png), each followed by the path of the
+// file to write. It reports whether args is one of them; it exits with status 1 if
+// the file cannot be written.
 func toolCommand(args []string) bool {
 	if len(args) != 2 {
 		return false
@@ -374,7 +391,9 @@ func toolCommand(args []string) bool {
 	var err error
 	switch args[0] {
 	case "--make-syso":
-		err = writeSyso(args[1])
+		err = writeSyso(args[1], exeWindow)
+	case "--make-syso-cli":
+		err = writeSyso(args[1], exeCLI)
 	case "--make-ico":
 		err = writeICO(args[1])
 	case "--make-icon256":

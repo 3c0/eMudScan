@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `eMudScan-cli.exe`, a second program for administrators, which scans from the command line: a console program, so command prompts and scripts wait for it and get its exit code. It is the same scanner as `eMudScan.exe` and works alone. Its exit code gives the worst status found (0: OK or information only, 1: warning, 2: update needed, 3: critical, 10: the scan could not run). `--report FILE` writes the report as text, JSON or CSV, by the extension of the file, and can be given several times; without it, the text report goes to the standard output. The log goes to the standard error output. `--drives C:,D:` chooses the drives. It never runs a fix, and makes no internet connection unless `--online` is given.
 - **Save report** can save the report as a JSON or a CSV file, for other programs and spreadsheets: choose the type in the list of types of its dialog. The JSON file has every item with all its fields, the fixes and the log; the CSV file has one row for each item, with commas. Their field names and keywords are in English in both languages. “The report”, in `docs/using.md`, describes the fields. **Copy report** still copies the text.
 
 ### Changed

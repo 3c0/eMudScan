@@ -5,6 +5,8 @@ package main
 // Command-line runner used to test the checks on other systems (from the root of
 // the repository):
 //   go run ./cmd/emudscan [--lang fr] [folders to scan...]
+// With --scan first, it runs the scan of eMudScan-cli.exe (cliscan.go), with its
+// options.
 // The commands that make files from the source (--make-syso…) work on any system:
 // see toolCommand in mkrsrc.go.
 
@@ -74,6 +76,23 @@ func main() {
 	}
 	if toolCommand(args) {
 		return
+	}
+	if len(args) > 0 && args[0] == "--scan" { // the scan of eMudScan-cli.exe, with its options
+		o, err := parseArgs(args[1:])
+		if o.lang >= 0 {
+			Lang = o.lang
+		}
+		if o.help {
+			fmt.Print(usage())
+			return
+		}
+		if err == nil {
+			err = loadData()
+		}
+		if err != nil {
+			os.Exit(scanFailed(os.Stderr, err.Error()))
+		}
+		os.Exit(runScan(o, os.Stdout, os.Stderr))
 	}
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--lang" && i+1 < len(args) {

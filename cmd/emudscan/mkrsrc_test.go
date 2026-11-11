@@ -46,15 +46,29 @@ func TestIcon256(t *testing.T) {
 	}
 }
 
-// The committed Windows resources are those that --make-syso writes, so the build
-// does not change them, and the exe does not say it was built from modified files.
+// The committed Windows resources of both programs are those that --make-syso and
+// --make-syso-cli write, so the build does not change them, and the exes do not say
+// they were built from modified files. Each program is named in its own.
 func TestSysoUpToDate(t *testing.T) {
-	b, err := os.ReadFile("rsrc_windows_amd64.syso")
-	if err != nil {
-		t.Fatal(err)
+	for _, x := range []struct {
+		dir, command string
+		exe          exeFile
+	}{{"gui", "--make-syso", exeWindow}, {"cli", "--make-syso-cli", exeCLI}} {
+		path := "winres/" + x.dir + "/rsrc_windows_amd64.syso"
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(b, sysoBytes(x.exe)) {
+			t.Errorf("%s is not up to date: regenerate it with go run ./cmd/emudscan %s cmd/emudscan/%s", path, x.command, path)
+		}
+		if name := utf16zLE(x.exe.file); !bytes.Contains(b, name) {
+			t.Errorf("%s does not name %s", path, x.exe.file)
+		}
 	}
-	if !bytes.Equal(b, sysoBytes()) {
-		t.Error("rsrc_windows_amd64.syso is not up to date: regenerate it with go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso")
+	if bytes.Equal(sysoBytes(exeWindow), sysoBytes(exeCLI)) || !bytes.Contains(sysoBytes(exeWindow), utf16zLE("eMudScan.exe")) ||
+		bytes.Contains(sysoBytes(exeWindow), utf16zLE("eMudScan-cli.exe")) {
+		t.Error("the two programs must have their own version information")
 	}
 }
 

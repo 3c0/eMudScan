@@ -29,6 +29,9 @@ v=$1
 echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || fail "usage: sh scripts/release.sh <version>, such as 3.1.0"
 cd "$(dirname "$0")/.."
 model=cmd/emudscan/model.go
+# the Windows resources of eMudScan.exe and of eMudScan-cli.exe, which give the version
+syso=cmd/emudscan/winres/gui/rsrc_windows_amd64.syso
+syso_cli=cmd/emudscan/winres/cli/rsrc_windows_amd64.syso
 
 # 1. checks
 branch=$(git branch --show-current)
@@ -108,7 +111,7 @@ read -r answer || answer=""
 
 # 3. the release changes
 restore() {
-	git checkout -q -- "$model" CHANGELOG.md cmd/emudscan/rsrc_windows_amd64.syso
+	git checkout -q -- "$model" CHANGELOG.md "$syso" "$syso_cli"
 	echo "Error: $1 The files are back as they were: nothing changed." >&2
 	exit 1
 }
@@ -133,16 +136,18 @@ awk -v v="$v" -v p="$p" -v day="$day" '
 	}
 	{ print }
 ' CHANGELOG.md >"$tmp/changelog" && cp "$tmp/changelog" CHANGELOG.md
-go run ./cmd/emudscan --make-syso cmd/emudscan/rsrc_windows_amd64.syso || restore "the Windows resources could not be regenerated."
+go run ./cmd/emudscan --make-syso "$syso" && go run ./cmd/emudscan --make-syso-cli "$syso_cli" ||
+	restore "the Windows resources could not be regenerated."
 
 # 4. checks and tests
 echo "Checking and testing…"
 go vet ./... || restore "go vet failed."
 GOOS=windows GOARCH=amd64 go vet ./... || restore "go vet failed (Windows)."
+GOOS=windows GOARCH=amd64 go vet -tags cli ./... || restore "go vet failed (Windows, console program)."
 go test ./... || restore "the tests failed."
 
 # 5. commit, tag, push
-git commit -q -m "chore(release): $v" -- "$model" CHANGELOG.md cmd/emudscan/rsrc_windows_amd64.syso
+git commit -q -m "chore(release): $v" -- "$model" CHANGELOG.md "$syso" "$syso_cli"
 if [ "$branch" = main ]; then
 	git push -q origin main || fail "the push of main failed: the commit \"chore(release): $v\" is only on your PC. Fix the problem, then run: git push, git tag $v and git push origin $v"
 fi
@@ -154,7 +159,7 @@ echo
 echo "Done: $v is committed, tagged and pushed."
 echo "Next, as docs/building.md says:"
 echo "  1. Wait for the build: $repo/actions"
-echo "  2. Check the draft release, scan its eMudScan.exe on Jotti and complete its Tested clean line: $repo/releases"
+echo "  2. Check the draft release, scan its eMudScan.exe and its eMudScan-cli.exe on Jotti and complete its two Tested clean lines: $repo/releases"
 echo "  3. Publish it."
 if [ "$branch" != main ]; then
 	echo "  4. Copy the hotfix into main: git switch main, then sh scripts/hotfix-to-main.sh $v"

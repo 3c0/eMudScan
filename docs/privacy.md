@@ -113,6 +113,9 @@ makes no internet connection at all, not even for proxy detection. The online
 test is skipped; every other check works the same. The choice is not saved. The
 fixes that you run still connect, as described above.
 
+`eMudScan-cli.exe`, which scans without the window, is the other way round:
+nobody is there to clear a box, so it runs the online test only with `--online`.
+
 ## Everything else stays on your PC
 
 The Windows certificate checks run without network access and without updating

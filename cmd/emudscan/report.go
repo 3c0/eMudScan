@@ -12,7 +12,7 @@ func runAllChecks(c *checker, drives []string, extraRoots []string) {
 	start := time.Now()
 	c.setScan(scanRun{drives: drives})
 	c.line(StPending, Tf("log.start", appName, appVersionDate(), windowsVersionString(), time.Now().Format("2006-01-02 15:04")))
-	if drives != nil && len(drives) == 0 { // no drive ticked in the window
+	if drives != nil && len(drives) == 0 { // no drive ticked in the window, or --drives none
 		c.note(StInfo, T("log.noDrive"))
 	}
 	if defaultEmbedScanner == nil {
