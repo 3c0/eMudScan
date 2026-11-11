@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- In the log, the line of a certificate bundle gives the file itself instead of its folder (“Certificate bundle — file”), and the line of a program says “in” before its folder (“Java in folder”) instead of a dash.
 - The name of a saved report has the name of the PC, such as `eMudScan-report-MY-PC-20261201-101548.txt`, so that the reports of several PCs can be kept in one folder.
 
 ## [3.1.0] - 2026-11-11

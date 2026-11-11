@@ -2438,7 +2438,7 @@ func (tp *appsContext) checkBundles() {
 		case dotnetRootsRe.MatchString(p):
 			name = T("dotnet.name")
 		}
-		tp.c.begin(tp.groupOf(name, p), "bundle", name, filepath.Dir(p), func(it *Item) { tp.bundleOne(it, p) })
+		tp.c.beginFile(tp.groupOf(name, p), "bundle", name, p, func(it *Item) { tp.bundleOne(it, p) })
 	}
 	for i, p := range badPaths {
 		if i == maxItems {

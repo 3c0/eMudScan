@@ -232,7 +232,7 @@ func (tp *appsContext) checkCertSettings() {
 	sort.SliceStable(settings, func(i, j int) bool { return settings[i].owner < settings[j].owner })
 	for _, s := range settings {
 		s := s
-		tp.c.begin(GroupApps, "setting", s.label, firstNonEmpty(s.config, s.target), func(it *Item) { tp.settingOne(it, s) })
+		tp.c.beginFile(GroupApps, "setting", s.label, firstNonEmpty(s.config, s.target), func(it *Item) { tp.settingOne(it, s) })
 	}
 }
 

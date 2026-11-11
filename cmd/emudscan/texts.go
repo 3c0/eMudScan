@@ -113,6 +113,7 @@ var tr = map[string][2]string{
 
 	// --- progress log
 	"log.start":           {"%s %s · %s · %s", "%s %s · %s · %s"},
+	"log.in":              {"%s in %s", "%s dans %s"}, // a program, in its folder
 	"log.done":            {"Finished in %s: %s.", "Terminé en %s\u00a0: %s."},
 	"log.done.short":      {"done", "terminé"},
 	"log.cancelled":       {"Scan interrupted.", "Scan interrompu."},

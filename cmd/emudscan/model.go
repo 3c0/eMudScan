@@ -364,8 +364,8 @@ type checker struct {
 	items       map[int]*Item
 	order       []int
 	rechecks    map[int]func(*Item)
-	summaries   []summary      // elements that sum up others (addSummary)
-	where       map[int]string // location shown in the log for each item
+	summaries   []summary     // elements that sum up others (addSummary)
+	where       map[int]place // where each item is, as the log says it
 	cancel      func() bool
 	fixes       []fixLine // what the fixes showed, for the report
 	scan        scanRun   // how the whole scan ran, for the JSON report
@@ -375,7 +375,7 @@ func newChecker(r Reporter, cancel func() bool) *checker {
 	if cancel == nil {
 		cancel = func() bool { return false }
 	}
-	return &checker{r: r, items: map[int]*Item{}, rechecks: map[int]func(*Item){}, where: map[int]string{}, cancel: cancel}
+	return &checker{r: r, items: map[int]*Item{}, rechecks: map[int]func(*Item){}, where: map[int]place{}, cancel: cancel}
 }
 
 func (c *checker) section(s string)            { c.r.Log(LogSection, StPending, s) }
@@ -386,17 +386,41 @@ func (c *checker) stepStart(s string)          { c.r.Log(LogStart, StPending, s+
 func (c *checker) stepEnd(st Status, s string) { c.r.Log(LogEnd, st, s) }
 func (c *checker) activity(s string)           { c.r.Activity(s) }
 
-// stepLabel is the text logged when an item is checked.
-func stepLabel(name, where string) string {
-	if where == "" {
-		return name
-	}
-	return name + " — " + shownPath(where)
+// place is where an item is, as its line of the log says it after its name: the
+// folder that holds a program or, with file set, a file (the item itself, such as a
+// certificate bundle, or the file that holds a setting) or the value of a variable.
+type place struct {
+	path string
+	file bool
 }
 
-// begin adds an item in the "checking" state and starts its line in the log.
-// check, if not nil, computes the item and can be run again later.
-func (c *checker) begin(g Group, kind, name, where string, check func(*Item)) *Item {
+// stepLabel is the text logged when an item is checked: its name and, when it is
+// known, where it is. A program is in its folder ("Java in C:\Apps\jdk"); a file or a
+// value comes after a dash ("Certificate bundle — C:\Apps\certs\cacert.pem").
+func stepLabel(name string, at place) string {
+	switch {
+	case at.path == "":
+		return name
+	case at.file:
+		return name + " — " + shownPath(at.path)
+	}
+	return Tf("log.in", name, shownPath(at.path))
+}
+
+// begin adds an item in the "checking" state and starts its line in the log, which
+// says that it is in folder (if not empty). check, if not nil, computes the item and
+// can be run again later.
+func (c *checker) begin(g Group, kind, name, folder string, check func(*Item)) *Item {
+	return c.beginAt(g, kind, name, place{path: folder}, check)
+}
+
+// beginFile is begin for an item that is a file, or a setting written in a file or
+// that has a value: its line of the log gives file after a dash.
+func (c *checker) beginFile(g Group, kind, name, file string, check func(*Item)) *Item {
+	return c.beginAt(g, kind, name, place{path: file, file: true}, check)
+}
+
+func (c *checker) beginAt(g Group, kind, name string, where place, check func(*Item)) *Item {
 	c.mu.Lock()
 	c.nextID++
 	it := &Item{ID: c.nextID, Group: g, Kind: kind, Name: name, Status: StPending, Summary: T("checking"), Recheck: check != nil}

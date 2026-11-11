@@ -141,6 +141,44 @@ func TestLogNote(t *testing.T) {
 	}
 }
 
+// The line of an item in the log says where it is: a program, in its folder; a file
+// (a certificate bundle, the file of a setting) or the value of a variable, after a
+// dash; nothing when it is not known.
+func TestStepLabel(t *testing.T) {
+	defer func() { Lang = 0 }()
+	for _, c := range []struct {
+		name string
+		at   place
+		en   string
+		fr   string
+	}{
+		{"Java", place{path: `C:\Apps\jdk-25`}, `Java in C:\Apps\jdk-25`, `Java dans C:\Apps\jdk-25`},
+		{"Certificate bundle", place{path: `C:\Apps\example-app-31\cacert.pem`, file: true}, `Certificate bundle — C:\Apps\example-app-31\cacert.pem`, `Certificate bundle — C:\Apps\example-app-31\cacert.pem`},
+		{"Example App 31", place{}, "Example App 31", "Example App 31"},
+	} {
+		Lang = 0
+		if got := stepLabel(c.name, c.at); got != c.en {
+			t.Errorf("English: %q, want %q", got, c.en)
+		}
+		Lang = 1
+		if got := stepLabel(c.name, c.at); got != c.fr {
+			t.Errorf("French: %q, want %q", got, c.fr)
+		}
+	}
+	Lang = 0
+	var out bytes.Buffer
+	c := newChecker(&scanLog{out: &out}, nil)
+	c.finish(c.begin(GroupApps, "app", "Example App 31", `C:\Apps\example-app-31`, nil), result{Status: StOK, Summary: "Checked"})
+	c.finish(c.beginFile(GroupApps, "bundle", "certifi", `C:\Apps\example-app-31\certifi\cacert.pem`, nil), result{Status: StOK, Summary: "Checked"})
+	c.finish(c.beginFile(GroupApps, "setting", "SSL_CERT_FILE", `C:\Apps\certs\ca.pem`, nil), result{Status: StOK, Summary: "Checked"})
+	want := "Example App 31 in C:\\Apps\\example-app-31 … ✅ Checked\r\n" +
+		"certifi — C:\\Apps\\example-app-31\\certifi\\cacert.pem … ✅ Checked\r\n" +
+		"SSL_CERT_FILE — C:\\Apps\\certs\\ca.pem … ✅ Checked\r\n"
+	if out.String() != want {
+		t.Errorf("log:\n%s\nwant:\n%s", out.String(), want)
+	}
+}
+
 // At its end, a command-line scan writes the reports in the files asked for, their
 // types given by their extensions, or the text report on stdout; its exit code is
 // the worst status, or 10 when a report could not be written.
