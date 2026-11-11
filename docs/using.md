@@ -487,5 +487,6 @@ them, usually through a form on their website. eMudScan’s author cannot change
 what an antivirus reports, so please do not report false positives in
 eMudScan’s issues.
 
-You can also build `eMudScan.exe` yourself from its source code: see
-[Building and releasing](building.md).
+You can also build `eMudScan.exe` yourself from its source code, and check that
+you get the same file as the one of a release: see
+[Rebuilding a release](building.md#rebuilding-a-release).

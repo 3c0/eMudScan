@@ -200,6 +200,32 @@ application icon (`icons.go`), a test fails until you write it again:
 it with a PNG optimizer that keeps 8-bit RGBA, the exact pixels (no alpha
 optimization), no interlacing and no metadata, and regenerate the resources.
 
+## Rebuilding a release
+
+The build is reproducible: built from the same commit with the same Go version,
+the two exes come out the same, byte for byte, on Windows, Linux or macOS and in
+any folder. So anyone can check that the exes of a release come from its source
+code, without trusting GitHub or eMudScan’s author:
+
+1. Find the Go version of the release: `go version eMudScan.exe` shows the one
+   that built an exe, such as `go1.27.4` for eMudScan 3.1.0.
+2. Get the source code of the release:
+   `git clone https://github.com/3c0/eMudScan`, then `git checkout 3.1.0` in
+   its folder.
+3. With that Go version, run `.\scripts\build.ps1` or `./scripts/build.sh`.
+4. Compare the SHA-256 of `dist/eMudScan.exe` and of `dist/eMudScan-cli.exe` with
+   those of the release page: `Get-FileHash dist\eMudScan.exe` in PowerShell,
+   `sha256sum dist/eMudScan.exe` on Linux.
+
+It works because eMudScan has no dependencies, the build records no folder
+(`-trimpath`) and no date but the one of the commit, and the Windows resources
+are generated from the source code. The files must be exactly those of the
+version tag: with another commit or a changed file, the build scripts make a
+build that is not of a release, which shows its commit and is another file.
+
+It was checked for eMudScan 3.1.0: built on a Windows PC, both exes have the
+SHA-256 of those that GitHub built on Linux.
+
 ## Notes
 
 - GitHub builds with the latest Go release, which receives security fixes. Each
