@@ -98,14 +98,14 @@ protects tags, so set it to **Disabled** meanwhile, run
 
 ## Publishing a hotfix
 
-A hotfix brings only an urgent fix to the latest version, such as 3.1.1 after
-3.1.0; an older version gets none.
+A hotfix brings small or urgent fixes to the latest version, such as 3.1.1
+after 3.1.0; an older version gets none.
 
-- When the commits on `main` since that version can be published with the fix,
-  such as documentation changes, commit the fix on `main` and publish it as
-  above: `sh scripts/release.sh 3.1.1`.
-- When `main` holds changes for the next version, publish them with the fix as
-  the next minor version (3.2.0) instead, if they are ready.
+- When the commits on `main` since that version can be published with the
+  fixes, such as documentation changes, commit the fixes on `main` and publish
+  them as above: `sh scripts/release.sh 3.1.1`.
+- When `main` holds changes for the next version, publish them with the fixes
+  as the next minor version (3.2.0) instead, if they are ready.
 
 Otherwise, publish the hotfix from a branch:
 
@@ -113,28 +113,28 @@ Otherwise, publish the hotfix from a branch:
    move the commits not pushed yet to a branch (`git branch wip`, then
    `git reset --hard origin/main`).
 2. Create a branch from the version’s tag: `git switch -c hotfix-3.1.1 3.1.0`.
-3. Commit the fix there, with its changelog entry, then run
+3. Commit the fixes there, with their changelog entries, then run
    `sh scripts/release.sh 3.1.1`: on this branch, it pushes only the tag.
 4. Copy the hotfix into `main`: `git switch main`, then
-   `sh scripts/hotfix-to-main.sh 3.1.1`. It copies the commits of the fix,
+   `sh scripts/hotfix-to-main.sh 3.1.1`. It copies the commits of the fixes,
    without merge commits, and leaves the unreleased changes in `CHANGELOG.md` as
    they are. Then it adds the 3.1.1 section and its links to `CHANGELOG.md`, and
    its version to `model.go`, as in the tag, in a commit
-   `chore(release): add 3.1.1 to main`. If a commit of the fix conflicts with
+   `chore(release): add 3.1.1 to main`. If a commit of the fixes conflicts with
    `main`, it stops and says how to go on.
 5. Finish in `main`:
    - `git push`: sends to GitHub what `hotfix-to-main.sh` added to your `main`,
-     the fix and `chore(release): add 3.1.1 to main`, so that the next version
-     includes the fix. No tag to create: `release.sh` already created and pushed
+     the fixes and `chore(release): add 3.1.1 to main`, so that the next version
+     includes them. No tag to create: `release.sh` already created and pushed
      `3.1.1`, on the hotfix branch.
    - `git branch -D hotfix-3.1.1`: deletes the branch, which is no longer
      needed. `-D` because Git sees that its commits are not in `main` (only
      copies of them are) and would refuse `-d`. Nothing is lost: the tag `3.1.1`
      keeps them.
    - If you moved commits to `wip` at the start, put them back on `main`, after
-     the fix:
+     the hotfix:
      - `git switch wip`, then `git rebase main`: replays your commits on top of
-       the fix, as if you had started them after it. Where `CHANGELOG.md`
+       the hotfix, as if you had started them after it. Where `CHANGELOG.md`
        conflicts, keep both sides: your entries under `## [Unreleased]`, the
        3.1.1 section below.
      - `git switch main`, then `git merge --ff-only wip`: moves `main` forward
