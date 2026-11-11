@@ -228,9 +228,7 @@ SHA-256 of those that GitHub built on Linux.
 
 ## Notes
 
-- GitHub builds with the latest Go release, which receives security fixes. Each
-  Go release makes programs slightly larger: about 5.4 MB with Go 1.24, 6.1 MB
-  with Go 1.27.
+- GitHub builds with the latest Go release, which receives security fixes.
 - Do not compress the exe with UPX or any other packer: antivirus software often
   flags packed programs.
 - `data/LICENSE-emudscan.txt` must stay identical to `LICENSE`; a test checks
