@@ -205,8 +205,9 @@ func runScan(o cliOptions, stdout, stderr io.Writer) (code int) {
 
 // finishScan writes the reports of a scan that ended: in the files asked for, their
 // types given by their extensions (text for another one), replacing those that
-// exist; without any, the text report on stdout, as Copy report gives it. It returns
-// the exit code: the worst status, unless a report could not be written.
+// exist; without any, the text report on stdout, as Copy report gives it, after an
+// empty line on stderr. It returns the exit code: the worst status, unless a report
+// could not be written.
 func finishScan(c *checker, logText string, o cliOptions, stdout, stderr io.Writer) int {
 	now := time.Now()
 	for _, path := range o.reports {
@@ -221,6 +222,9 @@ func finishScan(c *checker, logText string, o cliOptions, stdout, stderr io.Writ
 		fmt.Fprintf(stderr, "%s\r\n", Tf("cli.saved", path))
 	}
 	if len(o.reports) == 0 {
+		// in a console, the report comes right after the log: an empty line sets them
+		// apart (on stderr, so that a report redirected to a file starts with its title)
+		io.WriteString(stderr, "\r\n")
 		if _, err := io.WriteString(stdout, buildReport(c, logText)); err != nil {
 			return scanFailed(stderr, Tf("saveError", err))
 		}

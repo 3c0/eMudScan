@@ -171,10 +171,11 @@ func TestFinishScan(t *testing.T) {
 		}
 	}
 
-	// without --report: the text report on stdout, without a byte order mark
+	// without --report: the text report on stdout, without a byte order mark, after an
+	// empty line on stderr, which sets it apart from the log in a console
 	stdout.Reset()
 	stderr.Reset()
-	if code := finishScan(c, "the log\r\n", cliOptions{}, &stdout, &stderr); code != exitUpdate || stderr.Len() != 0 {
+	if code := finishScan(c, "the log\r\n", cliOptions{}, &stdout, &stderr); code != exitUpdate || stderr.String() != "\r\n" {
 		t.Errorf("exit code %d, stderr %q", code, stderr.String())
 	}
 	if out := stdout.String(); !strings.HasPrefix(out, "====") || !strings.Contains(out, "Example App 22 4.2.0 [Scoop] › Node.js 25.1.0") || !strings.HasSuffix(out, "the log\r\n\r\n") {
