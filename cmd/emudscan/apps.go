@@ -2380,6 +2380,9 @@ func (tp *appsContext) toolsOne(it *Item, exes []string) {
 	default:
 		r.Status, r.Summary, r.Details = StCaution, T("embed.sumAAA"), details+"\n\n"+T("embed.aaaNote")
 	}
+	if r.Status == StWarn || r.Status == StCaution { // its root store, written in a file too (builtincopy.go)
+		r.Details = joinParas(r.Details, tp.copyNotes(present))
+	}
 	tp.c.finish(it, r)
 }
 
@@ -2530,8 +2533,14 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 	}
 	// a list replaced by eMudScan's commands: it can be put back
 	restore := restoreAdvice(p)
+	// a copy of the root store built into a program, which can write it again (builtincopy.go)
+	source, copied := tp.builtInSource(p)
 	if !br.Bad() {
-		r.Status, r.Summary, r.Details = StOK, T("bundle.sumNowOK"), joinParas(T("ok.bundle"), restore)
+		written := ""
+		if copied && source.replaced {
+			written = Tf("bundle.builtInReplaced", lk(source.exe))
+		}
+		r.Status, r.Summary, r.Details = StOK, T("bundle.sumNowOK"), joinParas(T("ok.bundle"), written, restore)
 		tp.c.finish(it, r)
 		return
 	}
@@ -2576,6 +2585,9 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 			fix = joinParas(bundledAdvice(o), T("fix.directly")+"\n"+replaceBundleFix(p))
 		} else { // software that is not known: the file belongs to it all the same
 			fix = joinParas(T("bundle.genericFix"), copyWarning(replaceBundleFix(p)))
+		}
+		if copied && !source.replaced {
+			fix = joinParas(Tf("bundle.builtIn", lk(source.exe)), fix)
 		}
 	}
 	r.Search = bundleSearch(o.Name, p, bundled)

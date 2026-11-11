@@ -157,6 +157,14 @@ there, in every program it checks for a built-in root store. When the Python
 packed with it rejects the compromised certificates itself, an outdated bundle
 is reported for information.
 
+Some programs write their built-in root store to a file of their folder when
+that file is missing. When a certificate bundle is, byte for byte, in the data
+of a program of its folder or of the folder above, eMudScan says so in the
+detailed information of both; that program is then read in full. The fix
+replaces the file, but the program still carries its outdated list and can
+write it again when the file is missing, for example after its update: scan
+again then.
+
 **Settings that point software to a certificate bundle** are checked the same
 way, because such a bundle replaces the software’s own certificates, even
 up-to-date ones: the environment variables `SSL_CERT_FILE`, `SSL_CERT_DIR`,

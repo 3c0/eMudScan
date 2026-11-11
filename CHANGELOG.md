@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- When a certificate bundle is, byte for byte, a copy of the root store built into a program of its folder or of the folder above, the detailed information of both says so. The fix replaces the file, but the program still carries its outdated list and can write it again when the file is missing, for example after its update.
 - When a report is saved, a note at the end of the log gives its path, as a link that shows the file in File Explorer, to find the reports again. The notes are shown in the window only: the reports do not have them.
 
 ### Changed
