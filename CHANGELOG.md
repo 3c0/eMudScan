@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-11-11
+
 ### Added
 
 - When a certificate bundle is, byte for byte, a copy of the root store built into a program of its folder or of the folder above, the detailed information of both says so. The fix replaces the file, but the program still carries its outdated list and can write it again when the file is missing, for example after its update.
@@ -117,6 +119,7 @@ First public version.
 - A report to copy or save. English and French.
 - Changes nothing on your PC until you confirm a fix. Clear the online test, and a scan makes no internet connection at all.
 
-[unreleased]: https://github.com/3c0/eMudScan/compare/3.1.0...HEAD
+[unreleased]: https://github.com/3c0/eMudScan/compare/3.1.1...HEAD
+[3.1.1]: https://github.com/3c0/eMudScan/compare/3.1.0...3.1.1
 [3.1.0]: https://github.com/3c0/eMudScan/compare/3.0.1...3.1.0
 [3.0.1]: https://github.com/3c0/eMudScan/releases/tag/3.0.1
