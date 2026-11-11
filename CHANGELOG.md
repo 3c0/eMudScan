@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-11-11
+
 ### Added
 
 - `eMudScan-cli.exe`, a second program for administrators, which scans from the command line: a console program, so command prompts and scripts wait for it and get its exit code. It is the same scanner as `eMudScan.exe` and works alone. Its exit code gives the worst status found (0: OK or information only, 1: warning, 2: update needed, 3: critical, 10: the scan could not run). `--report FILE` writes the report as text, JSON or CSV, by the extension of the file, and can be given several times; without it, the text report goes to the standard output. The log goes to the standard error output. `--drives C:,D:` chooses the drives. It never runs a fix, and makes no internet connection unless `--online` is given.
@@ -105,5 +107,6 @@ First public version.
 - A report to copy or save. English and French.
 - Changes nothing on your PC until you confirm a fix. Clear the online test, and a scan makes no internet connection at all.
 
-[unreleased]: https://github.com/3c0/eMudScan/compare/3.0.1...HEAD
+[unreleased]: https://github.com/3c0/eMudScan/compare/3.1.0...HEAD
+[3.1.0]: https://github.com/3c0/eMudScan/compare/3.0.1...3.1.0
 [3.0.1]: https://github.com/3c0/eMudScan/releases/tag/3.0.1
