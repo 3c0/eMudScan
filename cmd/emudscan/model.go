@@ -332,6 +332,7 @@ const (
 	LogSection                // a section title
 	LogStart                  // the start of a step: the result follows on the same line
 	LogEnd                    // the result of the current step
+	LogNote                   // a note about the whole scan: after an empty line, its status mark and its text
 )
 
 // Reporter receives progress and results from the checking goroutine.
@@ -379,6 +380,7 @@ func newChecker(r Reporter, cancel func() bool) *checker {
 
 func (c *checker) section(s string)            { c.r.Log(LogSection, StPending, s) }
 func (c *checker) line(st Status, s string)    { c.r.Log(LogLine, st, s) }
+func (c *checker) note(st Status, s string)    { c.r.Log(LogNote, st, s) }
 func (c *checker) logf(f string, a ...any)     { c.r.Log(LogLine, StPending, fmt.Sprintf(f, a...)) }
 func (c *checker) stepStart(s string)          { c.r.Log(LogStart, StPending, s+" …") }
 func (c *checker) stepEnd(st Status, s string) { c.r.Log(LogEnd, st, s) }

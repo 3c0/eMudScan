@@ -43,6 +43,8 @@ func (r *cliReporter) Log(kind LogKind, st Status, text string) {
 	case LogStart:
 		r.write(text)
 		r.pending = true
+	case LogNote:
+		r.write("\n" + statusMark(st) + " " + text + "\n")
 	case LogEnd:
 		if !r.pending {
 			r.write("   ")

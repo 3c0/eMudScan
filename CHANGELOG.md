@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - The language is chosen on the command line with `--lang en` or `--lang fr`, which replace `--en` and `--fr`.
+- In the log, the note “No drive selected…” comes below the first line, between two empty lines and without the indent of the results, instead of above it.
 - The name of a saved report has the seconds, such as `eMudScan-report-20261201-101548.txt`, so that two reports saved in the same minute have different names.
 - The About box, like the README, says that eMudScan is a technical tool for advanced users: security researchers, administrators and developers.
 

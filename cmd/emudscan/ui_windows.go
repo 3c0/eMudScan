@@ -801,6 +801,9 @@ func (a *ui) logRuns(e uiEvent) []logRun {
 	case LogStart:
 		runs = append(runs, logRun{e.text, normal, false, false})
 		a.logPending = true
+	case LogNote:
+		runs = append(runs, logRun{"\r\n", normal, false, false}, logRun{text: logMark(e.st), color: statusColor(e.st), bold: true, sym: true},
+			logRun{" " + e.text + "\r\n", normal, false, false})
 	case LogEnd:
 		prefix := " "
 		if !a.logPending {
@@ -1616,9 +1619,6 @@ func (a *ui) start() {
 			}
 			postEvent(uiEvent{kind: 3})
 		}()
-		if len(drives) == 0 {
-			c.line(StInfo, T("log.noDrive"))
-		}
 		runAllChecks(c, drives, nil)
 	}()
 }
