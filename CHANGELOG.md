@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.1.2] - 2026-11-12
+
 ### Changed
 
 - The detailed information of “Software copying the Windows root store” gives the result on this PC first, then says in a few words what such software is. It no longer reads as a check of Python only, and leaves the fixed versions of Python to the item of each Python found.
@@ -127,7 +129,8 @@ First public version.
 - A report to copy or save. English and French.
 - Changes nothing on your PC until you confirm a fix. Clear the online test, and a scan makes no internet connection at all.
 
-[unreleased]: https://github.com/3c0/eMudScan/compare/3.1.1...HEAD
+[unreleased]: https://github.com/3c0/eMudScan/compare/3.1.2...HEAD
+[3.1.2]: https://github.com/3c0/eMudScan/compare/3.1.1...3.1.2
 [3.1.1]: https://github.com/3c0/eMudScan/compare/3.1.0...3.1.1
 [3.1.0]: https://github.com/3c0/eMudScan/compare/3.0.1...3.1.0
 [3.0.1]: https://github.com/3c0/eMudScan/releases/tag/3.0.1
