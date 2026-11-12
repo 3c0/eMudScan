@@ -183,9 +183,9 @@ func flutterAppVerdict(name string, blocklist bool, risk int) (Status, string, s
 	if blocklist {
 		return StOK, T("py.sumSSLBlocks"), Tf("flutterApp.ok", name)
 	}
-	why := Tf("dart.copies", name) + " " + Tf("dart.fixedBy", flutterWithDart())
-	if risk > 0 {
-		return StCaution, T("net.copies"), joinParas(why, copyRisk(risk), Tf("flutterApp.fix", name, flutterFixed))
+	if risk == 0 { // only the state of this PC
+		return StOK, T("net.copiesOK"), Tf("net.notAffected", name)
 	}
-	return StOK, T("net.copiesOK"), joinParas(why, copyRisk(risk), Tf("flutterApp.later", name, flutterFixed))
+	why := Tf("dart.copies", name) + " " + Tf("dart.fixedBy", flutterWithDart())
+	return StCaution, T("net.copies"), joinParas(why, copyRisk(risk), Tf("flutterApp.fix", name, flutterFixed))
 }

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The detailed information about the Windows roots, and about software that uses them and is not affected, now says only what is found on this PC. It no longer explains how such software works, names a version of Flutter, or advises not to delete the roots: that advice was outdated, since Microsoft removed the eMudhra roots from Windows.
+
 ## [3.1.1] - 2026-11-11
 
 ### Added

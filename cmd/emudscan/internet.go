@@ -465,17 +465,16 @@ func (tp *appsContext) startableBrowser(exe string) bool {
 // copierVerdict: software that loads the Windows roots into its own OpenSSL library
 // is affected like Python's ssl module, through the roots present on this PC.
 func (tp *appsContext) copierVerdict(r *result, name, file string, f embedFindings) {
+	if tp.pyStoreRisk == 0 { // only the state of this PC
+		r.Status, r.Summary, r.Details = StOK, T("net.copiesOK"), Tf("net.notAffected", name)
+		return
+	}
 	why := Tf("net.copiesDetails", name, plain(filepath.Base(file)))
 	if f.Markers["libtorrent"] {
 		why += "\n\n" + T("net.copiesLibtorrent")
 	}
-	if tp.pyStoreRisk > 0 {
-		r.Status, r.Summary = StCaution, T("net.copies")
-		r.Details = why + "\n\n" + Tf("net.copiesRisk", tp.pyStoreRisk, tlsChainsTotal, refWinCopy()) + "\n\n" + Tf("net.copiesFix", name)
-		return
-	}
-	r.Status, r.Summary = StOK, T("net.copiesOK")
-	r.Details = why + "\n\n" + Tf("net.copiesNoRisk", refWinCopy())
+	r.Status, r.Summary = StCaution, T("net.copies")
+	r.Details = why + "\n\n" + Tf("net.copiesRisk", tp.pyStoreRisk, tlsChainsTotal, refWinCopy()) + "\n\n" + Tf("net.copiesFix", name)
 }
 
 // geckoBlocked: a Firefox-based program that carries the updated list of blocked

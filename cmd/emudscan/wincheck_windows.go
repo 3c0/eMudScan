@@ -346,7 +346,7 @@ func checkRoots(c *checker) func(*Item) {
 			c.finish(it, result{Status: StOK, Summary: T("win.rootsNone"), Details: T("win.rootsDetails")})
 			return
 		}
-		c.finish(it, result{Status: StInfo, Summary: strings.Join(present, ", "), Details: T("win.rootsDetails")})
+		c.finish(it, result{Status: StInfo, Summary: strings.Join(present, ", "), Details: Tf("win.rootsHas", strings.Join(present, ", "))})
 	}
 }
 

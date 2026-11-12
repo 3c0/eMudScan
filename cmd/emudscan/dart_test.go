@@ -53,7 +53,7 @@ func TestFlutterAppVerdict(t *testing.T) {
 	if st, sum, d := flutterAppVerdict("App", false, 2); st != StCaution || sum != T("net.copies") || !strings.Contains(d, Tf("flutterApp.fix", "App", "3.47.8")) {
 		t.Errorf("old engine, risk: %v %q %q", st, sum, d)
 	}
-	if st, sum, d := flutterAppVerdict("App", false, 0); st != StOK || sum != T("net.copiesOK") || !strings.Contains(d, Tf("flutterApp.later", "App", "3.47.8")) {
+	if st, sum, d := flutterAppVerdict("App", false, 0); st != StOK || sum != T("net.copiesOK") || d != Tf("net.notAffected", "App") {
 		t.Errorf("old engine, no risk: %v %q %q", st, sum, d)
 	}
 }
@@ -133,5 +133,25 @@ func TestFlutterEngineInInternetProgram(t *testing.T) {
 	}
 	if kinds["flutter"] != StOK || kinds["netapp"] != StWarn {
 		t.Errorf("elements: %v", kinds)
+	}
+}
+
+// A program that loads the Windows roots into its own OpenSSL: when no root of this
+// PC leads to the compromised intermediates, its details say only that; else they
+// explain, give the risk and the advice.
+func TestCopierVerdict(t *testing.T) {
+	Lang = 0
+	tp := testApps(t)
+	var r result
+	tp.copierVerdict(&r, "Example App 35", `C:\Apps\example-app-35\example.dll`, embedFindings{Markers: map[string]bool{"libtorrent": true}})
+	if r.Status != StOK || r.Summary != T("net.copiesOK") || r.Details != Tf("net.notAffected", "Example App 35") {
+		t.Errorf("not affected: %v %q\n%s", r.Status, r.Summary, r.Details)
+	}
+	tp.pyStoreRisk = 6
+	r = result{}
+	tp.copierVerdict(&r, "Example App 35", `C:\Apps\example-app-35\example.dll`, embedFindings{})
+	if r.Status != StCaution || r.Summary != T("net.copies") || !strings.HasPrefix(r.Details, "Example App 35 validates") ||
+		!strings.Contains(r.Details, Tf("net.copiesRisk", 6, tlsChainsTotal, refWinCopy())) || !strings.HasSuffix(r.Details, Tf("net.copiesFix", "Example App 35")) {
+		t.Errorf("at risk: %v %q\n%s", r.Status, r.Summary, r.Details)
 	}
 }
