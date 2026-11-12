@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The detailed information of “Software copying the Windows root store” gives the result on this PC first, then says in a few words what such software is. It no longer reads as a check of Python only, and leaves the fixed versions of Python to the item of each Python found.
+
 ### Fixed
 
 - The detailed information about the Windows roots, and about software that uses them and is not affected, now says only what is found on this PC. It no longer explains how such software works, names a version of Flutter, or advises not to delete the roots: that advice was outdated, since Microsoft removed the eMudhra roots from Windows.

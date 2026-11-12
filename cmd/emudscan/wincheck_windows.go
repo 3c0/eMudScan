@@ -359,10 +359,11 @@ func checkCopy(c *checker, risk *int) func(*Item) {
 		r := checkCertList(certs)
 		*risk = r.Trusted
 		if r.Trusted == 0 {
-			c.finish(it, result{Status: StOK, Summary: Tf("win.copyOK", tlsChainsTotal), Details: T("win.copyDetails")})
+			c.finish(it, result{Status: StOK, Summary: Tf("win.copyOK", tlsChainsTotal),
+				Details: joinParas(Tf("win.copyOKDetails", tlsChainsTotal), T("win.copyDetails"))})
 			return
 		}
 		c.finish(it, result{Status: StCaution, Summary: Tf("win.copyRisk", r.Trusted, tlsChainsTotal),
-			Details: T("win.copyDetails") + "\n\n" + Tf("win.copyRiskDetails", r.Trusted, tlsChainsTotal, strings.Join(r.RootsPresent, ", "), fixedVersionsList("python"))})
+			Details: joinParas(Tf("win.copyRiskDetails", r.Trusted, tlsChainsTotal, strings.Join(r.RootsPresent, ", ")), T("win.copyDetails"), T("win.copyListed"))})
 	}
 }
