@@ -8,7 +8,7 @@
 | `data/` | The reference data from emudhra.we-have-a-problem.com, with its notice and license, Go’s license and a copy of `LICENSE`, all embedded in the program, except the two chains of `chains/rollover`, which only the tests use |
 | `docs/` | This documentation; `docs/images/` holds the screenshots and icons shown here and in the README (the icons are drawn by eMudScan’s own code, `cmd/emudscan/icons.go`) |
 | `scripts/` | Build scripts for your own PC, and the scripts that publish a version (`release.sh`) and copy a hotfix into `main` (`hotfix-to-main.sh`) |
-| `.github/` | The GitHub build (`workflows/build.yml`), the code analysis (`workflows/codeql.yml`), the release page template (`release-notes.md`), the Dependabot settings (`dependabot.yml`), the security policy (`SECURITY.md`), the issue forms (`ISSUE_TEMPLATE/`), the pull request template and the contributing guide |
+| `.github/` | The GitHub build (`workflows/build.yml`), the code analysis (`workflows/codeql.yml`), the release page template (`release-notes.md`) and the release notes of each version (`release-notes/`), the Dependabot settings (`dependabot.yml`), the security policy (`SECURITY.md`), the issue forms (`ISSUE_TEMPLATE/`), the pull request template and the contributing guide |
 
 ## GitHub builds the program
 
@@ -36,10 +36,14 @@ Its history is linear (no merge commits):
 ## Publishing a version
 
 1. Check that `## [Unreleased]` in `CHANGELOG.md` lists the version’s changes,
-   in its Security, Fixed, Changed… subsections. They are copied to the release
-   page, where GitHub keeps line breaks: write each paragraph and each item on a
-   single line.
-2. In Git Bash, at the root of eMudScan, on an up-to-date `main` (`git pull`),
+   in its Security, Fixed, Changed… subsections.
+2. Write the release notes of the version in `.github/release-notes/3.1.0.md`,
+   and commit them. They are not the changelog: they tell the users what they
+   can now see or do, under `### New`, `### Improved` and `### Fixed`, with one
+   short line for each change they can notice, in plain words, without file
+   names or explanations. A change that a user cannot notice is left out. The
+   release page links to the changelog for the full list.
+3. In Git Bash, at the root of eMudScan, on an up-to-date `main` (`git pull`),
    run `sh scripts/release.sh 3.1.0` with the new version (three numbers, as
    explained at the top of [CHANGELOG.md](../CHANGELOG.md)).
 
@@ -47,10 +51,10 @@ The script first checks that the version follows the current one (in a
 repository without any version tag yet, that it is the one `appVersion`
 already gives, such as 3.0.1, and that the `[unreleased]` link at the end of
 `CHANGELOG.md` gives the commits of `main`), that nothing is left uncommitted,
-that `main` is up to date with GitHub, and that the changelog has changes to
-publish. It shows the commit the version is based on,
+that `main` is up to date with GitHub, that the changelog has changes to
+publish, and that the release notes of the version are written and committed. It shows the commit the version is based on,
 the commits it brings (and those not pushed yet, which it would publish too),
-and the changes, then asks for your confirmation. Only then does it set
+the changes and the release notes, then asks for your confirmation. Only then does it set
 `appVersion` and `appDate` (today) in `cmd/emudscan/model.go`, turn
 `## [Unreleased]` into `## [3.1.0] - <date>` with its links, run the checks and
 the tests (putting the files back if they fail), commit
@@ -60,12 +64,9 @@ GitHub then builds the two exes and checks that the tag matches `appVersion` and
 that `CHANGELOG.md` has a section for this version. It creates a **draft
 release** with `eMudScan.exe`, `eMudScan-cli.exe` and a page made from
 `.github/release-notes.md`: the text
-around `@CHANGES@` is the same for every version, `@CHANGES@` is replaced by the
-changes since the previous version published in this repository (its highest
-version tag below this one): the version’s section of the changelog, then, each
-under its own heading, the sections of the versions in between that have no
-release here. Without such a tag, the previous version is the one this
-repository starts from, the `appVersion` of its first commit. The SHA-256 of
+around `@CHANGES@` is the same for every version, and `@CHANGES@` is replaced by
+the release notes of the version (`.github/release-notes/3.1.0.md`), followed by
+a link to the changelog. The SHA-256 of
 each exe, the build log and the date of the release are filled in too. It also
 records a build attestation proving that GitHub built the two exes from this
 tag. Anyone can verify a copy with
@@ -113,7 +114,8 @@ Otherwise, publish the hotfix from a branch:
    move the commits not pushed yet to a branch (`git branch wip`, then
    `git reset --hard origin/main`).
 2. Create a branch from the version’s tag: `git switch -c hotfix-3.1.1 3.1.0`.
-3. Commit the fixes there, with their changelog entries, then run
+3. Commit the fixes there, with their changelog entries and the release notes
+   of the hotfix (`.github/release-notes/3.1.1.md`), then run
    `sh scripts/release.sh 3.1.1`: on this branch, it pushes only the tag.
 4. Copy the hotfix into `main`: `git switch main`, then
    `sh scripts/hotfix-to-main.sh 3.1.1`. It copies the commits of the fixes,

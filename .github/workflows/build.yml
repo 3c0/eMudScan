@@ -53,7 +53,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0  # the whole history and the tags, for the changes since the previous version
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
@@ -68,44 +67,25 @@ jobs:
             echo "::error::The tag $GITHUB_REF_NAME does not match appVersion \"$version\" in cmd/emudscan/model.go"
             exit 1
           fi
-          # The changes since the previous version published in this repository, from
-          # CHANGELOG.md (Keep a Changelog: "## [3.1.0] - 2026-12-01"): the version's
-          # section, then, each under its own heading, the sections of the versions
-          # between them that have no release here. The previous version is the highest
-          # version tag below this one; without one, the version this repository starts
-          # from (the appVersion of its first commit).
+          # The release page is not the changelog: its "In this version" part is
+          # .github/release-notes/<version>.md, written for the users (New, Improved,
+          # Fixed: a short line for each change they can notice). The page links to
+          # the changelog for the full list, which must have the version's section
+          # (Keep a Changelog: "## [3.1.0] - 2026-12-01").
           heading="## [$version] - ${date:0:4}-${date:4:2}-${date:6:2}"
           if ! grep -qxF "$heading" CHANGELOG.md; then
             echo "::error::CHANGELOG.md has no section \"$heading\""
             exit 1
           fi
-          prev=$({ git tag -l; echo "$version"; } | grep -xE '[0-9]+\.[0-9]+\.[0-9]+' | sort -uV |
-            awk -v v="$version" '$0 == v {r = p} {p = $0} END {print r}')
-          if [ -z "$prev" ]; then
-            first=$(git rev-list --max-parents=0 HEAD | tail -n 1)
-            prev=$(git show "$first:cmd/emudscan/model.go" | sed -n 's/^const appVersion *= *"\([^"]*\)".*/\1/p')
-          fi
-          if ! awk -v v="$version" -v prev="$prev" '
-            /^\[[^]]*\]: / {exit}
-            /^## / {
-              x = $2; gsub(/[][]/, "", x)
-              if (x == v) {on = 1; next}
-              if (on && x == prev) {found = 1; exit}
-              if (on) {print "## In version " x " (" $4 ")"; next}
-            }
-            on
-            END {exit !found}
-          ' CHANGELOG.md > changes.md; then
-            echo "::error::CHANGELOG.md has no section for $prev, the previous version, below the one of $version"
+          changes=".github/release-notes/$version.md"
+          if ! grep -q '[^[:space:]]' "$changes" 2>/dev/null; then
+            echo "::error::$changes, the release notes of this version, is missing or empty"
             exit 1
           fi
-          if ! grep -q '[^[:space:]]' changes.md; then
-            echo "::error::the section \"$heading\" of CHANGELOG.md is empty"
-            exit 1
-          fi
-          # The release page: .github/release-notes.md, with the version's changes,
-          # the SHA-256 of each exe, the build log, the repository and the date of the
-          # release (for the lines of the Jotti scans) filled in.
+          # The release page: .github/release-notes.md, with the version's release
+          # notes, the SHA-256 of each exe, the build log, the repository, the version
+          # (for the link to its changelog) and the date of the release (for the lines
+          # of the Jotti scans) filled in.
           for exe in dist/eMudScan.exe dist/eMudScan-cli.exe; do
             if [ ! -f "$exe" ]; then
               echo "::error::The build did not make $exe"
@@ -116,9 +96,9 @@ jobs:
           sha_cli=$(sha256sum dist/eMudScan-cli.exe | cut -d ' ' -f 1)
           log="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           day="${date:0:4}-${date:4:2}-${date:6:2}"
-          awk -v sha="$sha" -v sha_cli="$sha_cli" -v url="$log" -v repo="$GITHUB_REPOSITORY" -v day="$day" '
-            $0 == "@CHANGES@" { while ((getline line < "changes.md") > 0) print line; next }
-            { gsub(/@SHA256@/, sha); gsub(/@SHA256_CLI@/, sha_cli); gsub(/@BUILD_LOG@/, url); gsub(/@REPOSITORY@/, repo); gsub(/@DATE@/, day); print }
+          awk -v sha="$sha" -v sha_cli="$sha_cli" -v url="$log" -v repo="$GITHUB_REPOSITORY" -v day="$day" -v ver="$version" -v changes="$changes" '
+            $0 == "@CHANGES@" { while ((getline line < changes) > 0) print line; next }
+            { gsub(/@SHA256@/, sha); gsub(/@SHA256_CLI@/, sha_cli); gsub(/@BUILD_LOG@/, url); gsub(/@REPOSITORY@/, repo); gsub(/@DATE@/, day); gsub(/@VERSION@/, ver); print }
           ' .github/release-notes.md > notes.md
           echo "TITLE=eMudScan $version ($date)" >> "$GITHUB_ENV"
 

@@ -4,14 +4,16 @@
 #   sh scripts/release.sh 3.1.0
 #
 # Before running it, list the version's changes under "## [Unreleased]" in
-# CHANGELOG.md. The script then:
+# CHANGELOG.md, and write its release notes, for the users, in
+# .github/release-notes/3.1.0.md. The script then:
 # 1. checks that the version follows the current one (3.0.2, 3.1.0 or 4.0.0 after
 #    3.0.1), or, in a repository without any version tag yet, that it is the
 #    one appVersion gives; that nothing is left uncommitted, that main is up to
-#    date with GitHub, and that the changelog has changes to publish;
+#    date with GitHub, that the changelog has changes to publish, and that the
+#    release notes of the version are written and committed;
 # 2. shows the commit the version is based on, the commits it brings, the changes
-#    of the changelog, and asks for your confirmation: until you answer "y",
-#    nothing changes;
+#    of the changelog, the release notes, and asks for your confirmation: until
+#    you answer "y", nothing changes;
 # 3. sets appVersion and appDate (today) in cmd/emudscan/model.go, turns
 #    "## [Unreleased]" into the version's section in CHANGELOG.md, with its links,
 #    and regenerates the Windows resources;
@@ -72,6 +74,9 @@ if [ "$branch" = main ]; then
 fi
 changes=$(awk '/^## \[Unreleased\]$/ {on = 1; next} on && /^(## |\[[^]]*\]: )/ {exit} on' CHANGELOG.md)
 echo "$changes" | grep -q '[^[:space:]]' || fail "CHANGELOG.md has no changes under \"## [Unreleased]\": list the changes of $v there first."
+notes=".github/release-notes/$v.md"
+grep -q '[^[:space:]]' "$notes" 2>/dev/null || fail "$notes is missing or empty: write the release notes of $v there first (New, Improved, Fixed: a short line for each change a user can notice)."
+git ls-files --error-unmatch "$notes" >/dev/null 2>&1 || fail "$notes is not committed: commit it first."
 if [ -n "$first" ]; then
 	grep -q '^\[unreleased\]: .*/commits/main$' CHANGELOG.md || fail "the [unreleased] link at the end of CHANGELOG.md does not give the commits of main."
 else
@@ -104,6 +109,9 @@ fi
 echo
 echo "Its changes, from CHANGELOG.md:"
 echo "$changes" | sed '/^$/d; s/^/  /'
+echo
+echo "Its release notes, from $notes:"
+sed '/^$/d; s/^/  /' "$notes"
 echo
 printf 'Publish %s? Type y to go on, anything else to stop: ' "$v"
 read -r answer || answer=""

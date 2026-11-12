@@ -12,6 +12,8 @@ Administrators can scan from the command line with `eMudScan-cli.exe`, a console
 
 @CHANGES@
 
+Full list of changes: [changelog](https://github.com/@REPOSITORY@/blob/@VERSION@/CHANGELOG.md).
+
 ## Verify your download
 
 - SHA-256 of `eMudScan.exe`: `@SHA256@`
