@@ -874,17 +874,18 @@ func searchFor(owner, name string, bundled bool) string {
 	return name
 }
 
-// bundleSearch is the web search for the certificate bundle at p: its software, when
-// it is the software's own copy (bundled); else the software that the list shows for
-// it (its owner, or the program its folders name) with the file's name, to find out
-// what ships it; for a bundle that belongs to no software (in Downloads…), the
-// file's name alone.
-func bundleSearch(owner, p string, bundled bool) string {
-	soft := owner
-	if soft == "" {
-		soft, _ = guessProgramVersion(p)
+// bundleSearch is the web search for the certificate bundle at p: the software that
+// the list shows for it (its owner, or the program its folders name), without the
+// name of the file; for a bundle that belongs to no software (in Downloads…), the
+// name of the file.
+func bundleSearch(owner, p string) string {
+	if owner != "" {
+		return owner
 	}
-	return searchFor(owner, strings.TrimSpace(soft+" "+filepath.Base(p)), bundled)
+	if soft, _ := guessProgramVersion(p); soft != "" {
+		return soft
+	}
+	return filepath.Base(p)
 }
 
 // ---------------------------------------------------------------------------
@@ -2590,7 +2591,7 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 			fix = joinParas(Tf("bundle.builtIn", lk(source.exe)), fix)
 		}
 	}
-	r.Search = bundleSearch(o.Name, p, bundled)
+	r.Search = bundleSearch(o.Name, p)
 	if pyList && fx.protected() {
 		r.Status, r.Summary = StInfo, T("bundle.sumPySafe")
 		r.Details = joinParas(strings.TrimSpace(details), pythonBlocksText(fx), T("py.updateAnyway")+" "+fix, restore)

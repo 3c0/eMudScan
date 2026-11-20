@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The web search for a certificate bundle of a software that eMudScan does not know searches for the software alone, such as “example-app”, instead of the software with the name of the file, such as “example-app cacert.pem”. This applies to the link of the detailed information and to **Search on Google** in the right-click menu.
+
 ## [3.1.2] - 2026-11-12
 
 ### Changed
