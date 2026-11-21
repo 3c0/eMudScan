@@ -155,7 +155,7 @@ so that a report tells which code produced it. The build scripts set it from git
 
 You need Go 1.24 or later, and nothing else. From the root of the repository:
 
-- Windows (PowerShell): `.\scripts\build.ps1`
+- Windows (Windows PowerShell 5.1 or PowerShell 7): `.\scripts\build.ps1`
 - Linux or macOS: `./scripts/build.sh`
 
 Both run the checks and the tests, regenerate the Windows resources, then write

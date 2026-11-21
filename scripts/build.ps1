@@ -28,8 +28,15 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 }
 $ldflags = '-s -w'
 if ($rev) { $ldflags += " -X main.buildRev=$rev" }
-$tags, $out, $cli = '', 'dist\eMudScan.exe', 'dist\eMudScan-cli.exe'
-if ($Simulate) { $tags, $out, $cli = 'simulate', 'dist\eMudScan-simulation.exe', '' }
+# The -tags option of go is given only with a tag: Windows PowerShell 5.1 does not
+# pass an empty argument to a program, so that go would take the argument after
+# -tags '' for the tags.
+$tagArgs = @()
+$out, $cli = 'dist\eMudScan.exe', 'dist\eMudScan-cli.exe'
+if ($Simulate) {
+    $tagArgs = '-tags', 'simulate'
+    $out, $cli = 'dist\eMudScan-simulation.exe', ''
+}
 
 # Each line starts with the time since the line before it and since the start, such
 # as "[+02.40 06.90]": each stage says what it does, and the times show which one
@@ -52,13 +59,13 @@ function Run([string]$stage, [scriptblock]$command) {
     & $command 2>&1 | ForEach-Object { Say "$_" }
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
-Run 'Checking the code (go vet)...' { go vet -tags "$tags" ./... }
+Run 'Checking the code (go vet)...' { go vet @tagArgs ./... }
 if ($cli) { Run 'Checking the code of the console program (go vet)...' { go vet -tags cli ./... } }
-Run 'Running the tests (go test)...' { go test -tags "$tags" ./... }
+Run 'Running the tests (go test)...' { go test @tagArgs ./... }
 Run 'Regenerating the Windows resources...' { go run ./cmd/emudscan --make-syso cmd\emudscan\winres\gui\rsrc_windows_amd64.syso }
 Run 'Regenerating the Windows resources of the console program...' { go run ./cmd/emudscan --make-syso-cli cmd\emudscan\winres\cli\rsrc_windows_amd64.syso }
 # the window program: -H windowsgui; the console program: the tag cli, without it
-Run "Building $out..." { go build -trimpath -tags "$tags" -ldflags "$ldflags -H windowsgui" -o $out ./cmd/emudscan }
+Run "Building $out..." { go build -trimpath @tagArgs -ldflags "$ldflags -H windowsgui" -o $out ./cmd/emudscan }
 if ($cli) {
     Run "Building $cli..." { go build -trimpath -tags cli -ldflags $ldflags -o $cli ./cmd/emudscan }
     Say "Done: $out and $cli"
