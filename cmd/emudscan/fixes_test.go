@@ -1,15 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// The commands that replace a certificate bundle are one fix: its commands are those
-// shown, with the backups; without them, the same change, made only when the download
-// is right.
+// The commands that replace a certificate bundle are one fix, a script: those that the
+// Fix function runs, with the backups; without them, the same without its backup
+// block; and the details show it as one block that runs alone.
 func TestFixBundle(t *testing.T) {
 	Lang = 0
 	pd := t.TempDir()
@@ -21,19 +22,35 @@ func TestFixBundle(t *testing.T) {
 		t.Fatalf("fixes: %+v", f)
 	}
 	fx := f[0]
-	if fx.Kind != fixBundle || !fx.Admin || len(fx.Files) != 2 || len(fx.Cmds) != 7 || len(fx.Plain) != 7 || !strings.HasSuffix(text, fx.lines()) || !fetchesRight(fx) {
-		t.Errorf("fix: %+v", fx)
+	want := []string{
+		"# The certificate bundles to replace",
+		"$files = " + psQuote(a) + ", " + psQuote(b),
+		"",
+		"# Download Mozilla’s certificate bundle, as published by curl, into memory, and check its SHA-256",
+		"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
+		"$cacert = (Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem).RawContentStream.ToArray()",
+		"$sha256 = ([Text.Encoding]::ASCII.GetString((Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem.sha256).RawContentStream.ToArray()) -split '\\s')[0]",
+		"if ((Get-FileHash -InputStream ([IO.MemoryStream]::new($cacert))).Hash -ne $sha256) { throw " + psQuote(T("fix.badSum")) + " }",
+		"",
+		"# Back up the files, with their dates",
+		"$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'",
+		`$files | ForEach-Object { Copy-Item -LiteralPath $_ -Destination "$_.emudscan-$stamp.bak" }`,
+		`$files | ForEach-Object { (Get-Item -LiteralPath "$_.emudscan-$stamp.bak").CreationTime = (Get-Item -LiteralPath $_).CreationTime }`,
+		"",
+		"# Replace the files",
+		"$files | ForEach-Object { [IO.File]::WriteAllBytes($_, $cacert) }",
 	}
-	for i := range fx.Cmds {
-		switch {
-		case i < 5 && fx.Cmds[i] != fx.Plain[i]:
-			t.Errorf("download %d differs: %q", i, fx.Plain[i])
-		case i >= 5 && (!strings.Contains(fx.Cmds[i], "Copy-Item") || strings.Contains(fx.Plain[i], "Copy-Item")):
-			t.Errorf("backup %d: %q / %q", i, fx.Cmds[i], fx.Plain[i])
-		}
+	if fx.Kind != fixBundle || !fx.Admin || !fx.Script || len(fx.Files) != 2 || strings.Join(fx.Cmds, "\n") != strings.Join(want, "\n") || !strings.HasSuffix(text, fx.lines()) || !fetchesRight(fx) ||
+		fmt.Sprint(fx.Fetch) != "[5 6]" {
+		t.Errorf("fix: %+v\n%s", fx, strings.Join(fx.Cmds, "\n"))
 	}
-	if want := "if ($ok) { [IO.File]::WriteAllBytes(" + psQuote(a) + ", $cacert) }"; fx.Plain[5] != want {
-		t.Errorf("without backup: %q", fx.Plain[5])
+	// without the backups: the same, but its backup block
+	if strings.Join(fx.Plain, "\n") != strings.Join(append(append([]string(nil), want[:8]...), want[13:]...), "\n") {
+		t.Errorf("without backup:\n%s", strings.Join(fx.Plain, "\n"))
+	}
+	// the details: one block, which stops at its first error
+	if fx.Alone[0] != "& {" || fx.Alone[1] != "    $ErrorActionPreference = 'Stop'" || fx.Alone[3] != "    "+want[0] || fx.Alone[len(fx.Alone)-1] != "}" || len(fx.Alone) != len(want)+4 {
+		t.Errorf("alone:\n%s", strings.Join(fx.Alone, "\n"))
 	}
 	// in a user's folder, no administrator rights
 	if f := fixesIn(replaceBundleFix(b)); len(f) != 1 || f[0].Admin {
@@ -48,9 +65,19 @@ func TestFixJava(t *testing.T) {
 	t.Setenv("ProgramFiles", pf)
 	bl := javaBlockList{file: filepath.Join(pf, "Java", "lib", "security", "blocked.certs")}
 	f := fixesIn(javaBlockCmd(bl, javaRoots))
-	if len(f) != 1 || f[0].Kind != fixJava || !f[0].Admin || len(f[0].Cmds) != 1 || !strings.HasPrefix(f[0].Plain[0], "Add-Content -LiteralPath "+psQuote(bl.file)) ||
-		!strings.Contains(f[0].Cmds[0], "Copy-Item") || !strings.HasSuffix(f[0].Cmds[0], f[0].Plain[0]+" }") {
-		t.Errorf("fixes: %+v", f)
+	if len(f) != 1 || f[0].Kind != fixJava || !f[0].Admin || !f[0].Script || f[0].Alone == nil {
+		t.Fatalf("fixes: %+v", f)
+	}
+	// a script: the list and the certificates, the backup, then the addition; without
+	// the backups, the same without its backup block
+	cmds := strings.Join(f[0].Cmds, "\n")
+	if !strings.HasPrefix(cmds, "# The block list of this Java, and the certificates to add to it\n$list  = "+psQuote(bl.file)+"\n$certs = '") ||
+		!strings.Contains(cmds, "\n\n# Back up the block list, with its dates\n$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'\nCopy-Item -LiteralPath $list -Destination \"$list.emudscan-$stamp.bak\"\n") ||
+		!strings.HasSuffix(cmds, "\n\n# Add the certificates to the block list\nAdd-Content -LiteralPath $list -Value '', $certs") {
+		t.Errorf("script:\n%s", cmds)
+	}
+	if plain := strings.Join(f[0].Plain, "\n"); strings.Contains(plain, "Copy-Item") || !strings.HasSuffix(plain, "Add-Content -LiteralPath $list -Value '', $certs") {
+		t.Errorf("without backup:\n%s", plain)
 	}
 }
 

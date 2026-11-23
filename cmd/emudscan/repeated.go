@@ -173,7 +173,8 @@ func (it Item) shownDetails() string {
 			continue
 		}
 		// the lines that all copies share at the start of this paragraph, then the others
-		// of each copy, after its place
+		// of each copy, after its place. Not inside a block of commands: each copy gets
+		// all of its own, which a script needs to be whole
 		lines := make([][]string, len(all))
 		shared := -1
 		for i := range all {
@@ -187,6 +188,11 @@ func (it Item) shownDetails() string {
 				if ls[c] != lines[0][c] {
 					shared = c
 				}
+			}
+		}
+		for c := 0; c < shared; c++ {
+			if _, ok := cmdOf(lines[0][c]); ok { // the first command: the block is not shared
+				shared = c
 			}
 		}
 		block := append([]string(nil), lines[0][:shared]...)

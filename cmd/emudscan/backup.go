@@ -190,21 +190,34 @@ func restoreAdviceFor(pairs []restorePair) string {
 		return joinParas(refused...)
 	}
 	admin := anyNeedsAdmin(changed...) // as psHeader says
-	var cmds []string
+	// a script (scriptLines): the backups put back, then the files that a fix added
+	// removed, with their marks
+	var moves, removes []string
 	for i, f := range changed {
 		if backups[i].added {
-			cmds = append(cmds, fmt.Sprintf(`Remove-Item -LiteralPath %s, %s -Force`, psPath(f, admin), psPath(backups[i].path, admin)))
+			removes = append(removes, fmt.Sprintf(`Remove-Item -LiteralPath %s, %s -Force`, psPath(f, admin), psPath(backups[i].path, admin)))
 			continue
 		}
-		cmds = append(cmds, fmt.Sprintf(`Move-Item -LiteralPath %s -Destination %s -Force`, psPath(backups[i].path, admin), psPath(f, admin)))
+		moves = append(moves, fmt.Sprintf(`Move-Item -LiteralPath %s -Destination %s -Force`, psPath(backups[i].path, admin), psPath(f, admin)))
+	}
+	var cmds scriptLines
+	if len(moves) == 1 {
+		cmds.block(T("restore.s.back1"), moves...)
+	} else if len(moves) > 1 {
+		cmds.block(T("restore.s.backN"), moves...)
+	}
+	if len(removes) == 1 {
+		cmds.block(T("restore.s.added1"), removes...)
+	} else if len(removes) > 1 {
+		cmds.block(T("restore.s.addedN"), removes...)
 	}
 	from := make([]string, len(backups))
 	for i, b := range backups {
 		from[i] = b.path
 	}
-	restore := newFix(fixAction{Kind: fixRestore, Admin: admin, Cmds: cmds, Files: changed, From: from})
+	restore := newFix(fixAction{Kind: fixRestore, Admin: admin, Script: true, Cmds: cmds, Alone: runsAlone(cmds), Files: changed, From: from})
 	intro, warn := T("restore.intro1"), T("restore.warn1")
-	if len(cmds) > 1 {
+	if len(changed) > 1 {
 		intro, warn = T("restore.introN"), T("restore.warnN")
 	}
 	return joinParas(intro+"\n"+strings.Join(list, "\n")+"\n\n"+how(warn)+"\n"+psHeader(changed...)+"\n"+restore.lines(), joinParas(refused...))

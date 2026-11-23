@@ -179,7 +179,7 @@ func TestBundleRestore(t *testing.T) {
 		}
 		// the restore is recorded for the Restore button of the details, apart from the
 		// fixes, which never run it
-		if r := it.Restores; len(r) != 1 || r[0].Kind != fixRestore || r[0].key() != move || fmt.Sprint(r[0].Files) != fmt.Sprint([]string{p}) ||
+		if r := it.Restores; len(r) != 1 || r[0].Kind != fixRestore || r[0].key() != "# Put the original file back\n"+move || fmt.Sprint(r[0].Files) != fmt.Sprint([]string{p}) ||
 			fmt.Sprint(r[0].From) != fmt.Sprint([]string{p + ".emudscan-20261031-011500.bak"}) {
 			t.Errorf("%s: restores %+v", p, r)
 		}

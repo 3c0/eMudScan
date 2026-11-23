@@ -219,7 +219,8 @@ func psAdapt(lines []string) []string {
 	out := make([]string, len(lines))
 	for i, l := range lines {
 		l = strings.ReplaceAll(l, `& "$env:SystemRoot\System32\tar.exe"`, "& "+tar)
-		out[i] = strings.ReplaceAll(l, `\`, "/")
+		l = strings.ReplaceAll(l, `'\s'`, "\x00") // a regular expression, not a path
+		out[i] = strings.ReplaceAll(strings.ReplaceAll(l, `\`, "/"), "\x00", `'\s'`)
 	}
 	return out
 }
@@ -273,7 +274,7 @@ func TestPySSLFixInPowerShell(t *testing.T) {
 		{name: "added files", sslDir: "DLLs", replace: mixedShape.replace, added: mixedShape.added, backup: true, fixed: true},
 		{name: "added files, no backups", sslDir: "DLLs", replace: mixedShape.replace, added: mixedShape.added, fixed: true},
 		{name: "fails before", sslDir: "DLLs", replace: pbsShape.replace, backup: true, failBefore: true, stopsAt: "$emudscanFiles before"},
-		{name: "another download", sslDir: "DLLs", replace: pbsShape.replace, backup: true, badSum: true, stopsAt: "Get-FileHash", says: T("pyssl.badSum")},
+		{name: "another download", sslDir: "DLLs", replace: pbsShape.replace, backup: true, badSum: true, stopsAt: "Get-FileHash", says: T("fix.badSum")},
 		{name: "a file missing", sslDir: "DLLs", replace: pbsShape.replace, backup: true, lacks: "libssl-3-x64.dll", stopsAt: "tar"},
 		{name: "a file missing, python.org", sslDir: ".", replace: orgShape.replace, zip: true, backup: true, lacks: "libssl-3.dll", stopsAt: "tar"},
 		{name: "in use", sslDir: "DLLs", replace: pbsShape.replace, backup: true, inUse: true, stopsAt: "[IO.File]::Open"},
@@ -418,7 +419,7 @@ func TestPySSLAloneInPowerShell(t *testing.T) {
 		{name: "python.org", sslDir: ".", replace: orgShape.replace, zip: true, fixed: true},
 		{name: "added files", sslDir: "DLLs", replace: mixedShape.replace, added: mixedShape.added, fixed: true},
 		{name: "fails before", sslDir: "DLLs", replace: pbsShape.replace, failBefore: true, stopsAt: T("pyssl.a.noSsl")},
-		{name: "another download", sslDir: "DLLs", replace: pbsShape.replace, badSum: true, stopsAt: T("pyssl.badSum")},
+		{name: "another download", sslDir: "DLLs", replace: pbsShape.replace, badSum: true, stopsAt: T("fix.badSum")},
 		{name: "a file missing", sslDir: "DLLs", replace: pbsShape.replace, lacks: "libssl-3-x64.dll", stopsAt: T("pyssl.missing")},
 		{name: "a file missing, python.org", sslDir: ".", replace: orgShape.replace, zip: true, lacks: "libssl-3.dll", stopsAt: T("pyssl.missing")},
 		{name: "in use", sslDir: "DLLs", replace: pbsShape.replace, inUse: true, stopsAt: "libcrypto-3-x64.dll"},

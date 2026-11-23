@@ -273,10 +273,12 @@ Once you accept:
    result in the column on its left: “…” while it runs, then a green ✔ or a red
    ✘. Below come what it showed, its warnings in yellow, its errors in red, then
    its exit code when it failed, and a blank line after the commands of each
-   software. The fix of the ssl files of a Python is a script: each of its lines
-   is one command, a comment, or a line that opens or closes a block. It stops
-   at its first command that fails (✘); inside `try`, the failure goes to
-   `catch`, which puts the original files back. Only the commands that ran have
+   software. The fixes that change files (the ssl files of a Python, a
+   certificate bundle, a Java block list, the restore of backups) are scripts:
+   each of their lines is one command, a comment, or a line that opens or closes
+   a block. A script stops at its first command that fails (✘); in the fix of a
+   Python, inside `try`, the failure goes to `catch`, which puts the original
+   files back. Only the commands that ran have
    a result: a comment, a line of a block, or a command that did not run, has
    none. The other fixes still run. **Stop** never stops a command in the middle: Windows PowerShell
    first ends the commands it was given (those of one software, or all those

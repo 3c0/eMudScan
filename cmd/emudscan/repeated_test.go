@@ -124,3 +124,50 @@ func TestShortPlaces(t *testing.T) {
 		t.Errorf("narrow: %q", got)
 	}
 }
+
+// Copies whose scripts share their first lines (the Python fix of two copies differs
+// from its paths on): each copy gets its whole script, which runs only whole. What
+// announces the scripts is shared.
+func TestMergeRepeatedScripts(t *testing.T) {
+	Lang = 0
+	py := func(id int, home string) Item {
+		f := pySSLFix(home+`\python.exe`, pySSLPlan{src: pbsSSL["3.14"], dir: home + `\DLLs`, replace: pySSLShapes[0].replace})
+		it := Item{ID: id, Group: GroupApps, Kind: "python", Name: "Python", Version: "3.14.7", Owner: "Example App 2", Status: StWarn, Summary: "Update Python to 3.14.10",
+			Folder: home, Details: guide("Python 3.14.7 does not reject them.\n\n"+how(T("fix.ps"))+"\n"+newFix(f).lines(), true)}
+		it.fillDisplay("Python")
+		return it
+	}
+	a, b := py(1, `C:\a\python`), py(2, `C:\b\python`)
+	got := mergeRepeated([]Item{a, b})
+	if len(got) != 1 {
+		t.Fatalf("%d elements, want 1", len(got))
+	}
+	d := got[0].shownDetails()
+	script := func(it Item) string {
+		_, s, _ := strings.Cut(it.Details, "\n> To fix")
+		_, s, _ = strings.Cut(s, "\n")
+		return s
+	}
+	want := "> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell:\n" +
+		"> For [[C:\\a\\python]]:\n" + script(a) + "\n> For [[C:\\b\\python]]:\n" + script(b)
+	if !strings.HasPrefix(script(a), "$ & {\n$     $ErrorActionPreference = 'Stop'\n") || !strings.HasSuffix(d, want) {
+		t.Errorf("details:\n%s\nwant the end:\n%s", d, want)
+	}
+	if n := len(fixesIn(d)); n != 2 {
+		t.Errorf("%d fixes, want 2", n)
+	}
+}
+
+// A sentence followed by commands: the commands, or the line that announces them,
+// start their own line.
+func TestThenFix(t *testing.T) {
+	for _, c := range []struct{ fix, want string }{
+		{"Recommended action: update it.", "Lead. Recommended action: update it."},
+		{"> In PowerShell:\n$ pip install x", "Lead.\n> In PowerShell:\n$ pip install x"},
+		{"$ pip install x", "Lead.\n$ pip install x"},
+	} {
+		if got := thenFix("Lead.", c.fix); got != c.want {
+			t.Errorf("%q: %q", c.fix, got)
+		}
+	}
+}

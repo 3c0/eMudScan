@@ -55,10 +55,10 @@ func TestJavaVerdicts(t *testing.T) {
 		want, absent []string // in this order; not there
 	}{
 		{"nothing blocked", openJDK, false, header, StWarn,
-			[]string{T("java.fix"), how(T("java.blockRoots")), ".bak'", "Add-Content", badCerts[0].SHA256, javaRoots[0].sha256, javaRoots[3].sha256},
+			[]string{T("java.fix"), how(T("java.blockRoots")), badCerts[0].SHA256, javaRoots[0].sha256, javaRoots[3].sha256, `.emudscan-$stamp.bak"`, "Add-Content"},
 			[]string{"keytool"}},
 		{"first fix only", openJDK, false, header + intermediates, StCaution,
-			[]string{T("java.blockOnly"), T("java.fix"), how(T("java.blockRoots")), "Add-Content", javaRoots[0].sha256, javaRoots[3].sha256},
+			[]string{T("java.blockOnly"), T("java.fix"), how(T("java.blockRoots")), javaRoots[0].sha256, javaRoots[3].sha256, "Add-Content"},
 			[]string{badCerts[0].SHA256}},
 		{"roots blocked", openJDK, false, header + intermediates + roots, StOK,
 			[]string{T("java.okRootsBlocked")}, []string{"Add-Content", T("java.fix")}},
@@ -68,14 +68,14 @@ func TestJavaVerdicts(t *testing.T) {
 		{"no block list", openJDK, false, "", StWarn, []string{T("java.fix")}, []string{how(T("java.blockRoots")), "Add-Content"}},
 		// a root that OpenJDK does not ship, which issued the direct intermediates
 		{"another root, the four blocked", withTLSG3, false, header + roots, StWarn,
-			[]string{T("java.fix"), Tf("java.blockOthers", rootNameTLSG3), "Add-Content", badCerts[0].SHA256, tlsG3},
+			[]string{T("java.fix"), Tf("java.blockOthers", rootNameTLSG3), badCerts[0].SHA256, tlsG3, "Add-Content"},
 			[]string{javaRoots[0].sha256}},
 		{"another root, the intermediates and the four blocked", withTLSG3, false, header + intermediates + roots, StCaution,
-			[]string{T("java.blockOnly"), "Add-Content", tlsG3}, []string{badCerts[0].SHA256, javaRoots[0].sha256}},
+			[]string{T("java.blockOnly"), tlsG3, "Add-Content"}, []string{badCerts[0].SHA256, javaRoots[0].sha256}},
 		{"all roots blocked", withTLSG3, false, header + roots + tlsG3, StOK,
 			[]string{T("java.okRootsBlocked")}, []string{"Add-Content"}},
 		{"inside another program", openJDK, true, header, StWarn,
-			[]string{"update Example App 1, which this copy belongs to,", how(T("java.blockRoots")), how(T("bundled.warn")) + "\n> To fix this vulnerability, click **Fix this software**, or run this command yourself in PowerShell", "Add-Content"},
+			[]string{"update Example App 1, which this copy belongs to,", how(T("java.blockRoots")), how(T("bundled.warn")) + "\n> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell", "Add-Content"},
 			[]string{T("java.fix")}},
 	} {
 		app := filepath.Join(root, "app"+itoa(i))

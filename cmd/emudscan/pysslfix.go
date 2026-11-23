@@ -263,9 +263,9 @@ func pySSLScript(exe string, plan pySSLPlan, admin, alone, backups bool) (lines 
 	fetch = len(lines)
 	add(`if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $archive }`)
 	if alone { // its folder stays when it stops: without the file, which the next run would take for a new download
-		add(`if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { Remove-Item -LiteralPath $archive; throw ` + psQuote(T("pyssl.badSum")) + ` }`)
+		add(`if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { Remove-Item -LiteralPath $archive; throw ` + psQuote(T("fix.badSum")) + ` }`)
 	} else {
-		add(`if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { throw ` + psQuote(T("pyssl.badSum")) + ` }`)
+		add(`if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { throw ` + psQuote(T("fix.badSum")) + ` }`)
 	}
 
 	title("pyssl.s.unpack")

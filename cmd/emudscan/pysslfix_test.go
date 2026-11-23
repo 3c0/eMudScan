@@ -278,7 +278,7 @@ func TestRestoreAdded(t *testing.T) {
 	a := restoreAdvice(dll)
 	f := fixesIn(a)
 	if !strings.Contains(a, Tf("restore.added", longDate(time.Date(2026, 11, 7, 12, 0, 0, 0, time.Local)), "12:00")) || len(f) != 1 ||
-		f[0].Cmds[0] != "Remove-Item -LiteralPath "+psPath(dll, false)+", "+psPath(mark, false)+" -Force" {
+		strings.Join(f[0].Cmds, "\n") != "# "+T("restore.s.added1")+"\nRemove-Item -LiteralPath "+psPath(dll, false)+", "+psPath(mark, false)+" -Force" {
 		t.Fatalf("%+v\n%s", f, a)
 	}
 	res := moveBackups([]fixUnit{{fix: f[0]}}, func(fixLine) {})

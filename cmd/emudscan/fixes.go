@@ -336,7 +336,9 @@ func guide(details string, vulnerable bool) string {
 				grouped = grouped || len(first) > 0
 				continue
 			}
-			n++
+			if isCommand(c) { // not the comments and the empty lines of a script
+				n++
+			}
 			if !grouped {
 				first = append(first, c)
 			}
@@ -346,7 +348,7 @@ func guide(details string, vulnerable bool) string {
 		recordedFixes.Unlock()
 		what := T("fix.what1")
 		switch {
-		case recorded && f.Script:
+		case recorded && f.Script && n > 1:
 			what = T("fix.whatScript")
 		case n > 1:
 			what = T("fix.whatN")

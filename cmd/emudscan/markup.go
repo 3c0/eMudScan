@@ -181,6 +181,19 @@ func how(s string) string {
 // howOf is the text of a line that how marked.
 func howOf(line string) (string, bool) { return strings.CutPrefix(line, "> ") }
 
+// thenFix is lead, a sentence, followed by fix, the advice that it leads to: in the
+// same line when fix starts with text, else above it, since a line about commands
+// (how) or a command must start its own line.
+func thenFix(lead, fix string) string {
+	first, _, _ := strings.Cut(fix, "\n")
+	_, isHow := howOf(first)
+	_, isCmd := cmdOf(first)
+	if isHow || isCmd {
+		return lead + "\n" + fix
+	}
+	return lead + " " + fix
+}
+
 // withoutCommands is the details as the reports give them: the state of the PC and
 // what to do about it, without the commands that do it. Left out: the command lines,
 // and the lines about them (how). The sentence that led to commands ("update it with

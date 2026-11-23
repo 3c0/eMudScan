@@ -136,7 +136,7 @@ func TestSettingCopyWarning(t *testing.T) {
 		if it.Status != StWarn {
 			t.Fatalf("%s: %v", p, it.Status)
 		}
-		got := strings.Contains(it.Details, how(T("bundled.warn"))+"\n> To fix this vulnerability, click **Fix this software**, or run these commands yourself in PowerShell")
+		got := strings.Contains(it.Details, how(T("bundled.warn"))+"\n> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell")
 		if got != warn || strings.Count(it.Details, how(T("bundled.warn"))) > 1 {
 			t.Errorf("%s: warning %v, want %v:\n%s", p, got, warn, it.Details)
 		}

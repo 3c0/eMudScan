@@ -70,7 +70,7 @@ func TestCopyWarningUnknownOwner(t *testing.T) {
 	if it.Bundled || !strings.Contains(it.Details, T("bundle.genericFix")) {
 		t.Fatalf("not the advice for unknown software:\n%s", it.Details)
 	}
-	at := strings.Index(it.Details, how(T("bundled.warn"))+"\n"+how(Tf("fix.do", T("dlg.fix"), T("fix.whatN"), "")))
+	at := strings.Index(it.Details, how(T("bundled.warn"))+"\n"+how(Tf("fix.do", T("dlg.fix"), T("fix.whatScript"), "")))
 	if at < 0 || at < strings.Index(it.Details, T("bundle.genericFix")) || strings.Count(it.Details, how(T("bundled.warn"))) != 1 {
 		t.Errorf("warning missing or misplaced:\n%s", it.Details)
 	}

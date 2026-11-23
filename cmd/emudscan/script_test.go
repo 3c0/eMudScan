@@ -292,7 +292,7 @@ func TestGuide(t *testing.T) {
 	Lang = 0
 	one := newFix(fixAction{Kind: fixPip, Cmds: []string{"pip install --upgrade example-app-1"}})
 	several := newFix(fixAction{Kind: fixBundle, Admin: true, Cmds: []string{"$a = 1", "Copy-Item a b"}})
-	script := newFix(fixAction{Kind: fixPySSL, Script: true, Cmds: []string{"# run by the Fix window", "$a = 1"}, Alone: []string{"& {", "    $a = 2", "}"}})
+	script := newFix(fixAction{Kind: fixPySSL, Script: true, Cmds: []string{"# run by the Fix window", "$a = 1"}, Alone: []string{"& {", "    $a = 2", "    $b = 3", "}"}})
 	undo1 := newFix(fixAction{Kind: fixRestore, Cmds: []string{"Move-Item a.bak a"}, Files: []string{"a"}})
 	undo2 := newFix(fixAction{Kind: fixRestore, Cmds: []string{"Move-Item a.bak a", "Move-Item b.bak b"}, Files: []string{"a", "b"}})
 	ps, admin := how(T("fix.ps")), how(T("fix.psAdmin"))

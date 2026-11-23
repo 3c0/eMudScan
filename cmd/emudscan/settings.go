@@ -327,7 +327,7 @@ func (tp *appsContext) settingOne(it *Item, s certSetting) {
 		}
 		if s.python && tp.pythonsProtected() {
 			r.Status, r.Summary = StInfo, T("set.sumPySafe")
-			r.Details = joinParas(what, bundleProblem(br), T("set.pySafe"), T("py.updateAnyway")+" "+fix)
+			r.Details = joinParas(what, bundleProblem(br), T("set.pySafe"), thenFix(T("py.updateAnyway"), fix))
 			break
 		}
 		r.Status, r.Summary = StWarn, T("set.sumBad")

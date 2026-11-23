@@ -1152,7 +1152,7 @@ func (tp *appsContext) curlOne(it *Item, exe string) {
 	case ok && br.Bad():
 		fix := joinParas(T("curl.fix"), replaceBundleFix(bundle))
 		if bundled {
-			fix = joinParas(bundledAdvice(o), T("fix.directly")+"\n"+replaceBundleFix(bundle))
+			fix = joinParas(bundledAdvice(o), how(T("fix.directly"))+"\n"+replaceBundleFix(bundle))
 		}
 		r.Status, r.Summary, r.Details = StWarn, T("curl.sumBad"), details+"\n\n"+bundleProblem(br)+"\n\n"+fix
 	case ok:
@@ -1737,9 +1737,19 @@ func javaBlockCmd(bl javaBlockList, roots []javaRoot) string {
 		return ""
 	}
 	admin := needsAdmin(bl.file)
-	add := fmt.Sprintf(`Add-Content -LiteralPath %s -Value '',%s`, psPath(bl.file, admin), strings.Join(missing, ","))
-	f := newFix(fixAction{Kind: fixJava, Admin: admin, Files: []string{bl.file},
-		Cmds: []string{backupThenLine(bl.file, "", add, admin)}, Plain: []string{changeLine("", add)}})
+	// a script (scriptLines); the empty line ends the last line of the list, if it has
+	// no line break
+	script := func(backup bool) []string {
+		var s scriptLines
+		s.block(T("java.s.list"), "$list  = "+psPath(bl.file, admin), "$certs = "+strings.Join(missing, ", "))
+		if backup {
+			s.block(T("java.s.backup"), backupLines("$list")...)
+		}
+		s.block(T("java.s.add"), `Add-Content -LiteralPath $list -Value '', $certs`)
+		return s
+	}
+	cmds := script(true)
+	f := newFix(fixAction{Kind: fixJava, Admin: admin, Script: true, Files: []string{bl.file}, Cmds: cmds, Plain: script(false), Alone: runsAlone(cmds)})
 	return psHeader(bl.file) + "\n" + f.lines()
 }
 
@@ -2583,7 +2593,7 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 			r.Version = distInfoVersion(sp, "certifi")
 		}
 		if bundled {
-			fix = joinParas(bundledAdvice(o), T("fix.directly")+"\n"+replaceBundleFix(p))
+			fix = joinParas(bundledAdvice(o), how(T("fix.directly"))+"\n"+replaceBundleFix(p))
 		} else { // software that is not known: the file belongs to it all the same
 			fix = joinParas(T("bundle.genericFix"), copyWarning(replaceBundleFix(p)))
 		}
@@ -2594,7 +2604,7 @@ func (tp *appsContext) bundleOne(it *Item, p string) {
 	r.Search = bundleSearch(o.Name, p)
 	if pyList && fx.protected() {
 		r.Status, r.Summary = StInfo, T("bundle.sumPySafe")
-		r.Details = joinParas(strings.TrimSpace(details), pythonBlocksText(fx), T("py.updateAnyway")+" "+fix, restore)
+		r.Details = joinParas(strings.TrimSpace(details), pythonBlocksText(fx), thenFix(T("py.updateAnyway"), fix), restore)
 		tp.c.finish(it, r)
 		return
 	}
@@ -2708,32 +2718,41 @@ func gitBundleAdvice(state FixState, bundled bool, o ownerInfo, files []string) 
 }
 
 // replaceBundleFix: keep a copy of an outdated bundle and replace it with Mozilla's
-// current list, as published by curl. PowerShell itself downloads it (curl.exe can be
+// current list, as published by curl. It is a script (scriptLines), which stops at its
+// first command that fails. PowerShell itself downloads the list (curl.exe can be
 // removed from Windows), into memory: a file in between, in a folder other programs
 // can write to, could be replaced before being copied (with administrator rights, over
-// a file they could not change themselves). The first command makes sure that Windows
-// PowerShell 5.1 can use TLS 1.2, which curl.se requires: depending on the Windows and
-// on the settings of .NET Framework, it may otherwise offer only SSL 3 and TLS 1.0.
+// a file they could not change themselves). Windows PowerShell 5.1 is first set to use
+// TLS 1.2, which curl.se requires: depending on the Windows and on the settings of
+// .NET Framework, it may otherwise offer only SSL 3 and TLS 1.0.
 //
 // The download is used only when it matches the SHA-256 that curl publishes next to
-// it: a failed download (nothing, a value left from an earlier run), an empty answer,
-// a proxy's error page or a cut transfer changes nothing. Each command works on its
-// own, so that it is safe also when the commands are run one by one.
+// it: a failed download, an empty answer, a proxy's error page or a cut transfer stops
+// the script before anything is changed.
 func replaceBundleFix(files ...string) string {
-	download := func() []string {
-		return []string{
-			`[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12`,
-			`$cacert = $null; $cacert = (Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem).RawContentStream.ToArray()`,
-			`$sha256 = $null; $sha256 = ([Text.Encoding]::ASCII.GetString((Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem.sha256).RawContentStream.ToArray()) -split '\s')[0]`,
-			`$ok = $cacert -and $sha256 -and (Get-FileHash -InputStream ([IO.MemoryStream]::new($cacert))).Hash -eq $sha256`,
-			fmt.Sprintf(`if (-not $ok) { Write-Warning %s }`, psQuote(T("fix.downloadFailed")))}
+	admin := anyNeedsAdmin(files...)
+	pick := func(one, many string) string {
+		if len(files) > 1 {
+			return T(many)
+		}
+		return T(one)
 	}
-	f := fixAction{Kind: fixBundle, Admin: anyNeedsAdmin(files...), Cmds: download(), Plain: download(), Files: files, Fetch: []int{1, 2}}
-	for _, file := range files {
-		write := fmt.Sprintf(`[IO.File]::WriteAllBytes(%s, $cacert)`, psPath(file, f.Admin))
-		f.Cmds = append(f.Cmds, backupThenLine(file, "$ok", write, f.Admin))
-		f.Plain = append(f.Plain, changeLine("$ok", write))
+	script := func(backup bool) []string {
+		var s scriptLines
+		s.block(pick("bundle.s.file1", "bundle.s.fileN"), "$files = "+psPaths(files, admin))
+		s.block(T("bundle.s.download"),
+			`[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12`,
+			`$cacert = (Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem).RawContentStream.ToArray()`,
+			`$sha256 = ([Text.Encoding]::ASCII.GetString((Invoke-WebRequest -UseBasicParsing -Uri https://curl.se/ca/cacert.pem.sha256).RawContentStream.ToArray()) -split '\s')[0]`,
+			`if ((Get-FileHash -InputStream ([IO.MemoryStream]::new($cacert))).Hash -ne $sha256) { throw `+psQuote(T("fix.badSum"))+` }`)
+		if backup {
+			s.block(pick("bundle.s.backup1", "bundle.s.backupN"), backupLines("$files")...)
+		}
+		s.block(pick("bundle.s.replace1", "bundle.s.replaceN"), `$files | ForEach-Object { [IO.File]::WriteAllBytes($_, $cacert) }`)
+		return s
 	}
+	cmds := script(true)
+	f := fixAction{Kind: fixBundle, Admin: admin, Script: true, Cmds: cmds, Plain: script(false), Alone: runsAlone(cmds), Files: files, Fetch: fetchLines(cmds)}
 	return how(T("fix.replaceBundle")) + "\n" + psHeader(files...) + "\n" + newFix(f).lines()
 }
 

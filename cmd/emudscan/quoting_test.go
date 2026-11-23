@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -58,23 +59,43 @@ var hostileNames = []string{
 }
 
 // checkCommands fails the test when a command line of details holds anything of the
-// hostile names outside a quoted string, or a double-quoted string at all.
+// hostile names outside a quoted string, or a double-quoted string that holds more
+// than the script's own variables ("$_.emudscan-$stamp.bak"): no path, which is
+// always single-quoted, no subexpression and no escape. The comments of a script are
+// not run: they are skipped.
 func checkCommands(t *testing.T, what, details string) int {
 	t.Helper()
 	n := 0
 	for _, line := range strings.Split(details, "\n") {
 		c, ok := strings.CutPrefix(line, "$ ")
-		if !ok {
+		if !ok || strings.HasPrefix(strings.TrimSpace(c), "#") {
 			continue
 		}
 		n++
 		code, _, closed := psSplit(c)
-		if !closed || strings.Contains(code, "Start-Process") || strings.ContainsAny(code, "\"“”„") {
+		if !closed || strings.Contains(code, "Start-Process") || strings.ContainsAny(code, "“”„`") || strings.Contains(code, "$(") || !onlyVariables(code) {
 			t.Errorf("%s: unsafe command (code outside the quotes: %q):\n%s", what, code, c)
 		}
 	}
 	return n
 }
+
+// onlyVariables: the double-quoted strings of code hold only variables of the script
+// and the name of a backup, which PowerShell expands without running anything.
+func onlyVariables(code string) bool {
+	parts := strings.Split(code, "\"")
+	if len(parts)%2 == 0 {
+		return false // not closed
+	}
+	for i := 1; i < len(parts); i += 2 {
+		if !doubleQuotedRe.MatchString(parts[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+var doubleQuotedRe = regexp.MustCompile(`^(\$(_|stamp|list|files|folder|new|temp|unpacked|emudscanFiles)\b|[\\.]|emudscan-|bak|added|[a-z0-9-]+)*$`)
 
 // psQuote's strings are read back as they were, whatever quotes they hold, and
 // nothing in them is left outside the string.
