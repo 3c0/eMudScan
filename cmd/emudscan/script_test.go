@@ -198,7 +198,7 @@ func TestCheckFileLink(t *testing.T) {
 	if strings.Contains(f.lines(), pyCheckName) {
 		t.Error("the details name the file")
 	}
-	if string(mustFiles(t)[pyCheckName]) != pyCheckScript || !strings.HasPrefix(pyCheckScript, "# eMudScan's checks of a Python's ssl module") {
+	if string(mustFiles(t)[pyCheckName]) != pyCheckScript || !strings.HasPrefix(pyCheckScript, `"""Test the ssl module of a Python`) {
 		t.Error("the file of the checks")
 	}
 }
