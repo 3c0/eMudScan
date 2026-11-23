@@ -104,7 +104,9 @@ there are more than two.
 Double-click an item (or press Enter) to see its software date and where that
 date comes from, its folders, homepage and package, and the **recommended
 action**. Commands are shown in black blocks, with a copy button, for you to run.
-When eMudScan can run them for you, **Fix this software** does so, once you
+A line too long for its block ends with a gray ↩, and its rest starts with ↪ on
+the next row, at the indent of the line: it is still one line, and the signs are
+not copied. When eMudScan can run them for you, **Fix this software** does so, once you
 confirm (see [Fixing software](#fixing-software)).
 
 With several items selected, **Detailed information on 3 items…** (or Enter)
@@ -217,7 +219,9 @@ has, from top to bottom:
   says which fix it is, such as `# Fix: Replace the ssl files of Python…`, or
   `# Fix 1: Update with Scoop` and
   `# Fix 2, if the update does not fix it: Replace the certificate bundle…`. The
-  console shows the same while the fixes run. If they run in a different order,
+  console shows the same while the fixes run. A line too long for the console
+  ends with ↩ and goes on after ↪, as in the detailed information window. If
+  they run in a different order,
   the warning before they run explains it. When copied, the line between two
   software is a comment, which PowerShell skips. The button in their top right corner
   copies them, with their comments, as in the detailed information window; after

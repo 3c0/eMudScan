@@ -66,6 +66,8 @@ type logLine struct {
 	// link: linkN of its characters are a link, underlined, which calls onLink(link):
 	// its last ones, or those that end linkTail characters before its end
 	link, linkN, linkTail int
+	// signs: a line of a script (appendScript); its rows show the wrap signs when it is cut
+	signs bool
 }
 
 type logRowRef struct{ line, row int }
@@ -362,7 +364,13 @@ func (v *logView) clear() {
 
 // append adds runs at the end. The log follows its end if it was showing it (or
 // when follow is set).
-func (v *logView) append(runs []logRun, follow bool) {
+func (v *logView) append(runs []logRun, follow bool) { v.add(runs, follow, false) }
+
+// appendScript adds the runs of a line of a script, as append does: when the line is
+// cut, its rows show the wrap signs.
+func (v *logView) appendScript(runs []logRun, follow bool) { v.add(runs, follow, true) }
+
+func (v *logView) add(runs []logRun, follow, signs bool) {
 	follow = follow || v.atBottom()
 	changed := len(v.lines) // the first line to cut again: the last one if it is not ended
 	if changed > 0 && !v.lines[changed-1].done {
@@ -385,6 +393,7 @@ func (v *logView) append(runs []logRun, follow bool) {
 				v.lines = append(v.lines, logLine{off: len(v.text)})
 			}
 			ln := &v.lines[len(v.lines)-1]
+			ln.signs = ln.signs || signs
 			n, brk := len(s), false
 			for i, c := range s {
 				if c == '\n' {
@@ -493,11 +502,14 @@ func (v *logView) fit(dc uintptr, font int, s []uint16, width int32) int {
 }
 
 // cut lays a line out in rows: words (with their spaces) are kept whole, even in
-// several colors (a command), unless one is wider than the log by itself.
+// several colors (a command), unless one is wider than the log by itself. A line of a
+// script (signs) keeps room for half a space and ↩ after its text, and its next rows
+// start after ↪ and half a space, at its indent (paint draws the signs).
 func (v *logView) cut(dc uintptr, ln *logLine) {
 	ln.rows = ln.rows[:0]
 	var row []logFrag
 	x := int32(0)
+	xMax, next := v.width, int32(0) // the end of the rows, the start of the rows after the first
 	add := func(off, n, font int, color uint32) {
 		w := v.measure(dc, font, v.text[off:off+n])
 		if k := len(row) - 1; k >= 0 && row[k].font == font && row[k].color == color && row[k].off+row[k].n == off {
@@ -511,7 +523,7 @@ func (v *logView) cut(dc uintptr, ln *logLine) {
 	}
 	newRow := func() {
 		ln.rows = append(ln.rows, row)
-		row, x = nil, 0
+		row, x = nil, next
 	}
 	// the spans, from where they start in the text
 	type seg struct {
@@ -531,6 +543,15 @@ func (v *logView) cut(dc uintptr, ln *logLine) {
 			}
 		}
 	}
+	if ln.signs {
+		sp := v.measure(dc, logMono, []uint16{' '})
+		xMax -= sp/2 + v.measure(dc, logSymbol, utf16.Encode([]rune(wrapEnd)))
+		lead := 0
+		for ln.off+lead < end && v.text[ln.off+lead] == ' ' {
+			lead++
+		}
+		next = wrapIndent(lead, sp, xMax) + v.measure(dc, logSymbol, utf16.Encode([]rune(wrapStart))) + sp/2
+	}
 	for i := ln.off; i < end; {
 		j := i
 		for j < end && v.text[j] != ' ' {
@@ -542,14 +563,14 @@ func (v *logView) cut(dc uintptr, ln *logLine) {
 		}
 		ww := int32(0)
 		pieces(i, word, func(a, b int, s seg) { ww += v.measure(dc, s.font, v.text[a:b]) })
-		if x > 0 && x+ww > v.width {
+		if len(row) > 0 && x+ww > xMax {
 			newRow()
 		}
-		if x == 0 && ww > v.width { // too wide by itself: cut anywhere
+		if len(row) == 0 && x+ww > xMax { // too wide by itself: cut anywhere
 			pieces(i, word, func(a, b int, s seg) {
 				for a < b {
-					n := v.fit(dc, s.font, v.text[a:b], v.width-x)
-					if n == 0 && x > 0 {
+					n := v.fit(dc, s.font, v.text[a:b], xMax-x)
+					if n == 0 && len(row) > 0 {
 						newRow()
 						continue
 					}
@@ -734,6 +755,14 @@ func (v *logView) paint() {
 	}
 	hl, _, _ := pGetSysColorBrush.Call(uintptr(hlColor))
 	px, py := v.padX()+v.gutter(), v.padY()
+	sp := v.measure(dc, logMono, []uint16{' '})
+	endSign, startSign := utf16.Encode([]rune(wrapEnd)), utf16.Encode([]rune(wrapStart))
+	startW := v.measure(dc, logSymbol, startSign)
+	type sign struct {
+		x, y int32 // y: the top of a row, on whose baseline it is drawn
+		s    []uint16
+	}
+	var signs []sign // the wrap signs, drawn last: ↩ reaches into the next row
 	for i := 0; i < v.visibleRows() && v.top+i < len(v.rows); i++ {
 		ref := v.rows[v.top+i]
 		y := py + int32(i)*v.pitch
@@ -755,6 +784,20 @@ func (v *logView) paint() {
 				pDeleteObject.Call(br)
 			}
 			continue
+		}
+		if ln, row := &v.lines[ref.line], v.lines[ref.line].rows[ref.row]; ln.signs && len(row) > 0 { // the wrap signs of a line of a script
+			if ref.row > 0 { // half a space before the text
+				signs = append(signs, sign{px + row[0].x - sp/2 - startW, y, startSign})
+			}
+			if ref.row < len(ln.rows)-1 { // half a space after the last word, without its spaces
+				l := row[len(row)-1]
+				k := l.n
+				for k > 0 && v.text[l.off+k-1] == ' ' {
+					k--
+				}
+				x := px + l.x + v.measure(dc, l.font, v.text[l.off:l.off+k]) + sp/2
+				signs = append(signs, sign{x, y + wrapDrop(v.pitch), endSign})
+			}
 		}
 		for _, f := range v.lines[ref.line].rows[ref.row] {
 			if f.n == 0 {
@@ -785,6 +828,12 @@ func (v *logView) paint() {
 				pExtTextOutW.Call(dc, uintptr(xa), uintptr(ty), 0, 0, uintptr(unsafe.Pointer(&s[i0])), uintptr(i1-i0), 0)
 			}
 		}
+	}
+	pSelectObject.Call(dc, v.fonts[logSymbol])
+	pSetTextColor.Call(dc, uintptr(wrapSignColor))
+	for _, g := range signs { // in gray, never selected
+		ty := g.y + v.ascent - v.ascents[logSymbol]
+		pExtTextOutW.Call(dc, uintptr(g.x), uintptr(ty), 0, 0, uintptr(unsafe.Pointer(&g.s[0])), uintptr(len(g.s)), 0)
 	}
 	if v.copyText != nil {
 		drawCopyIcon(dc, v.copyRect(), v.copyHover, time.Since(v.copied) < 1500*time.Millisecond)

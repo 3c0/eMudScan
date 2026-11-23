@@ -862,7 +862,11 @@ func (d *fixDlg) show(l fixLine) {
 		runs[len(runs)-1].text = strings.TrimSuffix(runs[len(runs)-1].text, "\n")
 		runs = append(runs, logRun{" " + link + "\n", rgb(97, 214, 214), false, false})
 	}
-	d.console.append(runs, false)
+	if l.kind.ofScript() { // its rows show the wrap signs when it is cut
+		d.console.appendScript(runs, false)
+	} else {
+		d.console.append(runs, false)
+	}
 	if id != 0 {
 		d.console.setLink(d.lineAt[len(d.lineAt)-1], len(utf16.Encode([]rune(link))), id)
 	}

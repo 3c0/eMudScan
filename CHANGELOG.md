@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - In the Fix window, the name `check_ssl.py`, in the commands that replace the ssl files of a Python, is a link that shows this file: the tests that the fix runs in that Python, which you can read, and copy, before you run anything. These commands first say what `$emudscanFiles` is, the folder that eMudScan makes for the fix, with this file and its test certificates, and show it when the fix runs. The file is also in the source code as it is (`cmd/emudscan/check_ssl.py`). The box of the licenses and notices has the same new button, **Copy all**.
+- In the commands of the detailed information and in the console of the Fix window, a line too long for its box ends with ↩, and its rest starts with ↪ on the next row, at the indent of the line, so that it is not taken for another command. These signs are drawn in gray, and are not selected or copied.
 
 ### Changed
 

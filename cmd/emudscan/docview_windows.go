@@ -57,6 +57,7 @@ type docView struct {
 	fonts     map[string]*docFont
 	icons     map[Status]uintptr
 	frags     []docFrag
+	signs     []docFrag // the wrap signs of the commands: drawn, not in text
 	blockRcs  []rect
 	btns      []*docBtn
 	marks     []docIcon
@@ -105,6 +106,10 @@ const linkToolID = 0x10000
 const (
 	docCmdBg   = 0x0C0C0C // rgb(12,12,12)
 	docCmdText = 0xCCCCCC // rgb(204,204,204)
+	// wrapSignColor is the gray of the wrap signs (wrapEnd, wrapStart), in the commands of
+	// the details and in the console of the Fix window: that of the line at the end of
+	// the fixes, seen without being taken for text
+	wrapSignColor = 0x767676 // rgb(118,118,118)
 )
 
 var (
@@ -180,8 +185,9 @@ func (v *docView) destroy() {
 // Layout
 
 type docLayouter struct {
-	v  *docView
-	dc uintptr
+	v     *docView
+	dc    uintptr
+	signs bool // the lines are those of a script: their cut rows show the wrap signs
 }
 
 func (L *docLayouter) measure(f *docFont, s []uint16) int32 {
@@ -224,12 +230,32 @@ func splitWords(s string) []string {
 }
 
 // flow lays out styled text between xFirst (first line) or xIndent (next lines) and xMax,
-// from y; it returns the y below the last line.
+// from y; it returns the y below the last line. For a line of a script (L.signs), a
+// line that goes on ends with ↩, and the next one starts with ↪ at the indent of the
+// script line, after xIndent.
 func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spacing float64) int32 {
 	v := L.v
 	x := xFirst
+	var sym *docFont
+	var spaceW, startX int32
+	if L.signs { // room for half a space and ↩ after the text; the next lines after ↪ and half a space
+		sym = v.fonts["symbol"]
+		spaceW = L.measure(v.fonts["mono"], []uint16{' '})
+		xMax -= spaceW/2 + L.measure(sym, utf16.Encode([]rune(wrapEnd)))
+		lead := 0
+		for _, p := range parts {
+			n := leadSpaces(p.text)
+			lead += n
+			if n < len(p.text) {
+				break
+			}
+		}
+		startX = xIndent + wrapIndent(lead, spaceW, xMax-xIndent)
+		xIndent = startX + L.measure(sym, utf16.Encode([]rune(wrapStart))) + spaceW/2
+	}
+	first := true
 	var line []docFrag
-	commit := func() {
+	commit := func(cut bool) {
 		lh, base := int32(0), int32(0)
 		for _, f := range line {
 			lh, base = max(lh, f.font.height), max(base, f.font.ascent)
@@ -238,6 +264,24 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 			lh, base = v.fonts["body"].height, v.fonts["body"].ascent
 		}
 		lineH := int32(float64(lh) * spacing)
+		if L.signs && len(line) > 0 { // on the baseline of the text, or dy lower
+			sign := func(x, dy int32, s string) {
+				u := utf16.Encode([]rune(s))
+				v.signs = append(v.signs, docFrag{x: x, y: y + dy, w: L.measure(sym, u), h: lineH,
+					ty: y + dy + (lineH-lh)/2 + base - sym.ascent, text: u, font: sym, color: wrapSignColor})
+			}
+			if !first {
+				sign(startX, 0, wrapStart)
+			}
+			if cut { // half a space after the last word, which keeps its spaces
+				l := line[len(line)-1]
+				k := len(l.text)
+				for k > 0 && l.text[k-1] == ' ' {
+					k--
+				}
+				sign(l.x+L.measure(l.font, l.text[:k])+spaceW/2, wrapDrop(lineH), wrapEnd)
+			}
+		}
 		for _, f := range line {
 			f.y, f.h = y, lineH
 			f.ty = y + (lineH-lh)/2 + base - f.font.ascent
@@ -248,6 +292,7 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 		y += lineH
 		line = nil
 		x = xIndent
+		first = false
 	}
 	add := func(p styled, u []uint16, w int32) {
 		if n := len(line); n > 0 {
@@ -291,7 +336,7 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 			}
 		}
 		if x+wt > xMax && len(line) > 0 {
-			commit()
+			commit(true)
 		}
 		if x+wt <= xMax {
 			for _, pc := range word {
@@ -306,7 +351,7 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 				n := L.fit(p.font, u, xMax-x)
 				if n == 0 {
 					if len(line) > 0 {
-						commit()
+						commit(true)
 						continue
 					}
 					n = 1
@@ -314,12 +359,12 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 				add(p, u[:n], L.measure(p.font, u[:n]))
 				u = u[n:]
 				if len(u) > 0 {
-					commit()
+					commit(true)
 				}
 			}
 		}
 	}
-	commit()
+	commit(false)
 	return y
 }
 
@@ -371,7 +416,7 @@ func (v *docView) layout() {
 	dc, _, _ := pCreateCompatibleDC.Call(0)
 	defer pDeleteDC.Call(dc)
 	L := &docLayouter{v: v, dc: dc}
-	v.frags, v.blockRcs, v.btns, v.marks, v.text = nil, nil, nil, nil, nil
+	v.frags, v.signs, v.blockRcs, v.btns, v.marks, v.text = nil, nil, nil, nil, nil, nil
 	x0, xMax := s(24), rc.Right-s(24)
 	if xMax < x0+s(240) {
 		xMax = x0 + s(240)
@@ -431,10 +476,12 @@ func (v *docView) layout() {
 			top := y + s(2)
 			y = top + pad
 			tx := x0 + pad
+			L.signs = true
 			for _, c := range b.cmds {
 				y = L.flow(v.cmdStyled(c), tx, tx, xMax-pad-bsz-s(4), y, 1.3)
 				L.newline()
 			}
+			L.signs = false
 			y = max(y+pad, top+bsz+2*s(6))
 			v.blockRcs = append(v.blockRcs, rect{x0, top, xMax, y})
 			v.btns = append(v.btns, &docBtn{rc: rect{xMax - s(6) - bsz, top + s(6), xMax - s(6), top + s(6) + bsz}, cmds: b.cmds})
@@ -804,6 +851,14 @@ func (v *docView) paint() {
 			pFillRect.Call(dc, uintptr(unsafe.Pointer(&r)), hl)
 			pSetTextColor.Call(dc, uintptr(sysColor(14 /* COLOR_HIGHLIGHTTEXT */)))
 			pExtTextOutW.Call(dc, uintptr(xa), uintptr(f.ty+oy), 0, 0, uintptr(unsafe.Pointer(&f.text[i0])), uintptr(i1-i0), 0)
+		}
+	}
+	for i := range v.signs { // never selected
+		f := &v.signs[i]
+		if visible(f.y, f.y+f.h) {
+			pSelectObject.Call(dc, f.font.h)
+			pSetTextColor.Call(dc, uintptr(f.color))
+			pExtTextOutW.Call(dc, uintptr(f.x), uintptr(f.ty+oy), 0, 0, uintptr(unsafe.Pointer(&f.text[0])), uintptr(len(f.text)), 0)
 		}
 	}
 
