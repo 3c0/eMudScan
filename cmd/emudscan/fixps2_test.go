@@ -121,7 +121,7 @@ func TestBundleFixInPowerShell(t *testing.T) {
 					if ok != c.fixed {
 						t.Errorf("ran: %v, want %v\n%s", ok, c.fixed, out)
 					}
-					if c.wrong && !strings.Contains(strings.Join(strings.Fields(out), ""), strings.Join(strings.Fields(T("fix.badSum")), "")) {
+					if c.wrong && !strings.Contains(errorText(out), tightText(T("fix.badSum"))) {
 						t.Errorf("no message:\n%s", out)
 					}
 					report = out

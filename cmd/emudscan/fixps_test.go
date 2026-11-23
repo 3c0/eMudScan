@@ -25,11 +25,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
+
+// ansiColor is a color of the text that PowerShell 7 writes.
+var ansiColor = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+// errorText is what a PowerShell showed, as text to look for a message in. Windows
+// PowerShell cuts the lines of an error at the width of its window; PowerShell 7 too,
+// in colors, with a bar before each line of the message. So: without the colors, the
+// bars and the spaces, as tightText gives a message.
+func errorText(out string) string {
+	return tightText(strings.ReplaceAll(ansiColor.ReplaceAllString(out, ""), "|", ""))
+}
+
+// tightText is s without its spaces.
+func tightText(s string) string { return strings.Join(strings.Fields(s), "") }
 
 // testPowerShells are the PowerShells that run the tests, each with its version.
 func testPowerShells(t *testing.T) map[string]string {
@@ -465,12 +480,10 @@ func TestPySSLAloneInPowerShell(t *testing.T) {
 				}
 				cmd.Env = append(cmd.Env, "TEMP="+temp)
 				out, err := cmd.CombinedOutput()
-				// Windows PowerShell cuts the lines of an error at the width of its window: without the spaces
-				tight := func(s string) string { return strings.Join(strings.Fields(s), "") }
-				if (err == nil) != c.fixed || c.stopsAt != "" && !strings.Contains(tight(string(out)), tight(c.stopsAt)) {
+				if (err == nil) != c.fixed || c.stopsAt != "" && !strings.Contains(errorText(string(out)), tightText(c.stopsAt)) {
 					t.Errorf("%v, want fixed %v and %q:\n%s", err, c.fixed, c.stopsAt, out)
 				}
-				if c.failAfter && !strings.Contains(tight(string(out)), tight(T("pyssl.a.noNewSsl"))) { // why the files were put back
+				if c.failAfter && !strings.Contains(errorText(string(out)), tightText(T("pyssl.a.noNewSsl"))) { // why the files were put back
 					t.Errorf("no %q:\n%s", T("pyssl.a.noNewSsl"), out)
 				}
 				want := map[string]string{"_hashlib.pyd": "old", "libssl-3.dll": "old", "libcrypto-3.dll": "old"}
@@ -588,5 +601,28 @@ func TestRuleInPowerShell(t *testing.T) {
 		if err != nil || strings.TrimSpace(string(out)) != "after the line" {
 			t.Errorf("PowerShell %s: %v\n%s", version, err, out)
 		}
+	}
+}
+
+// A message is found in what each PowerShell shows of an error, cut in lines at the
+// width of its window: as PowerShell 7 shows it on Windows (GitHub's runner), in colors
+// and with a bar before each line.
+func TestErrorText(t *testing.T) {
+	msg := "This Python cannot load its ssl module, even before the fix. Nothing was changed. Update or reinstall the software it belongs to."
+	ps7 := "ImportError: DLL load failed (before)\r\n" +
+		"\x1b[31;1mException: \x1b[0mC:\\Temp\\t\\alone.ps1:13\x1b[0m\r\n" +
+		"\x1b[31;1m\x1b[0m\x1b[36;1mLine |\x1b[0m\r\n" +
+		"\x1b[31;1m\x1b[0m\x1b[36;1m\x1b[36;1m  13 | \x1b[0m … DE -ne 0) { \x1b[36;1mthrow 'This Python cannot load its ssl module, even befor\x1b[0m …\x1b[0m\r\n" +
+		"\x1b[31;1m\x1b[0m\x1b[36;1m\x1b[36;1m\x1b[0m\x1b[36;1m\x1b[0m\x1b[36;1m     | \x1b[31;1m               ~~~~~~~~~~~~~~~~~~~~~~~~~~\x1b[0m\r\n" +
+		"\x1b[31;1m\x1b[0m\x1b[36;1m\x1b[36;1m\x1b[0m\x1b[36;1m\x1b[0m\x1b[36;1m\x1b[31;1m\x1b[31;1m\x1b[36;1m     | \x1b[31;1mThis Python cannot load its ssl module, even before the fix. Nothing was changed. Update or reinstall the\x1b[0m\r\n" +
+		"\x1b[31;1m\x1b[0m\x1b[36;1m\x1b[36;1m\x1b[0m\x1b[36;1m\x1b[0m\x1b[36;1m\x1b[31;1m\x1b[31;1m\x1b[36;1m\x1b[31;1m\x1b[36;1m     | \x1b[31;1msoftware it belongs to.\x1b[0m\r\n"
+	ps51 := "This Python cannot load its ssl module, even before the fix. Nothing was changed. Update or reinstall the softwar\r\ne it belongs to.\r\nAt C:\\Temp\\t\\alone.ps1:13 char:42\r\n"
+	for name, out := range map[string]string{"PowerShell 7": ps7, "Windows PowerShell": ps51} {
+		if !strings.Contains(errorText(out), tightText(msg)) {
+			t.Errorf("%s: not found in %q", name, errorText(out))
+		}
+	}
+	if strings.Contains(errorText(ps7), tightText("Nothing was changed. Run the fix again.")) {
+		t.Error("found a message that is not there")
 	}
 }
