@@ -42,7 +42,7 @@ func TestUvTool(t *testing.T) {
 	}
 	got := check(filepath.Join(tools, "example-app-1"), true)
 	if f := fixesIn(got.Details); len(f) != 1 || f[0].Kind != fixPackage || f[0].Manager != "uv" || f[0].key() != "uv tool upgrade example-app-1" || strings.Join(f[0].Servers, " ") != "pypi.org" ||
-		!strings.Contains(got.Details, T("py.uvTool")) || strings.Contains(got.Details, "pip install") || strings.Contains(got.Details, "scoop update") {
+		!strings.Contains(got.Details, endSentence(T("py.uvTool"))+"\n> To do so, click **Fix this software**, or run this command yourself in PowerShell:\n$ uv tool upgrade") || strings.Contains(got.Details, "pip install") || strings.Contains(got.Details, "scoop update") {
 		t.Errorf("the tool: %+v\n%s", f, got.Details)
 	}
 	for name, c := range map[string]struct {

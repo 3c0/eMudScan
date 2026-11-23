@@ -237,7 +237,7 @@ func TestPackages(t *testing.T) {
 	if o := tp.ownerOf(prog); o.Name != "example-app-14" || o.Version != "14.1.0" {
 		t.Errorf("scoop owner: %+v", o)
 	}
-	fixFile := T("fix.orDirectly") + "\n$ copy a b"
+	fixFile := how(T("fix.orDirectly")) + "\n$ copy a b"
 	it := Item{Group: GroupApps, Kind: "tool", Name: "example-app-14", Owner: "example-app-14", OwnerVer: "14.1.0", File: prog, Status: StCaution, Details: "May trust.\n\n" + fixFile}
 	it.fillDisplay("")
 	tp.packageAdvice(&it)

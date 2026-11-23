@@ -89,7 +89,7 @@ func TestStorePackageTag(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "WindowsApps", "PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0")
 	tp := &appsContext{scoopApps: map[string]scoopManifest{}}
 	tp.store = []storePackage{{fullName: filepath.Base(root), name: "Python 3.13", version: "3.13.3824.0", root: root}}
-	fixFile := T("fix.orDirectly") + "\n$ copy a b"
+	fixFile := how(T("fix.orDirectly")) + "\n$ copy a b"
 	it := Item{Group: GroupApps, Kind: "bundle", Name: "certifi", Owner: "Python 3.13", OwnerVer: "3.13.3824.0",
 		File: filepath.Join(root, "Lib", "site-packages", "certifi", "cacert.pem"), Status: StWarn, Details: "Trusts them.\n\n" + fixFile}
 	it.fillDisplay("")

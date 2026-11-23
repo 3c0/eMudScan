@@ -125,6 +125,16 @@ stays out of them. The links and the copied paths keep the full path.
   <img src="images/details-window.png" width="560" alt="The detailed information window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown, or with Fix this software">
 </p>
 
+Above the commands of a fix, a sentence says what to do with them: click
+**Fix this software**, or run them yourself in PowerShell (“To fix this
+vulnerability, click **Fix this software**, or run this script yourself in
+PowerShell:”). For the restore of backups, it names the button as it then reads,
+**Restore the backups**. When the commands need administrator rights, it ends
+with “in PowerShell (Run as administrator):”, the last words in bold red: open
+PowerShell with **Run as administrator** to run them yourself; the button asks
+for these rights itself. Commands that the button does
+not run, such as removing a setting, only say “Run this command in PowerShell:”.
+
 Before changing a file, these commands back it up next to the original, with the
 date and time in its name (`cacert.pem.emudscan-20261031-011500.bak`) and the
 dates of the original, which a restore puts back too. As long as such a backup

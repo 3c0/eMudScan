@@ -49,7 +49,7 @@ func TestPymanagerAdvice(t *testing.T) {
 		fix       bool   // the pymanager update, as a fix
 		want      string // in the details, or "" for none of the manager's texts
 	}{
-		{"3.14.7", true, true, true, T("py.pymanagerFix") + "\n" + cmd("pymanager install --update -y 3.14-64")},
+		{"3.14.7", true, true, true, endSentence(T("py.pymanagerFix")) + "\n> To fix this vulnerability, click **Fix this software**, or run this command yourself in PowerShell:\n" + cmd("pymanager install --update -y 3.14-64")},
 		{"3.15.1", true, true, true, cmd("pymanager install --update -y 3.15-64")},
 		{"3.13.17", true, true, false, Tf("py.pymanagerNewer", "3.13", "3.14", "3.14") + "\n" + cmd("pymanager install 3.14")},
 		{"3.10.19", true, true, false, Tf("py.pymanagerNewer", "3.10", "3.14", "3.14")},

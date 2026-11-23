@@ -203,9 +203,9 @@ func restoreAdviceFor(pairs []restorePair) string {
 		from[i] = b.path
 	}
 	restore := newFix(fixAction{Kind: fixRestore, Admin: admin, Cmds: cmds, Files: changed, From: from})
-	intro, undo, warn := T("restore.intro1"), T("restore.how1"), T("restore.warn1")
+	intro, warn := T("restore.intro1"), T("restore.warn1")
 	if len(cmds) > 1 {
-		intro, undo, warn = T("restore.introN"), T("restore.howN"), T("restore.warnN")
+		intro, warn = T("restore.introN"), T("restore.warnN")
 	}
-	return joinParas(intro+"\n"+strings.Join(list, "\n")+"\n\n"+how(undo+"\n"+warn)+"\n"+psHeader(changed...)+"\n"+restore.lines(), joinParas(refused...))
+	return joinParas(intro+"\n"+strings.Join(list, "\n")+"\n\n"+how(warn)+"\n"+psHeader(changed...)+"\n"+restore.lines(), joinParas(refused...))
 }

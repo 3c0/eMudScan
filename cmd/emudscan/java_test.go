@@ -75,7 +75,7 @@ func TestJavaVerdicts(t *testing.T) {
 		{"all roots blocked", withTLSG3, false, header + roots + tlsG3, StOK,
 			[]string{T("java.okRootsBlocked")}, []string{"Add-Content"}},
 		{"inside another program", openJDK, true, header, StWarn,
-			[]string{"update Example App 1, which this copy belongs to,", how(T("java.blockRoots")), how(T("bundled.warn")) + "\n" + how(T("fix.ps")), "Add-Content"},
+			[]string{"update Example App 1, which this copy belongs to,", how(T("java.blockRoots")), how(T("bundled.warn")) + "\n> To fix this vulnerability, click **Fix this software**, or run this command yourself in PowerShell", "Add-Content"},
 			[]string{T("java.fix")}},
 	} {
 		app := filepath.Join(root, "app"+itoa(i))

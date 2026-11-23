@@ -233,7 +233,7 @@ func TestPySSLOffer(t *testing.T) {
 	})
 	d, at := got.Details, 0
 	for _, w := range []string{"Recommended action: update Example App 1", Tf("pyssl.offer", "3.11.18", "python-build-standalone", "Example App 1"),
-		how(T("bundled.warn")), "> In PowerShell:\n$ & {\n$     $ErrorActionPreference = 'Stop'\n$\n$     # The Python to fix, its ssl files, and a folder for the download\n$     $python = ",
+		how(T("bundled.warn")), "> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell:\n$ & {\n$     $ErrorActionPreference = 'Stop'\n$\n$     # The Python to fix, its ssl files, and a folder for the download\n$     $python = ",
 		"\n$\n$     # Test that this Python loads its ssl module\n", "\n$     }\n$\n$     # Delete the download\n$     Remove-Item -Recurse -Force -LiteralPath $temp\n$ }\n", Tf("py.untilThenAlso", "certifi"), "pip install --upgrade certifi"} {
 		i := strings.Index(d[at:], w)
 		if i < 0 {

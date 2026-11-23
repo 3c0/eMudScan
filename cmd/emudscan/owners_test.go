@@ -83,7 +83,7 @@ func TestPipCommandsAndOwners(t *testing.T) {
 		}
 		d := items[0].Details
 		hasCmd := strings.Contains(d, pipCmd(exe, "certifi"))
-		if c.want == "" && (!hasCmd || !strings.Contains(d, how(T("fix.psAdmin")))) || c.want != "" && (hasCmd || !strings.Contains(d, c.want)) {
+		if c.want == "" && (!hasCmd || !strings.Contains(d, T("fix.withAdmin"))) || c.want != "" && (hasCmd || !strings.Contains(d, c.want)) {
 			t.Errorf("%s:\n%s", c.name, d)
 		}
 		// the Fix function runs exactly the commands shown, as administrator

@@ -39,7 +39,9 @@ func TestCopyWarning(t *testing.T) {
 	it := c.begin(GroupApps, "java", "Java", "", func(it *Item) {
 		c.finish(it, result{Bundled: true, Details: advice + "\n\n" + cmds})
 	})
-	if !strings.Contains(it.Details, lead+"\n\n"+warn+"\n"+header) {
+	// what to do with the commands, in place of the line that announced them (guide):
+	// they are not a fix that the button runs
+	if !strings.Contains(it.Details, lead+"\n\n"+warn+"\n"+how(Tf("fix.runSelf", T("fix.what1"), T("fix.withAdmin")))+"\n$ Copy-Item a b") {
 		t.Errorf("finished element:\n%s", it.Details)
 	}
 }
@@ -68,7 +70,7 @@ func TestCopyWarningUnknownOwner(t *testing.T) {
 	if it.Bundled || !strings.Contains(it.Details, T("bundle.genericFix")) {
 		t.Fatalf("not the advice for unknown software:\n%s", it.Details)
 	}
-	at := strings.Index(it.Details, how(T("bundled.warn"))+"\n"+how(T("fix.ps")))
+	at := strings.Index(it.Details, how(T("bundled.warn"))+"\n"+how(Tf("fix.do", T("dlg.fix"), T("fix.whatN"), "")))
 	if at < 0 || at < strings.Index(it.Details, T("bundle.genericFix")) || strings.Count(it.Details, how(T("bundled.warn"))) != 1 {
 		t.Errorf("warning missing or misplaced:\n%s", it.Details)
 	}

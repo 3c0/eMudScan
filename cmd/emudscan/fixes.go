@@ -307,6 +307,78 @@ func fixesIn(details string) []fixAction {
 	return out
 }
 
+// guide writes, above the commands of the details of a finished element, what to do
+// with them, in place of the line that announced them until then (psHeader): for a fix
+// that the Fix function can run, to click the button of the window, by its name, or to
+// run them oneself in PowerShell; for the restore of backups, the same with the name
+// that the button has when the element has nothing to fix, else without the button,
+// which then fixes; for other commands, to run them in PowerShell. It says "this
+// command", "these commands" or "this script", and, when they need them, the
+// administrator rights, which must not be missed. vulnerable: the fix is for a
+// vulnerability, not for something that is only good to do.
+func guide(details string, vulnerable bool) string {
+	fixes, _ := restoresApart(fixesIn(details))
+	lines := strings.Split(details, "\n")
+	for i, line := range lines {
+		text, ok := howOf(line)
+		if !ok || text != T("fix.ps") && text != T("fix.psAdmin") {
+			continue
+		}
+		// the commands below it: its first group, then the rest of its paragraph
+		var first []string
+		n, grouped := 0, false
+		for _, l := range lines[i+1:] {
+			if strings.TrimSpace(l) == "" {
+				break
+			}
+			c, isCmd := cmdOf(l)
+			if !isCmd {
+				grouped = grouped || len(first) > 0
+				continue
+			}
+			n++
+			if !grouped {
+				first = append(first, c)
+			}
+		}
+		recordedFixes.Lock()
+		f, recorded := recordedFixes.m[strings.Join(first, "\n")]
+		recordedFixes.Unlock()
+		what := T("fix.what1")
+		switch {
+		case recorded && f.Script:
+			what = T("fix.whatScript")
+		case n > 1:
+			what = T("fix.whatN")
+		}
+		admin := ""
+		if text == T("fix.psAdmin") || recorded && f.Admin {
+			admin = T("fix.withAdmin")
+		}
+		switch {
+		case !recorded:
+			lines[i] = how(Tf("fix.runSelf", what, admin))
+		case f.Kind == fixRestore && len(fixes) > 0:
+			lines[i] = how(Tf("fix.undoSelf", what, admin))
+		case f.Kind == fixRestore && len(f.Files) > 1:
+			lines[i] = how(Tf("fix.undo", T("dlg.restoreN"), what, admin))
+		case f.Kind == fixRestore:
+			lines[i] = how(Tf("fix.undo", T("dlg.restore1"), what, admin))
+		case vulnerable:
+			lines[i] = how(Tf("fix.do", T("dlg.fix"), what, admin))
+		default:
+			lines[i] = how(Tf("fix.doSo", T("dlg.fix"), what, admin))
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// fixBlock is the commands of a fix under the advice that leads to them: the advice,
+// which ends there, then what to do with the commands (guide), then the commands.
+func fixBlock(advice string, f fixAction) string {
+	return endSentence(advice) + "\n" + how(T("fix.ps")) + "\n" + f.lines()
+}
+
 // restoresApart splits the actions of an element: its fixes, and the restores of its
 // backups.
 func restoresApart(actions []fixAction) (fixes, restores []fixAction) {

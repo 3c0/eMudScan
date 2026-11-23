@@ -252,12 +252,8 @@ func (tp *appsContext) packageAdvice(it *Item) {
 		}
 		advice, given := T("fix.store"), T("fix.store") // the Store: no command
 		if p.Update != "" {
-			one := Tf("fix.pkg", p.Manager)
-			if p.Manager == "Chocolatey" {
-				one = Tf("fix.pkgAdmin", p.Manager)
-			}
 			f := newFix(fixAction{Kind: fixPackage, Admin: p.Manager == "Chocolatey", Cmds: []string{p.Update}, Manager: p.Manager, Servers: managerServers[p.Manager]})
-			advice, given = one+"\n"+f.lines(), f.lines()
+			advice, given = fixBlock(Tf("fix.pkg", p.Manager), f), f.lines()
 		}
 		if strings.Contains(it.Details, given) {
 			continue
@@ -265,7 +261,7 @@ func (tp *appsContext) packageAdvice(it *Item) {
 		details := strings.Trim(it.Details, "\n")
 		cut := len(details)
 		for _, k := range []string{"fix.directly", "fix.orDirectly"} {
-			if i := strings.Index(details, T(k)); i >= 0 && i < cut {
+			if i := strings.Index(details, how(T(k))); i >= 0 && i < cut { // with its mark, which stays with it
 				cut = i
 			}
 		}

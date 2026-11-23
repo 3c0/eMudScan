@@ -23,7 +23,7 @@ func TestDenoUpgrade(t *testing.T) {
 	}
 	a := denoUpgradeAdvice(own)
 	f := fixesIn(a)
-	if !strings.HasPrefix(a, T("deno.upgrade")+"\n") || len(f) != 1 || f[0].Kind != fixPackage || f[0].Manager != "Deno" || f[0].Optional ||
+	if !strings.HasPrefix(a, endSentence(T("deno.upgrade"))+"\n"+how(T("fix.ps"))+"\n$ ") || len(f) != 1 || f[0].Kind != fixPackage || f[0].Manager != "Deno" || f[0].Optional ||
 		f[0].key() != "& "+psPath(own, false)+" upgrade" || strings.Join(f[0].Servers, " ") != "dl.deno.land" {
 		t.Errorf("%+v\n%s", f, a)
 	}

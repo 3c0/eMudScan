@@ -282,3 +282,66 @@ func TestFixResults(t *testing.T) {
 		t.Errorf("an error: %q", got)
 	}
 }
+
+// When an element is finished, the line that announced its commands says what to do
+// with them: the button, by its name, or PowerShell; "this command", "these commands"
+// or "this script"; the administrator rights, in red.
+func TestGuide(t *testing.T) {
+	Lang = 0
+	one := newFix(fixAction{Kind: fixPip, Cmds: []string{"pip install --upgrade example-app-1"}})
+	several := newFix(fixAction{Kind: fixBundle, Admin: true, Cmds: []string{"$a = 1", "Copy-Item a b"}})
+	script := newFix(fixAction{Kind: fixPySSL, Script: true, Cmds: []string{"# run by the Fix window", "$a = 1"}, Alone: []string{"& {", "    $a = 2", "}"}})
+	undo1 := newFix(fixAction{Kind: fixRestore, Cmds: []string{"Move-Item a.bak a"}, Files: []string{"a"}})
+	undo2 := newFix(fixAction{Kind: fixRestore, Cmds: []string{"Move-Item a.bak a", "Move-Item b.bak b"}, Files: []string{"a", "b"}})
+	ps, admin := how(T("fix.ps")), how(T("fix.psAdmin"))
+	for _, c := range []struct {
+		name, details string
+		vulnerable    bool
+		want          string
+	}{
+		{"a command", "Outdated.\n" + ps + "\n" + one.lines(), true, "Outdated.\n> To fix this vulnerability, click **Fix this software**, or run this command yourself in PowerShell:\n" + one.lines()},
+		{"good to do", "Still good practice.\n" + ps + "\n" + one.lines(), false, "Still good practice.\n> To do so, click **Fix this software**, or run this command yourself in PowerShell:\n" + one.lines()},
+		{"commands, as administrator", admin + "\n" + several.lines(), true, "> To fix this vulnerability, click **Fix this software**, or run these commands yourself in PowerShell !!(Run as administrator)!!:\n" + several.lines()},
+		{"as administrator, by the fix", ps + "\n" + several.lines(), true, "> To fix this vulnerability, click **Fix this software**, or run these commands yourself in PowerShell !!(Run as administrator)!!:\n" + several.lines()},
+		{"a script", ps + "\n" + script.lines(), true, "> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell:\n" + script.lines()},
+		{"two fixes under one line", "Update uv, then this Python.\n" + ps + "\n" + how("Update with Scoop:") + "\n" + one.lines() + "\n" + how("Update with uv:") + "\n" + several.lines(), true,
+			"Update uv, then this Python.\n> To fix this vulnerability, click **Fix this software**, or run these commands yourself in PowerShell:\n> Update with Scoop:\n" + one.lines() + "\n> Update with uv:\n" + several.lines()},
+		{"a restore", "Fixed.\n\n" + ps + "\n" + undo1.lines(), false, "Fixed.\n\n> To undo the fix, click **Restore the backup**, or run this command yourself in PowerShell:\n" + undo1.lines()},
+		{"a restore of two files", ps + "\n" + undo2.lines(), false, "> To undo the fix, click **Restore the backups**, or run these commands yourself in PowerShell:\n" + undo2.lines()},
+		// the button then fixes: it does not restore
+		{"a fix and a restore", ps + "\n" + one.lines() + "\n\n" + ps + "\n" + undo1.lines(), true,
+			"> To fix this vulnerability, click **Fix this software**, or run this command yourself in PowerShell:\n" + one.lines() + "\n\n> To undo the fix, run this command yourself in PowerShell:\n" + undo1.lines()},
+		// commands that the button does not run
+		{"not a fix", "If the setting is no longer needed, remove it:\n" + admin + "\n$ git config --system --unset http.sslCAInfo", true,
+			"If the setting is no longer needed, remove it:\n> Run this command in PowerShell !!(Run as administrator)!!:\n$ git config --system --unset http.sslCAInfo"},
+		{"no line to replace", "Recommended action: update Flutter:\n$ flutter upgrade", true, "Recommended action: update Flutter:\n$ flutter upgrade"},
+	} {
+		if got := guide(c.details, c.vulnerable); got != c.want {
+			t.Errorf("%s:\n%s\nwant:\n%s", c.name, got, c.want)
+		}
+		if len(fixesIn(guide(c.details, c.vulnerable))) != len(fixesIn(c.details)) {
+			t.Errorf("%s: the fixes changed", c.name)
+		}
+	}
+	// an advice that led to its commands ends there, before what to do with them
+	if got := fixBlock("Recommended action: update it with uv, which installed it:", one); got != "Recommended action: update it with uv, which installed it.\n"+ps+"\n"+one.lines() {
+		t.Errorf("fixBlock:\n%s", got)
+	}
+	// in red: its own run, which a text read from the PC cannot make
+	runs := parseLine("run it yourself, in PowerShell !!(Run as administrator)!!:")
+	if len(runs) != 3 || runs[1].kind != runAlert || runs[1].text != "(Run as administrator)" || runs[2].text != ":" {
+		t.Errorf("runs: %+v", runs)
+	}
+	if got := plainText(how("run it yourself, in PowerShell !!(Run as administrator)!!:")); got != "run it yourself, in PowerShell (Run as administrator):" {
+		t.Errorf("as text: %q", got)
+	}
+	if runs := parseLine(plain("a!!b!!c")); len(runs) != 1 || runs[0].kind != runText {
+		t.Errorf("plain text in red: %+v", runs)
+	}
+	// in French too
+	Lang = 1
+	defer func() { Lang = 0 }()
+	if got, want := guide(how(T("fix.psAdmin"))+"\n"+several.lines(), true), "> Pour corriger cette vulnérabilité, cliquez sur **Corriger ce logiciel**, ou exécutez vous-même ces commandes dans PowerShell !!(Exécuter en tant qu’administrateur)!!\u00a0:\n"+several.lines(); got != want {
+		t.Errorf("in French:\n%s", got)
+	}
+}

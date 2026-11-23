@@ -2652,7 +2652,7 @@ func pipFix(p, py, pkg string, bundled bool, o ownerInfo) string {
 		f := newFix(fixAction{Kind: fixPip, Admin: needsAdmin(p), Cmds: []string{pipLine(py, pkg, needsAdmin(p))}, Servers: serversPyPI})
 		command = psHeader(p) + "\n" + f.lines()
 		if bundled {
-			command = how(T("py.ifYouManage")) + "\n" + f.lines()
+			command = psHeader(p) + "\n" + f.lines() // under the warning about changing a copy (copyWarning)
 		}
 	}
 	if bundled {

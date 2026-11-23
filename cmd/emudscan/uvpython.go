@@ -105,7 +105,7 @@ func (tp *appsContext) uvAdvice(rt uvRuntime, fx pyFix, home string) string {
 	if hasUp {
 		lines += how(fixIntro(f)) + "\n"
 	}
-	return joinParas(text+"\n"+how(T("py.uvRemoves"))+"\n"+lines+newFix(f).lines(), pinned)
+	return joinParas(text+"\n"+how(T("fix.ps"))+"\n"+how(T("py.uvRemoves"))+"\n"+lines+newFix(f).lines(), pinned)
 }
 
 // shimPathRe: the program that a Scoop shim runs (uv.shim: path = "…\apps\uv\current\uv.exe").

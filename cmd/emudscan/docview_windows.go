@@ -345,6 +345,8 @@ func (v *docView) runsStyled(runs []mrun, base *docFont, color uint32) []styled 
 		switch r.kind {
 		case runBold:
 			out = append(out, styled{r.text, v.fonts["bold"], color, ""})
+		case runAlert:
+			out = append(out, styled{r.text, v.fonts["bold"], statusColor(StError), ""})
 		case runLink:
 			out = append(out, styled{r.text, v.fonts["link"], rgb(0, 102, 204), r.target})
 		case runWarn: // amber, as in the lists, with its ⚠ from the symbol font

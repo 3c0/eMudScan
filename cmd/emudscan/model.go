@@ -467,6 +467,7 @@ func (c *checker) finish(it *Item, r result) {
 		c.afterFinish(it)
 	}
 	it.Fixes, it.Restores = restoresApart(fixesIn(it.Details))
+	it.Details = guide(it.Details, r.Status == StWarn || r.Status == StCaution || r.Status == StError)
 	cp := *it
 	c.mu.Unlock()
 	c.r.Upsert(cp)

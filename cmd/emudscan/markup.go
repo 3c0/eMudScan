@@ -4,6 +4,7 @@ package main
 //   [[C:\path]] or [[https://url]]  link (opens Explorer or the browser)
 //   [[text|target]]                 link with its own text
 //   **text**                        bold
+//   !!text!!                        bold and red: what must not be missed ("Run as administrator")
 //   $ command                       a command line (monospace, copyable)
 //   > text                          a line about the commands below it: what announces or
 //                                   explains them, or what offers that eMudScan runs them
@@ -34,7 +35,8 @@ const (
 	runBold
 	runLink
 	runCommand
-	runWarn // in amber, as in the lists: the software's age
+	runWarn  // in amber, as in the lists: the software's age
+	runAlert // bold and red: what must not be missed
 )
 
 type mrun struct {
@@ -71,7 +73,7 @@ func plain(s string) string {
 		}
 		return r
 	}, s)
-	for _, sp := range [][2]string{{"[[", "[ ["}, {"]]", "] ]"}, {"**", "* *"}} {
+	for _, sp := range [][2]string{{"[[", "[ ["}, {"]]", "] ]"}, {"**", "* *"}, {"!!", "! !"}} {
 		for strings.Contains(s, sp[0]) {
 			s = strings.ReplaceAll(s, sp[0], sp[1])
 		}
@@ -282,7 +284,7 @@ func labelSep() string {
 }
 
 var (
-	inlineRe = regexp.MustCompile(`\[\[(.+?\]*)\]\]|\*\*(.+?)\*\*|https?://[^\s)\]"'<>]+`)
+	inlineRe = regexp.MustCompile(`\[\[(.+?\]*)\]\]|\*\*(.+?)\*\*|!!(.+?)!!|https?://[^\s)\]"'<>]+`)
 	labelRe  = regexp.MustCompile(`^([^:,;\\\[\]•*\n]{2,60}?)\s?:(\s|$)`) // a short label (a sentence with a comma is not one)
 )
 
@@ -326,6 +328,8 @@ func parseInline(line string) []mrun {
 			runs = append(runs, mrun{kind: runLink, text: text, target: target})
 		case m[4] >= 0:
 			runs = append(runs, mrun{kind: runBold, text: line[m[4]:m[5]]})
+		case m[6] >= 0:
+			runs = append(runs, mrun{kind: runAlert, text: line[m[6]:m[7]]})
 		default:
 			u := strings.TrimRight(line[m[0]:m[1]], ".,;:")
 			runs = append(runs, mrun{kind: runLink, text: u, target: u})

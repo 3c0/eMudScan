@@ -63,7 +63,7 @@ func TestLatestBackup(t *testing.T) {
 		t.Fatalf("latest: %v %+v", ok, b)
 	}
 	got := restoreAdvice(f, filepath.Join(dir, "none.pem"))
-	for _, w := range []string{T("restore.intro1"), "cacert.pem.emudscan-20261030-120000.bak", " — saved on 30 October 2026 at 12:00", how(T("restore.how1")+"\n"+T("restore.warn1")) + "\n" + how(T("fix.ps")),
+	for _, w := range []string{T("restore.intro1"), "cacert.pem.emudscan-20261030-120000.bak", " — saved on 30 October 2026 at 12:00", how(T("restore.warn1")) + "\n" + how(T("fix.ps")),
 		"Move-Item -LiteralPath " + psQuote(b.path) + " -Destination " + psQuote(f) + " -Force"} {
 		if !strings.Contains(got, w) {
 			t.Errorf("%q missing:\n%s", w, got)
@@ -74,7 +74,7 @@ func TestLatestBackup(t *testing.T) {
 	}
 	g := filepath.Join(dir, "other.pem")
 	os.WriteFile(g, []byte("changed"), 0o644)
-	if got := restoreAdvice(f, g); !strings.Contains(got, T("restore.introN")) || !strings.Contains(got, how(T("restore.howN")+"\n"+T("restore.warnN"))) || strings.Count(got, "Move-Item") != 2 {
+	if got := restoreAdvice(f, g); !strings.Contains(got, T("restore.introN")) || !strings.Contains(got, how(T("restore.warnN"))) || strings.Count(got, "Move-Item") != 2 {
 		t.Errorf("two files to put back:\n%s", got)
 	}
 	if got := restoreAdvice(filepath.Join(dir, "none.pem"), ""); got != "" {

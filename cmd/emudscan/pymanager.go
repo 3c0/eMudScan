@@ -77,7 +77,7 @@ func pymanagerAdvice(rt pymanagerRuntime, fx pyFix) string {
 	}
 	if fx.state == FixOutdated && line.Cmp(ParseVersion(pymanagerFirstLine)) >= 0 {
 		f := newFix(fixAction{Kind: fixPackage, Cmds: []string{"pymanager install --update -y " + rt.arg()}, Manager: "Python Install Manager", Servers: managerServers["Python Install Manager"]})
-		return T("py.pymanagerFix") + "\n" + f.lines()
+		return fixBlock(T("py.pymanagerFix"), f)
 	}
 	return Tf("py.pymanagerNewer", line.String(), pymanagerFirstLine, pymanagerFirstLine) + "\n" + cmd("pymanager install "+pymanagerFirstLine)
 }

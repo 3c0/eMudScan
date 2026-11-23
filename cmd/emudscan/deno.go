@@ -29,5 +29,5 @@ func denoOwnInstall(exe string) bool {
 // copy, whatever deno.exe the PATH finds first.
 func denoUpgradeAdvice(exe string) string {
 	f := newFix(fixAction{Kind: fixPackage, Manager: "Deno", Admin: needsAdmin(exe), Cmds: []string{"& " + psPath(exe, needsAdmin(exe)) + " upgrade"}, Servers: managerServers["Deno"]})
-	return T("deno.upgrade") + "\n" + f.lines()
+	return fixBlock(T("deno.upgrade"), f)
 }
