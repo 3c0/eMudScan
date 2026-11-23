@@ -7,17 +7,17 @@ package main
 // 64-bit Python (x64):
 //
 //   - a Python laid out as python-build-standalone's (libssl-3-x64.dll), and python.org's
-//     3.11 to 3.13, for which python.org publishes no fixed Windows build: from
-//     python-build-standalone 20261026 (on GitHub). For python.org's layout, _hashlib.pyd
-//     is replaced too and the two OpenSSL libraries are added beside the old ones, as
-//     python-build-standalone names them;
-//   - python.org's 3.14 and 3.15 (libssl-3.dll): from python.org's embeddable package of
-//     3.14.10 or 3.15.2.
+//     3.11 to 3.13, for which python.org publishes no fixed Windows build: from a
+//     release of python-build-standalone (on GitHub). For python.org's layout,
+//     _hashlib.pyd is replaced too and the two OpenSSL libraries are added beside the
+//     old ones, as python-build-standalone names them;
+//   - python.org's 3.14 and 3.15 (libssl-3.dll): from python.org's embeddable package.
 //
-// Each download is checked against a SHA-256 written here: the releases are pinned, so
-// that what runs is what was tested, and its hash does not come from the server that
-// serves it. To move to a newer release of a line, change its URL and SHA-256 (from
-// the release's SHA256SUMS, or python.org's page), then test its files as these were.
+// The commands download one release, by its URL, and check it against its SHA-256,
+// both written in them. During the scan, which connects to nothing, they are those of
+// the releases written here (pbsSSL, pyorgSSL). When a Fix window opens, eMudScan
+// itself looks for the latest release (latest.go) and writes the commands again for
+// it: to find the release is the program's work, not the commands'.
 // The checks of pycheck.go run
 // before and after; when one fails after, the original files are put back. It is an
 // optional fix, not ticked by default: it changes a program that its publisher has not
@@ -32,7 +32,8 @@ import (
 // pySSLSource is a download that holds the fixed ssl files of a minor version.
 type pySSLSource struct {
 	version, url, sha256 string
-	zip                  bool // python.org's embeddable package, its files at its root; else python-build-standalone's archive, in python\DLLs
+	zip                  bool   // python.org's embeddable package, its files at its root; else python-build-standalone's archive, in python\DLLs
+	tag                  string // python-build-standalone's release, such as "20261110"
 }
 
 func (s pySSLSource) from() string {
@@ -48,28 +49,37 @@ func (s pySSLSource) name() string {
 	if s.zip {
 		return "python-" + s.version + "-embed"
 	}
-	return "python-" + s.version + "-standalone"
+	return "python-" + s.version + "-" + s.tag + "-standalone"
 }
 
 // pbsFiles are the files taken out of python-build-standalone's archive (from
 // python\DLLs), the same for every plan, since the plans share them.
 var pbsFiles = []string{"_ssl.pyd", "_hashlib.pyd", "libssl-3-x64.dll", "libcrypto-3-x64.dll"}
 
-const pbsRelease = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/"
+// pbsTag is the release of python-build-standalone written here.
+const (
+	pbsTag      = "20261110"
+	pbsReleases = "https://github.com/astral-sh/python-build-standalone/releases/"
+	pbsRelease  = pbsReleases + "download/" + pbsTag + "/"
+)
 
-// pbsSSL: python-build-standalone 20261026, x64, by minor version.
+// pbsSSL: python-build-standalone pbsTag, x64, by minor version.
 var pbsSSL = map[string]pySSLSource{
-	"3.11": {"3.11.18", pbsRelease + "cpython-3.11.18%2B20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", "67215a7bf1643e33d01b17ee3f1e91a8b0b39163746855ee02594bf0608f68b4", false},
-	"3.12": {"3.12.16", pbsRelease + "cpython-3.12.16%2B20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", "1f2ab53880fc67ea323398c6388e05af28addc99a8e389209f08a51fdff4b149", false},
-	"3.13": {"3.13.18", pbsRelease + "cpython-3.13.18%2B20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", "7369f7a35f261222a6ac8b3a87c1c88eeebee8af945d85346202591a64038dd3", false},
-	"3.14": {"3.14.10", pbsRelease + "cpython-3.14.10%2B20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", "c1876a9795d3a94ee49a1499a69cd91e26ca3e2829593f93fa6e4db90d05402b", false},
-	"3.15": {"3.15.2", pbsRelease + "cpython-3.15.2%2B20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", "02e532b60e720aa3d77e757c349ae9cc945441c05851fa646336fc9ff0403041", false},
+	"3.11": {version: "3.11.18", url: pbsRelease + "cpython-3.11.18%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "f31751f4a8483f5ac7cd77ad83f8dfb80d9f2a7245bff1585e27516c777fb46f", tag: pbsTag},
+	"3.12": {version: "3.12.16", url: pbsRelease + "cpython-3.12.16%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "355ee61b8207b91574491b1c6dc9b0ebb4408fc56bfafe498f3ef439314b52dc", tag: pbsTag},
+	"3.13": {version: "3.13.18", url: pbsRelease + "cpython-3.13.18%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "2e0fed09d48989f64c9305da9ff2d37a41c0d13ab2aa6283405b2b620dfbf805", tag: pbsTag},
+	"3.14": {version: "3.14.10", url: pbsRelease + "cpython-3.14.10%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "32b6cf90a03e2bc15fda8d2ab7ff78c4870f138887d612932650ce764efaab8f", tag: pbsTag},
+	"3.15": {version: "3.15.2", url: pbsRelease + "cpython-3.15.2%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "ecd90d78accb906e3d47f6cdb409a610da10475f94d15ebdd8cb2e0561b71df6", tag: pbsTag},
 }
+
+// pyorgFiles is where python.org has the files of its releases, each in the folder of
+// its version.
+const pyorgFiles = "https://www.python.org/ftp/python/"
 
 // pyorgSSL: python.org's embeddable packages, x64, by minor version.
 var pyorgSSL = map[string]pySSLSource{
-	"3.14": {"3.14.10", "https://www.python.org/ftp/python/3.14.10/python-3.14.10-embed-amd64.zip", "90905e64a840557d8c1bc4f5b74db3d7ee85e3ffb217611cac1c7813acea4159", true},
-	"3.15": {"3.15.2", "https://www.python.org/ftp/python/3.15.2/python-3.15.2-embed-amd64.zip", "d012f3aa29cf07436dae8aea1fec0fd195c2612a0b059b1f915ae0afb9ad1f62", true},
+	"3.14": {version: "3.14.10", url: pyorgFiles + "3.14.10/python-3.14.10-embed-amd64.zip", sha256: "90905e64a840557d8c1bc4f5b74db3d7ee85e3ffb217611cac1c7813acea4159", zip: true},
+	"3.15": {version: "3.15.2", url: pyorgFiles + "3.15.2/python-3.15.2-embed-amd64.zip", sha256: "d012f3aa29cf07436dae8aea1fec0fd195c2612a0b059b1f915ae0afb9ad1f62", zip: true},
 }
 
 // pySSLPlan is what the fix changes in dir, the folder of _ssl.pyd: the files it
@@ -178,7 +188,22 @@ func pySSLFix(exe string, plan pySSLPlan) fixAction {
 	}
 	plain := append(append([]string(nil), cmds...),
 		`if ($pyGood) { foreach ($n in $pyFiles) { Remove-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -Force }; foreach ($n in $pyAdded) { Remove-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.added") -Force } }`)
-	return fixAction{Kind: fixPySSL, Admin: admin, Optional: true, Needs: "pycheck", Files: plan.files(), Cmds: cmds, Plain: plain, Fetch: []int{3}}
+	return fixAction{Kind: fixPySSL, Admin: admin, Optional: true, Needs: "pycheck", Files: plan.files(), Cmds: cmds, Plain: plain, Fetch: []int{3},
+		py: &pySSLTarget{exe: exe, plan: plan}}
+}
+
+// pySSLTarget is what pySSLFix was made for, kept with the fix: the same fix can be
+// made again for another release of its source (the latest one: latest.go).
+type pySSLTarget struct {
+	exe  string
+	plan pySSLPlan
+}
+
+// fixFrom is the fix of the target with the files of the release src.
+func (t pySSLTarget) fixFrom(src pySSLSource) fixAction {
+	plan := t.plan
+	plan.src = src
+	return pySSLFix(t.exe, plan)
 }
 
 func prefixAll(prefix string, names []string) []string {

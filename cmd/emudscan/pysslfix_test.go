@@ -104,9 +104,9 @@ func TestPySSLFix(t *testing.T) {
 		"$pyExe = " + psPath(exe, false) + "; $pyDir = " + psPath(filepath.Dir(ssl), false) + "; $pyFiles = '_ssl.pyd', '_hashlib.pyd'; $pyAdded = 'libssl-3-x64.dll', 'libcrypto-3-x64.dll'",
 		"& $pyExe -I (Join-Path $emudscanFiles 'check_ssl.py') $emudscanFiles before; $pyOK = $LASTEXITCODE -eq 0",
 		// once for the Pythons fixed in the same run from the same download, with the same files
-		"$pyArchive = Join-Path $emudscanFiles 'python-3.12.16-standalone.tar.gz'; if ($pyOK -and -not (Test-Path -LiteralPath $pyArchive)) {",
+		"$pyArchive = Join-Path $emudscanFiles 'python-3.12.16-20261110-standalone.tar.gz'; if ($pyOK -and -not (Test-Path -LiteralPath $pyArchive)) {",
 		"-Uri '" + pbsSSL["3.12"].url + "' -OutFile $pyArchive", "(Get-FileHash -LiteralPath $pyArchive).Hash -eq '" + pbsSSL["3.12"].sha256 + "'",
-		"$pyNew = Join-Path $emudscanFiles 'python-3.12.16-standalone'; if ($pyOK -and -not (Test-Path -LiteralPath $pyNew)) {",
+		"$pyNew = Join-Path $emudscanFiles 'python-3.12.16-20261110-standalone'; if ($pyOK -and -not (Test-Path -LiteralPath $pyNew)) {",
 		`tar.exe" -xzf $pyArchive -C $pyNew python/DLLs/_ssl.pyd python/DLLs/_hashlib.pyd python/DLLs/libssl-3-x64.dll python/DLLs/libcrypto-3-x64.dll }; $pyNew = Join-Path $pyNew 'python\DLLs';`,
 		"[IO.File]::Open((Join-Path $pyDir $n), 'Open', 'ReadWrite', 'None')",
 		`"$n.emudscan-$pyStamp.bak"`, `"$n.emudscan-$pyStamp.added"`,

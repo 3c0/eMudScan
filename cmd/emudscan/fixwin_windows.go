@@ -159,6 +159,7 @@ func (a *ui) openFix(owner uintptr, it Item) {
 	if a.fixBusy() || a.current == nil {
 		return
 	}
+	a.lookLatest(it.memberIDs())
 	d := &fixDlg{owner: owner, ids: it.memberIDs(), label: Tf("fix.title", itemTitle(it)), runText: T("fix.run"), question: T("fix.confirm"), cmdLine: -1}
 	if len(a.fixItems(d.ids)) == 0 {
 		return
@@ -169,6 +170,50 @@ func (a *ui) openFix(owner uintptr, it Item) {
 		return
 	}
 	a.showFix(d)
+}
+
+// lookLatest, before a Fix window opens for the elements ids (nil: all of them), looks
+// for the latest releases of what their fixes download, and writes their commands
+// again for them (checker.useLatest): the window then shows, and runs, the commands
+// of these releases. These are eMudScan's own connections, made only when a fix that
+// downloads a release is to be shown; they take a few seconds at most, under the wait
+// cursor. Without "Allow the online test", eMudScan does not connect: the commands
+// stay those of the releases written in it, with a note. The simulation connects to
+// nothing.
+func (a *ui) lookLatest(ids []int) {
+	if fixSimulation || a.current == nil {
+		return
+	}
+	if ids == nil {
+		for id := range a.items {
+			ids = append(ids, id)
+		}
+		sort.Ints(ids)
+	}
+	needed := false
+	for _, it := range a.fixItems(ids) {
+		for _, f := range it.Fixes {
+			needed = needed || f.py != nil
+		}
+	}
+	if !needed {
+		return
+	}
+	var changed []Item
+	if a.onlineOff {
+		changed = a.current.useLatest(ids, func(pySSLSource) (pySSLSource, bool) { return pySSLSource{}, false }, T("fix.latestOffline"))
+	} else {
+		wait, _, _ := pLoadCursorW.Call(0, 32514 /* IDC_WAIT */)
+		before, _, _ := pSetCursor.Call(wait)
+		changed = a.current.useLatest(ids, latestLooker(), T("fix.latestNotFound"))
+		pSetCursor.Call(before)
+	}
+	for _, it := range changed { // now, for the window that opens; the lists follow (Upsert)
+		a.items[it.ID] = it
+	}
+	if len(changed) > 0 {
+		a.refreshDetails()
+	}
 }
 
 // fixBusy: a Fix window is open, other than the Fix software window under the details
@@ -259,6 +304,7 @@ func (a *ui) openFixAll(ids ...int) {
 	if a.fix != nil || a.current == nil || a.running {
 		return
 	}
+	a.lookLatest(ids)
 	d := &fixDlg{owner: a.hwnd, label: T("fix.allTitle"), runText: T("fix.runAll"), rows: a.fixRows(ids...), cmdLine: -1}
 	if len(d.rows) == 0 || !a.newFixWindow(d, 1100, 860) {
 		return

@@ -163,10 +163,10 @@ a software, and no others:
   release line, which PowerShell downloads from nodejs.org and checks against
   the SHA-256 checksum that Node.js publishes, the OpenJS Foundation’s signature
   and its version; this fix is not ticked by default;
-- the ssl files of a Python inside a program replaced with those of the fixed
-  release of its line, which PowerShell downloads from python.org or
-  python-build-standalone and checks against the SHA-256 checksum written in
-  eMudScan, with tests before and after (see
+- the ssl files of a Python inside a program replaced with those of the latest
+  release of its line, which eMudScan looks for when the Fix window opens, and
+  which PowerShell downloads from python.org or python-build-standalone and
+  checks against its SHA-256 checksum, with tests before and after (see
   [Other software](checks.md#other-software)); this fix is not ticked by default.
 
 The other commands of the detailed information, such as removing a setting, are

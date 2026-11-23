@@ -6,13 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Fixed
-
-- `scripts\build.ps1` now works in Windows PowerShell 5.1, where it stopped with “no Go files”: it no longer gives go an empty `-tags` option, which Windows PowerShell 5.1 does not pass.
-
 ### Changed
 
+- The fix that replaces the ssl files of a Python inside a program uses the latest release of its line. When a Fix window opens, eMudScan itself looks for it: on GitHub for python-build-standalone, whose releases are immutable, and on python.org, where it takes the latest release of the line that has Windows files. The commands stay simple: one URL and its SHA-256. When no release is found, or when **Allow the online test** is cleared, the commands use the release written in eMudScan, now 20261110 for python-build-standalone, and the window says so.
 - The web search for a certificate bundle of a software that eMudScan does not know searches for the software alone, such as “example-app”, instead of the software with the name of the file, such as “example-app cacert.pem”. This applies to the link of the detailed information and to **Search on Google** in the right-click menu.
+
+### Fixed
+
+- `scripts/build.ps1` now works in Windows PowerShell 5.1, where it stopped with “no Go files”: it no longer gives go an empty `-tags` option, which Windows PowerShell 5.1 does not pass.
 
 ## [3.1.2] - 2026-11-12
 

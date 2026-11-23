@@ -599,6 +599,9 @@ func fixPreview(items []Item, backup bool) []fixLine {
 	var out []fixLine
 	cmdLines := func(f fixAction) {
 		out = append(out, fixLine{lineComment, fixIntro(f)})
+		if f.Note != "" {
+			out = append(out, fixLine{lineComment, f.Note})
+		}
 		cmds := f.Cmds
 		if !backup && f.Plain != nil {
 			cmds = f.Plain

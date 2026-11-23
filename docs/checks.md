@@ -82,13 +82,20 @@ the command that updates it there (`pipenv update certifi`,
 runs it, since it changes your project.
 
 Until a program that ships a 64-bit Python 3.11 to 3.15 is updated, eMudScan
-can replace the ssl files of that Python with those of the fixed release of its
-line: `_ssl.pyd` and the OpenSSL libraries it loads, from python.org’s
-embeddable package for 3.14 and 3.15 laid out as python.org’s, else from
+can replace the ssl files of that Python with those of the latest release of its
+line: `_ssl.pyd` and the OpenSSL libraries it loads. For a 3.14 or a 3.15 laid
+out as python.org’s, they come from python.org’s embeddable package; else from
 python-build-standalone’s build (on GitHub), with `_hashlib.pyd` too for
 python.org’s 3.11 to 3.13, whose fixed releases python.org does not publish for
-Windows. PowerShell checks the download against its SHA-256, written in
-eMudScan, and backs up each file it replaces. Before and after the replacement,
+Windows. The commands name one release, by its URL, and PowerShell checks the
+download against the SHA-256 written in them. eMudScan itself finds that
+release when a Fix window opens: on GitHub, in the list of SHA-256 of the
+latest release of python-build-standalone, whose releases are immutable; on
+python.org, in its list of releases, where it takes the latest one of the line
+that has Windows files. When it finds none, or when **Allow the online test**
+is cleared, the commands name the release written in eMudScan (Python 3.14.10
+or 3.15.2; python-build-standalone 20261110), and the window says so.
+PowerShell backs up each file it replaces. Before and after the replacement,
 that Python runs eMudScan’s tests, with certificates made for the fix, valid one
 hour, and without connecting to anything: its `ssl` and `hashlib` modules load
 and give 7 known results, the Windows roots load, TLS 1.2 and TLS 1.3

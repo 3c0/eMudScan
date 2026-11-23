@@ -42,6 +42,12 @@ type fixAction struct {
 	Manager string   // for an update: the package manager (Scoop, WinGet, Chocolatey)
 	Warn    string   // what the fix breaks, which the warning before it runs adds
 	Needs   string   // helper files that the runner writes next to the script ("pycheck": pyCheckFiles)
+	// Note is a line that the Fix window shows above the commands, such as the release
+	// that could not be looked for.
+	Note string
+	// py, for a fix that replaces the ssl files of a Python (pySSLFix): what it was made
+	// for, to make it again for the latest release when a Fix window opens (latest.go).
+	py *pySSLTarget
 	// Optional: the fix replaces a component inside a program (its node.exe, the ssl
 	// files of its Python), a heavier change than the others, which the Fix window does
 	// not tick: the user ticks it, or clicks Select All.

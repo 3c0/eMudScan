@@ -54,8 +54,8 @@ Fixes connect to the internet once you accept the warning, whether or not
 - replacing a node.exe downloads the list of Node.js releases, the SHA-256
   checksums of the chosen release and its node.exe from
   [nodejs.org](https://nodejs.org/dist/), which sees the same;
-- replacing the ssl files of a Python downloads the fixed release of its line
-  from [python.org](https://www.python.org/ftp/python/) (its embeddable
+- replacing the ssl files of a Python downloads the release that its commands
+  name from [python.org](https://www.python.org/ftp/python/) (its embeddable
   package) or from GitHub (the build of
   [python-build-standalone](https://github.com/astral-sh/python-build-standalone/releases)),
   which see the same; its tests connect to nothing;
@@ -70,6 +70,27 @@ Fixes connect to the internet once you accept the warning, whether or not
   stop.
 
 Adding the compromised certificates to a Java block list connects to nothing.
+
+## The latest release, looked for when a Fix window opens
+
+The commands that replace the ssl files of a Python name one release. During
+the scan, they name the release written in eMudScan. When a Fix window opens
+for such a fix, and **Allow the online test** is checked, eMudScan itself looks
+for the latest release, before you accept anything, so that the window shows
+the commands that will run:
+
+- for python-build-standalone, one request to github.com for the list of
+  SHA-256 checksums of its latest release, which GitHub redirects to the host
+  that serves its files;
+- for python.org, one request to www.python.org for its list of releases, then
+  one for the list of the files of a release, repeated for the release before
+  while the release has no Windows files.
+
+These requests go through Windows (WinHTTP), as those of the online test, with
+the same User-Agent, without cookies, and through the proxy configured in
+Windows. These sites see your IP address and that User-Agent. When **Allow the
+online test** is cleared, eMudScan does not look: the commands name the release
+written in eMudScan, and the window says so.
 
 ## The online test is the only connection of a scan
 
@@ -110,7 +131,8 @@ it.
 
 Clear **Allow the online test**, or start `eMudScan.exe --offline`: a scan then
 makes no internet connection at all, not even for proxy detection. The online
-test is skipped; every other check works the same. The choice is not saved. The
+test is skipped; every other check works the same. eMudScan does not look for
+the latest release when a Fix window opens either. The choice is not saved. The
 fixes that you run still connect, as described above.
 
 `eMudScan-cli.exe`, which scans without the window, is the other way round:
@@ -119,8 +141,8 @@ nobody is there to clear a box, so it runs the online test only with `--online`.
 ## Everything else stays on your PC
 
 The Windows certificate checks run without network access and without updating
-the Windows certificate lists. Apart from the online test and the fixes, nothing
-is sent anywhere. The only files read over your network are those on the drives
+the Windows certificate lists. Apart from the online test, the search for the
+latest release and the fixes, nothing is sent anywhere. The only files read over your network are those on the drives
 you select to scan, and a certificate bundle on a network share that one of your
 certificate settings names, as the software that uses that setting reads it.
 Links in the detailed information windows (homepages, web searches, test pages)

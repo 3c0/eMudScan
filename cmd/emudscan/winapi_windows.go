@@ -752,7 +752,17 @@ func winhttpStatusCallback(h, context, status, info, infoLen uintptr) uintptr {
 	return 0
 }
 
+// winhttpGet asks host for its home page, for the online test: the answer must come
+// from host itself, so no redirection is followed, and at most 4096 bytes are read.
 func winhttpGet(host string, timeoutMs int) httpsResult {
+	return winhttpFetch(host, "/?client="+strings.ToLower(appName) /* "/?client=emudscan" */, timeoutMs, false, 4096)
+}
+
+// winhttpFetch gets https://host/path with Windows' own HTTPS (WinHTTP), which checks
+// the certificate of the server as Windows does, and reads at most max bytes of the
+// answer. With redirects, it follows the redirections (to HTTPS only, WinHTTP's
+// default): the list of a release on GitHub is served by another host.
+func winhttpFetch(host, path string, timeoutMs int, redirects bool, max int) httpsResult {
 	var res httpsResult
 	if err := procWinHttpOpen.Find(); err != nil {
 		res.Err = 127
@@ -779,19 +789,22 @@ func winhttpGet(host string, timeoutMs int) httpsResult {
 	}
 	defer procWinHttpCloseHandle.Call(conn)
 	verb, _ := syscall.UTF16PtrFromString("GET")
-	obj, _ := syscall.UTF16PtrFromString("/?client=" + strings.ToLower(appName)) // "/?client=emudscan"
+	obj, _ := syscall.UTF16PtrFromString(path)
 	req, _, err := procWinHttpOpenRequest.Call(conn, uintptr(unsafe.Pointer(verb)), uintptr(unsafe.Pointer(obj)), 0, 0, 0, 0x00800000 /* WINHTTP_FLAG_SECURE */)
 	if req == 0 {
 		res.Err = errno(err)
 		return res
 	}
 	defer procWinHttpCloseHandle.Call(req)
-	// The answer must come from host itself, not from a site it redirects to, and
-	// nothing is sent beyond the request: no redirection is followed, no cookie is
-	// kept or sent. (Windows' credentials are not sent either: WinHTTP's default
-	// policy sends them only to the servers of the proxy bypass list, never to the
-	// internet; it is left as is, so that the test works through company proxies.)
+	// Nothing is sent beyond the request: no cookie is kept or sent and, without
+	// redirects, no redirection is followed, so that the answer comes from host itself,
+	// not from a site it redirects to. (Windows' credentials are not sent either:
+	// WinHTTP's default policy sends them only to the servers of the proxy bypass list,
+	// never to the internet; it is left as is, so that it works through company proxies.)
 	disabled := uint32(0x1 | 0x2) // WINHTTP_DISABLE_COOKIES | WINHTTP_DISABLE_REDIRECTS
+	if redirects {
+		disabled = 0x1
+	}
 	procWinHttpSetOption.Call(req, 63 /* WINHTTP_OPTION_DISABLE_FEATURE */, uintptr(unsafe.Pointer(&disabled)), 4)
 	secureFailMu.Lock()
 	secureFailNext++
@@ -814,7 +827,7 @@ func winhttpGet(host string, timeoutMs int) httpsResult {
 	var code, size uint32 = 0, 4
 	procWinHttpQueryHeaders.Call(req, 19|0x20000000 /* STATUS_CODE | FLAG_NUMBER */, 0, uintptr(unsafe.Pointer(&code)), uintptr(unsafe.Pointer(&size)), 0)
 	res.Status = int(code)
-	buf := make([]byte, 4096)
+	buf := make([]byte, max)
 	total := 0
 	for total < len(buf) {
 		var n uint32
