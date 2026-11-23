@@ -41,12 +41,13 @@ func (a *ui) restoreBackups(d *detailsDlg) {
 		}
 	}
 	title := itemTitle(d.item)
+	shell, _ := fixPowerShell()
 	question, text := T("restore.confirm1"), Tf("restore.warning1", title)
 	if files > 1 {
 		question, text = T("restore.confirmN"), Tf("restore.warningN", title)
 	}
 	if admin {
-		text += "\n\n" + T("restore.admin")
+		text += "\n\n" + Tf("restore.admin", shell.name)
 	}
 	text += "\n\n" + T("restore.warningEnd")
 	if !askWarning(d.hwnd, question, text, T("restore.accept"), T("fix.decline")) {
@@ -70,7 +71,7 @@ func (a *ui) restoreBackups(d *detailsDlg) {
 	r := &fixRunner{
 		exec: func(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, error) {
 			if admin {
-				return runFixes(units, true, out)
+				return runFixes(shell, units, true, out)
 			}
 			return moveBackups(units, out), nil
 		},
@@ -86,6 +87,7 @@ func (a *ui) restoreBackups(d *detailsDlg) {
 		out:       out,
 		fixed:     func(int) {},
 		simulated: func(id int) { simulateRestored(c, id) },
+		shell:     shell.name,
 	}
 	fixPromptOwner = d.hwnd
 	fixPromptClosed = func() { postEvent(uiEvent{kind: evRestorePrompt}) }

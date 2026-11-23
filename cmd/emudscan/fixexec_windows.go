@@ -1,8 +1,9 @@
 package main
 
-// Running fixes in Windows PowerShell (see fixrun.go): the one in System32, without
-// the user's profile scripts, hidden; as administrator through the Windows prompt
-// (ShellExecuteEx "runas"), which names Windows PowerShell and Microsoft.
+// Running fixes in PowerShell (see fixrun.go): Windows PowerShell, in System32, else
+// PowerShell 7 or later in Program Files (psfind.go), without the user's profile
+// scripts, hidden; as administrator through the Windows prompt (ShellExecuteEx
+// "runas"), which names that PowerShell and Microsoft.
 
 import (
 	"errors"
@@ -47,36 +48,50 @@ type shellExecuteInfo struct {
 
 const errorCancelled = 1223 // the user refused the administrator prompt
 
-func runFixes(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, error) {
+// fixPowerShell is the PowerShell that runs the fixes on this PC (findPowerShell).
+func fixPowerShell() (psHost, bool) {
+	programFiles := getenv("ProgramW6432") // the 64-bit Program Files, also for a 32-bit program
+	if programFiles == "" {
+		programFiles = getenv("ProgramFiles")
+	}
+	return findPowerShell(systemDir, programFiles)
+}
+
+// runFixes runs units in the PowerShell ps, as administrator when admin is set, and
+// writes the console with out.
+func runFixes(ps psHost, units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, error) {
+	if ps.exe == "" {
+		return nil, errors.New(T("fix.noShell"))
+	}
+	failed := func(err error) error { return fmt.Errorf(T("fix.noPowerShell"), ps.name, err) }
 	dir, err := os.MkdirTemp("", "eMudScan-fix-")
 	if err != nil {
-		return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+		return nil, failed(err)
 	}
 	defer os.RemoveAll(dir)
 	logPath, scriptPath := filepath.Join(dir, "fix.log"), filepath.Join(dir, "fix.ps1")
 	marker := fixMarker()
 	files, err := fixFiles(units, time.Now())
 	if err != nil {
-		return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+		return nil, failed(err)
 	}
 	for n, b := range files { // next to the script, which checks them
 		if err := os.WriteFile(filepath.Join(dir, n), b, 0o600); err != nil {
-			return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+			return nil, failed(err)
 		}
 	}
 	script := []byte(fixScript(units, logPath, marker, files))
 	if err := os.WriteFile(scriptPath, script, 0o600); err != nil {
-		return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+		return nil, failed(err)
 	}
 	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
-		return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+		return nil, failed(err)
 	}
-	ps := filepath.Join(systemDir, "WindowsPowerShell", "v1.0", "powershell.exe")
 	args := []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encodedCommand(fixBootstrap(scriptPath, script))}
 
 	var done func() (bool, uint32) // whether PowerShell has ended, and its exit code
 	if admin {
-		verb, file, params := utf16p("runas"), utf16p(ps), utf16p(strings.Join(args, " "))
+		verb, file, params := utf16p("runas"), utf16p(ps.exe), utf16p(strings.Join(args, " "))
 		info := shellExecuteInfo{fMask: 0x40 /* SEE_MASK_NOCLOSEPROCESS */, hwnd: fixPromptOwner,
 			lpVerb: verb, lpFile: file, lpParameters: params, nShow: 0 /* SW_HIDE */}
 		info.cbSize = uint32(unsafe.Sizeof(info))
@@ -86,7 +101,7 @@ func runFixes(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, err
 			if errno, ok := e.(syscall.Errno); ok && errno == errorCancelled {
 				return nil, errors.New(T("fix.adminRefused"))
 			}
-			return nil, fmt.Errorf(T("fix.noPowerShell"), e)
+			return nil, failed(e)
 		}
 		h := info.hProcess
 		defer syscall.CloseHandle(h)
@@ -99,10 +114,10 @@ func runFixes(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, err
 			return true, code
 		}
 	} else {
-		c := exec.Command(ps, args...)
+		c := exec.Command(ps.exe, args...)
 		c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000 /* CREATE_NO_WINDOW */}
 		if err := c.Start(); err != nil {
-			return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+			return nil, failed(err)
 		}
 		exited := make(chan struct{})
 		go func() { c.Wait(); close(exited) }()
@@ -120,7 +135,7 @@ func runFixes(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, err
 	log := newFixLog(units, marker, out, admin) // as administrator, the software of each command is named
 	f, err := os.Open(logPath)
 	if err != nil {
-		return nil, fmt.Errorf(T("fix.noPowerShell"), err)
+		return nil, failed(err)
 	}
 	defer f.Close()
 	buf := make([]byte, 64<<10)
@@ -141,7 +156,7 @@ func runFixes(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, err
 		if ended {
 			log.close()
 			if code == fixTampered {
-				return log.results, errors.New(T("fix.tampered"))
+				return log.results, fmt.Errorf(T("fix.tampered"), ps.name)
 			}
 			return log.results, nil
 		}

@@ -62,6 +62,7 @@ type fixDlg struct {
 	bBackup, bFix, bStop, bClose uintptr
 	ids                          []int  // the elements to fix (from the details)
 	label                        string // what the window fixes, for the report
+	shell                        psHost // the PowerShell that runs the fixes (fixPowerShell); its exe is "" when there is none
 	runText, question            string // the button that runs the fixes, and the warning's question (from the details)
 	running, ran                 bool
 	asking                       bool // the warning is shown
@@ -162,6 +163,7 @@ func (a *ui) openFix(owner uintptr, it Item) {
 	}
 	a.lookLatest(it.memberIDs())
 	d := &fixDlg{owner: owner, ids: it.memberIDs(), label: Tf("fix.title", itemTitle(it)), runText: T("fix.run"), question: T("fix.confirm"), cmdLine: -1}
+	d.shell, _ = fixPowerShell()
 	if len(a.fixItems(d.ids)) == 0 {
 		return
 	}
@@ -308,6 +310,7 @@ func (a *ui) openFixAll(ids ...int) {
 	}
 	a.lookLatest(ids)
 	d := &fixDlg{owner: a.hwnd, label: T("fix.allTitle"), runText: T("fix.runAll"), rows: a.fixRows(ids...), cmdLine: -1}
+	d.shell, _ = fixPowerShell()
 	if len(d.rows) == 0 || !a.newFixWindow(d, 1100, 860) {
 		return
 	}
@@ -793,11 +796,14 @@ func (d *fixDlg) backup() bool { return send(d.bBackup, bmGetCheck, 0, 0) == 1 }
 // preview shows the commands that will run, and enables the button that runs them
 // when there are some.
 func (d *fixDlg) preview(a *ui) {
-	title := "fix.cmdsThis"
+	title := Tf("fix.cmdsThis", d.shell.name)
 	if d.list != 0 {
-		title = "fix.cmdsSelected"
+		title = Tf("fix.cmdsSelected", d.shell.name)
 	}
-	setText(d.title, T(title))
+	if d.shell.exe == "" {
+		title = T("fix.cmdsNoShell")
+	}
+	setText(d.title, title)
 	d.clear()
 	d.results = false
 	d.console.updateCopyTip()
@@ -1194,7 +1200,11 @@ func (d *fixDlg) run(a *ui) {
 	} else {
 		pSetFocus.Call(d.console.hwnd)
 	}
-	setText(d.title, T("fix.resultsTitle"))
+	if d.shell.exe != "" {
+		setText(d.title, Tf("fix.resultsTitleIn", d.shell.name))
+	} else {
+		setText(d.title, T("fix.resultsTitle"))
+	}
 	d.clear()
 	d.results = true
 	d.console.updateCopyTip()
@@ -1209,10 +1219,17 @@ func (d *fixDlg) run(a *ui) {
 	if len(c.fixRecord()) > 0 {
 		c.recordFix(fixLine{lineNote, ""})
 	}
-	c.recordFix(fixLine{lineNote, Tf("fix.started", time.Now().Format("2006-01-02 15:04"), d.label)})
+	started := Tf("fix.startedIn", time.Now().Format("2006-01-02 15:04"), d.label, d.shell.name)
+	if d.shell.exe == "" {
+		started = Tf("fix.started", time.Now().Format("2006-01-02 15:04"), d.label)
+	}
+	c.recordFix(fixLine{lineNote, started})
 	logged := false // the log of the main window shows the checks after the fixes in their own section
+	shell := d.shell
 	r := &fixRunner{
-		exec: runFixes,
+		exec: func(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, error) {
+			return runFixes(shell, units, admin, out)
+		},
 		item: c.get,
 		recheck: func(ids []int) {
 			if !logged {
@@ -1227,6 +1244,7 @@ func (d *fixDlg) run(a *ui) {
 		simulated: func(id int) { simulateFixed(c, id) },
 		backup:    d.backup(),
 		pick:      pick,
+		shell:     shell.name,
 	}
 	fixPromptOwner = d.hwnd
 	fixPromptClosed = func() { postEvent(uiEvent{kind: 7}) }

@@ -272,9 +272,15 @@ Once you accept:
    updates did not fix. In each stage, commands that require administrator
    rights run last, together, so Windows asks for permission at most once per
    stage.
-2. The commands that need administrator rights run in a Windows PowerShell for
-   which Windows asks your permission, in a window that shows Microsoft as the
-   verified publisher. eMudScan itself does not need them.
+2. The commands run in Windows PowerShell 5.1, which is part of Windows. On a
+   PC where it was removed, they run in PowerShell 7 or later, installed in
+   Program Files (`C:\Program Files\PowerShell\7\pwsh.exe`); never in a
+   `pwsh.exe` found elsewhere, such as in the PATH, since some commands run as
+   administrator. The window names it above the commands and above their
+   results, and the report names it too. When there is neither, the window says
+   so, and nothing runs. The commands that need administrator rights run in a
+   PowerShell for which Windows asks your permission, in a window that shows
+   Microsoft as the verified publisher. eMudScan itself does not need them.
 3. The console shows each command in the colors of PowerShell 7, with its
    result in the column on its left: “…” while it runs, then a green ✔ or a red
    ✘. Below come what it showed, its warnings in yellow, its errors in red, then
@@ -286,7 +292,7 @@ Once you accept:
    Python, inside `try`, the failure goes to `catch`, which puts the original
    files back. Only the commands that ran have
    a result: a comment, a line of a block, or a command that did not run, has
-   none. The other fixes still run. **Stop** never stops a command in the middle: Windows PowerShell
+   none. The other fixes still run. **Stop** never stops a command in the middle: PowerShell
    first ends the commands it was given (those of one software, or all those
    that need administrator rights), then a red line says “Fix interrupted!”, and
    the software not reached is left as it was. A failed connection stops the
@@ -336,7 +342,7 @@ ssl files of a Python are restored only all together, when all the backups and
 marks of that fix are there, since some of them alone would stop its `ssl`
 module from loading; this also works after a fix that a crash interrupted during
 the copy. A file in a folder that only administrators can change, such as
-Program Files, is moved by that command, in a Windows PowerShell for which
+Program Files, is moved by that command, in a PowerShell for which
 Windows asks your permission: eMudScan itself does not need administrator
 rights. The software is then checked again, and a message says whether its files
 are back; if it needs fixing, its detailed information offers

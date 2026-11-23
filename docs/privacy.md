@@ -13,8 +13,9 @@ until you accept its warning (see [Fixing software](using.md#fixing-software)).
 Then:
 
 - the commands, and then what they show, are written to a new folder in your
-  temporary folder (`%TEMP%\eMudScan-fix-…`), from which Windows PowerShell runs
-  them; eMudScan deletes that folder once they have run;
+  temporary folder (`%TEMP%\eMudScan-fix-…`), from which PowerShell runs them
+  (Windows PowerShell, or PowerShell 7 on a PC without it); eMudScan deletes
+  that folder once they have run;
 - the commands change only what they show: they update software through its
   package manager, replace certificate bundles, the node.exe of programs and the
   ssl files of their Pythons, and add the compromised certificates to Java
@@ -23,7 +24,7 @@ Then:
 - **Restore the backup**, in the detailed information window of a fixed
   software, moves these backups back in place of their files, once you accept
   its warning; a file that needs administrator rights is moved by the command of
-  the detailed information, in a Windows PowerShell started as for the fixes;
+  the detailed information, in a PowerShell started as for the fixes;
 - replacing the ssl files of a Python also writes eMudScan’s tests into that
   temporary folder: a Python script and certificates made for the fix, valid one
   hour, whose SHA-256 the commands check before they run; the ssl files are
@@ -33,8 +34,8 @@ Then:
   backup** removes it; if **Back up the files to change** is cleared, these
   backups and marks are deleted once the tests pass;
 - package managers write what they usually write when they update software;
-- the commands that need administrator rights run in a Windows PowerShell for
-  which Windows asks your permission; eMudScan itself does not need them;
+- the commands that need administrator rights run in a PowerShell for which
+  Windows asks your permission; eMudScan itself does not need them;
 - at the end, the **Fix software** window saves the report in your Downloads
   folder.
 
@@ -49,8 +50,8 @@ Fixes connect to the internet once you accept the warning, whether or not
   python-build-standalone publishes its Pythons);
 - replacing a certificate bundle downloads Mozilla’s current bundle and its
   SHA-256 checksum from [curl.se](https://curl.se/docs/caextract.html), which
-  sees your IP address and the User-Agent of Windows PowerShell, which names its
-  version, your Windows version and your language;
+  sees your IP address and the User-Agent of the PowerShell that runs the fixes,
+  which names its version, your Windows version and your language;
 - replacing a node.exe downloads the node.exe of the release that its commands
   name from [nodejs.org](https://nodejs.org/dist/), which sees the same;
 - replacing the ssl files of a Python downloads the release that its commands
@@ -60,7 +61,7 @@ Fixes connect to the internet once you accept the warning, whether or not
   which see the same; its tests connect to nothing;
 - Deno’s own updater (`deno upgrade`) downloads Deno’s latest release, as when
   you run it yourself;
-- when an update fails, Windows PowerShell checks whether the servers of its
+- when an update fails, PowerShell checks whether the servers of its
   package manager can be reached, with one HEAD request to each, until one
   answers: github.com (Scoop, uv), cdn.winget.microsoft.com (WinGet),
   community.chocolatey.org (Chocolatey), www.python.org (the Python Install

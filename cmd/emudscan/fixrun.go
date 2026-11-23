@@ -317,6 +317,7 @@ type fixRunner struct {
 	restoring bool                      // it restores backups (restore), instead of fixing
 	restores  map[int][]string          // for a restore: the restores of each element, by their commands (fixAction.key)
 	checked   bool                      // the console ends with the results of a check (checkAgain): a blank line comes before what follows
+	shell     string                    // the name of the PowerShell that runs the fixes (psHost)
 }
 
 // anyRan: at least one fix ran.
@@ -525,7 +526,7 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 		if err != nil {
 			r.out(fixLine{lineError, err.Error()})
 		} else if !anyRan(res) {
-			r.out(fixLine{lineError, T("fix.notRun")}) // PowerShell started, but ran nothing (blocked by a policy?)
+			r.out(fixLine{lineError, Tf("fix.notRun", r.shell)}) // PowerShell started, but ran nothing (blocked by a policy?)
 		}
 		for i := range res {
 			if res[i].halted && i < len(units) {
@@ -633,7 +634,7 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 			return ran, ok, true
 		}
 		gap()
-		r.out(fixLine{lineNote, T("fix.adminPrompt")}) // the log names each software as its commands run
+		r.out(fixLine{lineNote, Tf("fix.adminPrompt", r.shell)}) // the log names each software as its commands run
 		units := values(elevated)
 		res, err := r.exec(units, true, r.out)
 		if halt := note(units, res, err); halt != nil {

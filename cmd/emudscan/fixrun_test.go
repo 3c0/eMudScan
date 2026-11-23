@@ -170,7 +170,7 @@ func TestFixRunner(t *testing.T) {
 		defer func() { console = plainLines(lines) }()
 		ranCmds := map[string]bool{}
 		execs := 0
-		r := fixRunner{backup: backup,
+		r := fixRunner{backup: backup, shell: "Windows PowerShell 5.1",
 			exec: func(units []fixUnit, admin bool, out func(fixLine)) ([]unitResult, error) {
 				execs++
 				var cmds []string
@@ -243,7 +243,7 @@ func TestFixRunner(t *testing.T) {
 		t.Errorf("run order %v, ran %v", kept, ranOrder)
 	}
 	text := strings.Join(console, "\n")
-	for _, w := range []string{Tf("fix.fixed", "B"), Tf("fix.notFixed", "D"), T("fix.adminPrompt"), Tf("fix.software", "A"), T("fix.restart")} {
+	for _, w := range []string{Tf("fix.fixed", "B"), Tf("fix.notFixed", "D"), Tf("fix.adminPrompt", "Windows PowerShell 5.1"), Tf("fix.software", "A"), T("fix.restart")} {
 		if !strings.Contains(text, w) {
 			t.Errorf("console: no %q in\n%s", w, text)
 		}
@@ -253,12 +253,12 @@ func TestFixRunner(t *testing.T) {
 	}
 	// a blank line after the commands of each software, and after those run as
 	// administrator
-	if !strings.Contains(text, Tf("fix.software", "A")+"\n\n"+Tf("fix.software", "B")+"\n\n"+T("fix.adminPrompt")+"\n\n"+T("fix.checkingUpdates")) {
+	if !strings.Contains(text, Tf("fix.software", "A")+"\n\n"+Tf("fix.software", "B")+"\n\n"+Tf("fix.adminPrompt", "Windows PowerShell 5.1")+"\n\n"+T("fix.checkingUpdates")) {
 		t.Errorf("console: no blank lines between the software:\n%s", text)
 	}
 	// and after the results of a check, before the next round; each check says which
 	// stage ended
-	if !strings.Contains(text, Tf("fix.notFixed", "D")+"\n\n"+T("fix.adminPrompt")) || strings.Count(text, T("fix.checkingFixes")) != 1 {
+	if !strings.Contains(text, Tf("fix.notFixed", "D")+"\n\n"+Tf("fix.adminPrompt", "Windows PowerShell 5.1")) || strings.Count(text, T("fix.checkingFixes")) != 1 {
 		t.Errorf("console: no blank line after the check:\n%s", text)
 	}
 	// an update that installed no newer version: its result says so, when the version is
@@ -333,7 +333,7 @@ func TestFixRunner(t *testing.T) {
 	halts["replace a with backup"] = true
 	calls, _, console, stopped = run(download, true, 0)
 	if !stopped || strings.Join(calls, " | ") != "false:scoop update a | false:winget upgrade b | true:choco upgrade d -y | recheck[1 2 4] | true:replace a with backup | recheck[1]" ||
-		!strings.HasSuffix(strings.Join(console, "\n"), T("fix.adminPrompt")+"\n"+T("fix.stoppedDownload")+"\n\n"+T("fix.checking")+"\n"+Tf("fix.notFixed", "A")+"\n"+T("fix.restart")) {
+		!strings.HasSuffix(strings.Join(console, "\n"), Tf("fix.adminPrompt", "Windows PowerShell 5.1")+"\n"+T("fix.stoppedDownload")+"\n\n"+T("fix.checking")+"\n"+Tf("fix.notFixed", "A")+"\n"+T("fix.restart")) {
 		t.Errorf("halt after a download: %v %v\n%s", stopped, calls, strings.Join(console, "\n"))
 	}
 	if r := haltReason(fixUnit{fix: fixAction{Servers: []string{"repo.anaconda.com", "conda.anaconda.org"}}}); r != Tf("fix.stoppedServer", "repo.anaconda.com or conda.anaconda.org") {
@@ -428,7 +428,7 @@ func TestRestoreOutcome(t *testing.T) {
 	if msg, ok := restoreOutcome(failed); ok || msg != Tf("restore.notDone", "A")+"\n\nAccess to the path is denied." {
 		t.Errorf("failed (%v):\n%s", ok, msg)
 	}
-	refused := []fixLine{{lineNote, T("fix.adminPrompt")}, {lineError, T("fix.adminRefused")}, {lineNote, ""},
+	refused := []fixLine{{lineNote, Tf("fix.adminPrompt", "Windows PowerShell 5.1")}, {lineError, T("fix.adminRefused")}, {lineNote, ""},
 		{lineNote, T("fix.checking")}, {lineNotFixed, Tf("restore.notDone", "A")}}
 	if msg, ok := restoreOutcome(refused); ok || msg != Tf("restore.notDone", "A")+"\n\n"+T("fix.adminRefused") {
 		t.Errorf("refused (%v):\n%s", ok, msg)
