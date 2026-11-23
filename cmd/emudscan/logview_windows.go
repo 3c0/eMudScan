@@ -571,25 +571,30 @@ func (v *logView) cut(dc uintptr, ln *logLine) {
 		if len(row) > 0 && x+ww > xMax {
 			newRow()
 		}
-		if len(row) == 0 && x+ww > xMax { // too wide by itself: cut anywhere
-			pieces(i, word, func(a, b int, s seg) {
-				for a < b {
-					n := v.fit(dc, s.font, v.text[a:b], xMax-x)
-					if n == 0 && len(row) > 0 {
-						newRow()
-						continue
+		if len(row) == 0 && x+ww > xMax { // too wide by itself: cut it, between names if it can (cutAt)
+			for i < word {
+				n, room := 0, xMax-x // how many characters fit
+				pieces(i, word, func(a, b int, s seg) {
+					if n == a-i { // all before fit
+						n += v.fit(dc, s.font, v.text[a:b], room)
+						room -= v.measure(dc, s.font, v.text[a:b])
 					}
-					n = max(n, 1)
-					if n < b-a && n > 1 && v.text[a+n]&0xFC00 == 0xDC00 { // not inside a surrogate pair
+				})
+				if n == 0 && len(row) > 0 {
+					newRow()
+					continue
+				}
+				if n = max(n, 1); n < word-i {
+					n = cutAt(v.text[i:word], n)
+					if n > 1 && v.text[i+n]&0xFC00 == 0xDC00 { // not inside a surrogate pair
 						n--
 					}
-					add(a, n, s.font, s.color)
-					if a += n; a < b {
-						newRow()
-					}
 				}
-			})
-			i = word
+				pieces(i, i+n, func(a, b int, s seg) { add(a, b-a, s.font, s.color) })
+				if i += n; i < word {
+					newRow()
+				}
+			}
 		}
 		pieces(i, j, func(a, b int, s seg) { add(a, b-a, s.font, s.color) })
 		i = j

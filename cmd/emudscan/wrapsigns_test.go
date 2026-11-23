@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+	"unicode/utf16"
+)
 
 func TestLeadSpaces(t *testing.T) {
 	for s, want := range map[string]int{"": 0, "$x = 1": 0, "    $x = 1": 4, "  ": 2, "\t$x": 0} {
@@ -49,6 +53,34 @@ func TestOfScript(t *testing.T) {
 	for k := lineNote; k <= lineRule; k++ {
 		if got := k.ofScript(); got != script[k] {
 			t.Errorf("kind %d: ofScript() = %v, want %v", k, got, script[k])
+		}
+	}
+}
+
+// A word too long for a row is cut between names: after the last /, \ or - that fits,
+// never inside a name such as x86_64, nor after a run of them that starts the word.
+func TestCutAt(t *testing.T) {
+	url := "'https://example.com/download/20261110/cpython-3.11.18%2B20261110-x86_64-pc-windows-msvc.tar.gz'"
+	for _, c := range []struct {
+		s    string
+		n    int
+		want string // what stays on the row
+	}{
+		{url, strings.Index(url, "x86") + 1, "'https://example.com/download/20261110/cpython-3.11.18%2B20261110-"},
+		{url, strings.Index(url, "x86") + 4, "'https://example.com/download/20261110/cpython-3.11.18%2B20261110-"},
+		{url, strings.Index(url, "_64-") + 4, "'https://example.com/download/20261110/cpython-3.11.18%2B20261110-x86_64-"},
+		{url, strings.Index(url, "cpython") + 2, "'https://example.com/download/20261110/"},
+		{url, 12, "'https://"},
+		{url, 9, "'https://"},
+		{url, 5, "'http"}, // no break that fits: where the row is full
+		{`"$env:LOCALAPPDATA\ExampleApp\cert.pem"`, 30, `"$env:LOCALAPPDATA\ExampleApp\`},
+		{"--long-option-name", 5, "--lon"},
+		{"--long-option-name", 9, "--long-"},
+		{"f31751f4a8483f5ac7cd77ad83f8dfb80d9f2a72", 20, "f31751f4a8483f5ac7cd"},
+	} {
+		u := utf16.Encode([]rune(c.s))
+		if got := string(utf16.Decode(u[:cutAt(u, c.n)])); got != c.want {
+			t.Errorf("cutAt(%q, %d) keeps %q, want %q", c.s, c.n, got, c.want)
 		}
 	}
 }

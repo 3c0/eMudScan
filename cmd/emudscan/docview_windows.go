@@ -344,23 +344,53 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 			}
 			continue
 		}
-		// longer than a whole line: cut it
+		// longer than a whole line: cut it, between names if it can (cutAt)
+		var all []uint16 // its text
 		for _, pc := range word {
-			p, u := pc.p, pc.u
-			for len(u) > 0 {
-				n := L.fit(p.font, u, xMax-x)
-				if n == 0 {
-					if len(line) > 0 {
-						commit(true)
-						continue
+			all = append(all, pc.u...)
+		}
+		end := len(all) // without its spaces
+		for end > 0 && all[end-1] == ' ' {
+			end--
+		}
+		fits := func(pos int, room int32) int { // how many characters from pos fit in room
+			n, a := 0, 0
+			for _, pc := range word {
+				b := a + len(pc.u)
+				if b > pos {
+					s := pc.u[max(pos-a, 0):]
+					k := L.fit(pc.p.font, s, room)
+					if n += k; k < len(s) {
+						return n
 					}
-					n = 1
+					room -= L.measure(pc.p.font, s)
 				}
-				add(p, u[:n], L.measure(p.font, u[:n]))
-				u = u[n:]
-				if len(u) > 0 {
-					commit(true)
+				a = b
+			}
+			return n
+		}
+		for pos := 0; pos < len(all); {
+			n := fits(pos, xMax-x)
+			if n == 0 && len(line) > 0 {
+				commit(true)
+				continue
+			}
+			if n = max(n, 1); pos+n >= end {
+				n = len(all) - pos // the rest, with its spaces
+			} else {
+				n = cutAt(all[pos:], n)
+			}
+			a := 0
+			for _, pc := range word { // the pieces of pos…pos+n
+				b := a + len(pc.u)
+				if lo, hi := max(pos, a), min(pos+n, b); lo < hi {
+					u := pc.u[lo-a : hi-a]
+					add(pc.p, u, L.measure(pc.p.font, u))
 				}
+				a = b
+			}
+			if pos += n; pos < len(all) {
+				commit(true)
 			}
 		}
 	}
