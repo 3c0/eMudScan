@@ -10,7 +10,9 @@ package main
 // in PATH). The fixes are scripts for Windows: on another system the tests are
 // skipped, unless EMUDSCAN_TEST_POWERSHELL names a PowerShell; they then run with the
 // paths of the scripts written for that system (/ for \, and its tar), which tests the
-// PowerShell of the scripts, not the tools of Windows.
+// PowerShell of the scripts, not the tools of Windows. EMUDSCAN_TEST_POWERSHELL_WANT
+// names versions that must run, such as "5.1,7.6,7.7": the tests fail when one of them
+// is not found (.github/workflows/powershell.yml).
 
 import (
 	"archive/tar"
@@ -52,10 +54,26 @@ func testPowerShells(t *testing.T) map[string]string {
 			}
 		}
 	}
+	for _, want := range strings.Split(os.Getenv("EMUDSCAN_TEST_POWERSHELL_WANT"), ",") {
+		if want = strings.TrimSpace(want); want != "" && !hasVersion(found, want) {
+			t.Fatalf("no PowerShell %s to run the fixes with: found %v", want, found)
+		}
+	}
 	if len(found) == 0 {
 		t.Skip("no PowerShell to run the fixes with")
 	}
 	return found
+}
+
+// hasVersion: one of the PowerShells found has the version want, or a version of it
+// ("7.6" for 7.6.10).
+func hasVersion(found map[string]string, want string) bool {
+	for v := range found {
+		if v == want || strings.HasPrefix(v, want+".") {
+			return true
+		}
+	}
+	return false
 }
 
 // standInPython builds, in dir, a program that stands in for python.exe: it shows a

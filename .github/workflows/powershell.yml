@@ -1,0 +1,56 @@
+# Runs for real, on Windows, the fixes that are scripts, in Windows PowerShell 5.1 and
+# in PowerShell 7.6 and 7.7: the tests of cmd/emudscan/fixps_test.go, which the build,
+# on Linux, skips. See docs/building.md.
+#
+# Windows PowerShell 5.1 is the one of Windows. PowerShell 7.6 and 7.7 are the
+# releases named below, from PowerShell's releases on GitHub, each checked against its
+# SHA-256. The test fails if one of the three versions did not run.
+#
+# The actions are pinned to exact commits, as in build.yml.
+name: PowerShell
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Get PowerShell 7.6 and 7.7
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          $releases = [ordered]@{
+              '7.6.10' = '7d871531806eb1646264e4bbabd9f0c30c23355591bc756bb9909448c29ae166'
+              '7.7.0'  = '7c74e03b20a75b59715847439d046a6214b1863ee79b187872980f139bb4a05f'
+          }
+          $found = foreach ($version in $releases.Keys) {
+              $zip = "$env:RUNNER_TEMP\PowerShell-$version.zip"
+              Invoke-WebRequest -Uri "https://github.com/PowerShell/PowerShell/releases/download/v$version/PowerShell-$version-win-x64.zip" -OutFile $zip
+              if ((Get-FileHash -LiteralPath $zip).Hash -ne $releases[$version]) { throw "PowerShell $version does not match its SHA-256." }
+              Expand-Archive -LiteralPath $zip -DestinationPath "$env:RUNNER_TEMP\PowerShell-$version"
+              "$env:RUNNER_TEMP\PowerShell-$version\pwsh.exe"
+          }
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "EMUDSCAN_TEST_POWERSHELL=$($found -join ';')"
+
+      - name: Run the fixes in each PowerShell
+        shell: pwsh
+        env:
+          EMUDSCAN_TEST_POWERSHELL_WANT: 5.1,7.6,7.7
+        run: go test -count=1 -v -run 'InPowerShell|ScriptStopsAlone' ./cmd/emudscan

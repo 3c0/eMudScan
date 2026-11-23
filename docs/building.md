@@ -8,13 +8,19 @@
 | `data/` | The reference data from emudhra.we-have-a-problem.com, with its notice and license, Go’s license and a copy of `LICENSE`, all embedded in the program, except the two chains of `chains/rollover`, which only the tests use |
 | `docs/` | This documentation; `docs/images/` holds the screenshots and icons shown here and in the README (the icons are drawn by eMudScan’s own code, `cmd/emudscan/icons.go`) |
 | `scripts/` | Build scripts for your own PC, and the scripts that publish a version (`release.sh`) and copy a hotfix into `main` (`hotfix-to-main.sh`) |
-| `.github/` | The GitHub build (`workflows/build.yml`), the code analysis (`workflows/codeql.yml`), the release page template (`release-notes.md`) and the release notes of each version (`release-notes/`), the Dependabot settings (`dependabot.yml`), the security policy (`SECURITY.md`), the issue forms (`ISSUE_TEMPLATE/`), the pull request template and the contributing guide |
+| `.github/` | The GitHub build (`workflows/build.yml`), the code analysis (`workflows/codeql.yml`), the run of the fix scripts in each PowerShell on Windows (`workflows/powershell.yml`), the release page template (`release-notes.md`) and the release notes of each version (`release-notes/`), the Dependabot settings (`dependabot.yml`), the security policy (`SECURITY.md`), the issue forms (`ISSUE_TEMPLATE/`), the pull request template and the contributing guide |
 
 ## GitHub builds the program
 
 Each push to `main` and each pull request runs the checks and the tests, then
 builds `eMudScan.exe` and `eMudScan-cli.exe`. Both can be downloaded from the
 run’s page on the **Actions** tab, under **Artifacts** (a zip file).
+
+A second workflow, **PowerShell**, runs on a Windows machine the fixes that are
+scripts, for real, in Windows PowerShell 5.1 and in PowerShell 7.6 and 7.7 (see
+[Building on your PC](#building-on-your-pc)). It gets the two PowerShell 7
+releases that it names from PowerShell’s releases on GitHub, and checks them
+against their SHA-256. It builds nothing, and a release does not wait for it.
 
 ## Branches
 
@@ -168,6 +174,18 @@ without that flag, as a console program: Windows reads this type in the exe, and
 a command prompt waits only for a console program, gives it its outputs and gets
 its exit code. The tag selects its entry point (`main_cli_windows.go` instead of
 `main_gui_windows.go`) and its resources.
+
+On Windows, the tests also run for real the fixes that are scripts (the
+replacement of the ssl files of a Python): the script that the Fix function
+runs, started as it starts it, and the script of the detailed information,
+which runs alone. They run in Windows PowerShell 5.1, and in PowerShell 7 when
+`pwsh` is in the PATH, on a stand-in Python made in the folder of the test, with
+its download already there: nothing is downloaded, and nothing is written
+elsewhere. The cases are those where all goes well and those where a command
+fails (the test before, another download, a missing file, a file in use, the
+test after): the test checks the result of each command and the files left.
+`EMUDSCAN_TEST_POWERSHELL` names other PowerShells to run them in (paths,
+separated by `;`). On Linux or macOS these tests are skipped.
 
 To test the Fix function without changing anything, `.\scripts\build.ps1 -Simulate`
 (or `./scripts/build.sh --simulate`) writes only `dist/eMudScan-simulation.exe`
