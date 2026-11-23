@@ -150,7 +150,7 @@ func (c *checker) scanInfo() scanRun {
 // field is removed or changes meaning (not when one is added).
 const (
 	reportFormatName    = "emudscan-report"
-	reportFormatVersion = 1
+	reportFormatVersion = 2 // 2: without the commands (fixes[].commands, and in details and fixes_run)
 )
 
 type reportDoc struct {
@@ -226,11 +226,10 @@ type reportCopy struct {
 }
 
 type reportFix struct {
-	Kind          string   `json:"kind"`
-	Manager       string   `json:"manager,omitempty"`
-	Optional      bool     `json:"optional"`
-	Administrator bool     `json:"administrator"`
-	Commands      []string `json:"commands"`
+	Kind          string `json:"kind"`
+	Manager       string `json:"manager,omitempty"`
+	Optional      bool   `json:"optional"`
+	Administrator bool   `json:"administrator"`
 }
 
 // statusKeyword names a status in the JSON and CSV reports.
@@ -332,7 +331,7 @@ func softwareDate(it Item) string {
 // is a component of the program "Windows".
 func reportItemOf(it Item) reportItem {
 	out := reportItem{Group: groupKeyword(it.Group), Status: statusKeyword(it.Status), Summary: it.Summary,
-		Details:      plainText(joinParas(staleAdvice(it), it.shownDetails())),
+		Details:      plainText(withoutCommands(joinParas(staleAdvice(it), it.shownDetails()))),
 		SoftwareDate: softwareDate(it),
 		File:         shownPath(it.File), Folder: shownPath(it.Folder), Homepage: it.Homepage()}
 	if it.Group == GroupWindows {
@@ -350,8 +349,7 @@ func reportItemOf(it Item) reportItem {
 		out.Copies = append(out.Copies, reportCopy{File: shownPath(m.File), Folder: shownPath(m.Folder)})
 	}
 	for _, f := range itemFixes(it) {
-		out.Fixes = append(out.Fixes, reportFix{Kind: f.Kind.keyword(), Manager: f.Manager, Optional: f.Optional,
-			Administrator: f.Admin, Commands: append([]string{}, f.shown()...)})
+		out.Fixes = append(out.Fixes, reportFix{Kind: f.Kind.keyword(), Manager: f.Manager, Optional: f.Optional, Administrator: f.Admin})
 	}
 	return out
 }
@@ -397,7 +395,7 @@ func reportDocOf(c *checker, logText string, now time.Time) reportDoc {
 		doc.Items = append(doc.Items, reportItemOf(it))
 	}
 	if fixes := c.fixRecord(); len(fixes) > 0 {
-		doc.FixesRun = reportLines(fixes)
+		doc.FixesRun = reportLines(fixResults(fixes))
 	}
 	return doc
 }

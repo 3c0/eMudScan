@@ -316,8 +316,10 @@ are back; if it needs fixing, its detailed information offers
 ## The report
 
 **Copy report** and **Save report** include every item, with the same
-explanations as the detailed information windows and, after fixes, the commands
-that ran and what they showed. Its top gives eMudScan’s version, the date, the
+explanations as the detailed information windows, without their commands and
+without what eMudScan offers to do itself: a report says what was found on the
+PC and what to do about it, and the windows say how. After fixes, it says what came of them: the result of each software
+and, for a command that failed, that command and what it showed. Its top gives eMudScan’s version, the date, the
 name of your PC and its Windows version. Before you share a report, remove what
 you want to keep private, such as the name of your PC or your user name in the
 paths. Apart from the fixes, saving a report is the only time eMudScan writes a
@@ -355,7 +357,7 @@ report.
 
 | Field | Content |
 |---|---|
-| `format`, `format_version` | `emudscan-report` and `1`. The version changes when a field is removed or changes meaning, not when a field is added |
+| `format`, `format_version` | `emudscan-report` and `2`. The version changes when a field is removed or changes meaning, not when a field is added. Version 1 also gave the commands of the fixes |
 | `tool` | eMudScan: `name`, `version`, `date` and `url`. A build that is not a release has `commit` instead of `date` |
 | `created` | When the report was made, such as `2026-12-01T10:15:48+01:00` |
 | `language` | `en` or `fr`: the language of the texts |
@@ -364,7 +366,7 @@ report.
 | `worst_status` | The worst status of the items |
 | `counts` | The number of items of each status |
 | `items` | The items, in the order of the text report |
-| `fixes_run` | After fixes: the lines of the Fixes section of the text report |
+| `fixes_run` | After fixes: the lines of the Fixes section of the text report, which says what came of them |
 | `log` | The lines of the log |
 
 Each item has these fields; a field without a value is left out:
@@ -376,13 +378,13 @@ Each item has these fields; a field without a value is left out:
 | `program`, `program_version` | The software. For a check of Windows: `Windows` |
 | `component`, `component_version` | The part that is checked, when it is not the program itself. For a check of Windows: the name of the check |
 | `summary` | The Details column of the lists |
-| `details` | The explanation of the detailed information window, as text |
+| `details` | The explanation of the detailed information window, as text, without its commands |
 | `software_date` | The Software date column, such as `2026-03-02` |
 | `file`, `folder` | The outdated file, or the file checked when the item is OK, and the software folder |
 | `homepage` | The homepage of the software |
 | `packages` | The packages of the software: `manager`, `id` and `page` |
 | `copies` | When the same finding is in several places, the other places: `file` and `folder` |
-| `fixes` | What **Fix** can run: `kind`, `manager` (for an update), `optional` (not ticked when the Fix window opens), `administrator` (needs administrator rights) and `commands`, as the detailed information gives them |
+| `fixes` | What **Fix** can run: `kind`, `manager` (for an update), `optional` (not ticked when the Fix window opens) and `administrator` (needs administrator rights) |
 
 The kinds of fixes are `update` (with the package manager), `pip`, `conda`,
 `tool`, `replace_bundle`, `java_block_list`, `replace_node` and

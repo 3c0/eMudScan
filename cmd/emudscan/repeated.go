@@ -191,10 +191,27 @@ func (it Item) shownDetails() string {
 		}
 		block := append([]string(nil), lines[0][:shared]...)
 		for i, m := range all {
-			block = append(block, Tf("copies.for", link(m)))
+			label := Tf("copies.for", link(m))
+			if onlyCommands(lines[i][shared:]) { // it announces commands: left out of the reports with them
+				label = how(label)
+			}
+			block = append(block, label)
 			block = append(block, lines[i][shared:]...)
 		}
 		parts = append(parts, strings.Join(block, "\n"))
 	}
 	return joinParas(parts...)
+}
+
+// onlyCommands: the lines are commands, or lines about them.
+func onlyCommands(lines []string) bool {
+	for _, l := range lines {
+		if _, ok := cmdOf(l); ok {
+			continue
+		}
+		if _, ok := howOf(l); !ok {
+			return false
+		}
+	}
+	return true
 }

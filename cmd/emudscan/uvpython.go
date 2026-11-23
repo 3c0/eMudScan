@@ -88,7 +88,7 @@ func (tp *appsContext) uvAdvice(rt uvRuntime, fx pyFix, home string) string {
 	next := fmt.Sprintf("%d.%d", fixed[0], fixed[1]+1)
 	kept, text, lines := Tf("py.uvKept", rt.line), T("py.uvFix"), ""
 	if hasUp { // each fix after its label, as in the Fix window, so that they stay apart
-		kept, text, lines = Tf("py.uvKeptAfter", rt.line), T("py.uvFixUpdate"), fixIntro(up)+"\n"+newFix(up).lines()+"\n"
+		kept, text, lines = Tf("py.uvKeptAfter", rt.line), T("py.uvFixUpdate"), how(fixIntro(up))+"\n"+newFix(up).lines()+"\n"
 	}
 	f := fixAction{Kind: fixTool, Manager: "uv", Servers: serversGitHub, Cmds: []string{upgrade,
 		fmt.Sprintf("if (uv python find --system --managed-python '>=%s,<%s' 2>$null) { uv python uninstall %s } else { Write-Warning %s }",
@@ -103,9 +103,9 @@ func (tp *appsContext) uvAdvice(rt uvRuntime, fx pyFix, home string) string {
 		f.Warn = Tf("py.uvWarn", rt.key, strings.Join(shown, "\n"))
 	}
 	if hasUp {
-		lines += fixIntro(f) + "\n"
+		lines += how(fixIntro(f)) + "\n"
 	}
-	return joinParas(text+"\n"+lines+newFix(f).lines(), pinned)
+	return joinParas(text+"\n"+how(T("py.uvRemoves"))+"\n"+lines+newFix(f).lines(), pinned)
 }
 
 // shimPathRe: the program that a Scoop shim runs (uv.shim: path = "…\apps\uv\current\uv.exe").

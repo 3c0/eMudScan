@@ -187,7 +187,8 @@ func buildReport(c *checker, logText string) string {
 					fmt.Fprintf(&b, "      %s%s%s [%s] — %s\n", T("dlg.package"), labelSep(), p.ID, p.Manager, p.Page)
 				}
 			}
-			if details := joinParas(staleAdvice(it), it.shownDetails()); details != "" { // the same explanation as in the details window
+			// the same explanation as in the details window, without its commands
+			if details := withoutCommands(joinParas(staleAdvice(it), it.shownDetails())); details != "" {
 				b.WriteString("\n")
 				for _, l := range strings.Split(plainText(details), "\n") {
 					fmt.Fprintf(&b, "      %s\n", l)
@@ -196,10 +197,10 @@ func buildReport(c *checker, logText string) string {
 			}
 		}
 	}
-	if fixes := c.fixRecord(); len(fixes) > 0 { // what the fixes ran and showed, as the Fix window did
+	if fixes := c.fixRecord(); len(fixes) > 0 { // what came of the fixes
 		separate()
 		fmt.Fprintf(&b, "%s\n%s\n", T("report.fixes"), strings.Repeat("-", len([]rune(T("report.fixes")))))
-		for _, l := range reportLines(fixes) {
+		for _, l := range reportLines(fixResults(fixes)) {
 			fmt.Fprintf(&b, "%s\n", l)
 		}
 	}

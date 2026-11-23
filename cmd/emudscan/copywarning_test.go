@@ -13,12 +13,12 @@ import (
 // commands that restore a backup, which have their own.
 func TestCopyWarning(t *testing.T) {
 	Lang = 0
-	warn := T("bundled.warn")
+	warn := how(T("bundled.warn"))
 	advice := "**This copy belongs to App.**\n\nRecommended action: update App."
 	lead := "If no update is available yet, the following commands fix it:"
-	header := T("fix.psAdmin") + "\n$ Copy-Item a b"
+	header := how(T("fix.psAdmin")) + "\n$ Copy-Item a b"
 	cmds := lead + "\n" + header
-	restore := T("restore.intro1") + "\n• a\n\n" + T("restore.how1") + "\n" + T("restore.warn1") + "\n" + T("fix.ps") + "\n$ Move-Item a b"
+	restore := T("restore.intro1") + "\n• a\n\n" + how(T("restore.how1")+"\n"+T("restore.warn1")) + "\n" + how(T("fix.ps")) + "\n$ Move-Item a b"
 	for _, c := range []struct {
 		name, details, want string
 	}{
@@ -68,8 +68,8 @@ func TestCopyWarningUnknownOwner(t *testing.T) {
 	if it.Bundled || !strings.Contains(it.Details, T("bundle.genericFix")) {
 		t.Fatalf("not the advice for unknown software:\n%s", it.Details)
 	}
-	at := strings.Index(it.Details, T("bundled.warn")+"\n"+T("fix.ps"))
-	if at < 0 || at < strings.Index(it.Details, T("bundle.genericFix")) || strings.Count(it.Details, T("bundled.warn")) != 1 {
+	at := strings.Index(it.Details, how(T("bundled.warn"))+"\n"+how(T("fix.ps")))
+	if at < 0 || at < strings.Index(it.Details, T("bundle.genericFix")) || strings.Count(it.Details, how(T("bundled.warn"))) != 1 {
 		t.Errorf("warning missing or misplaced:\n%s", it.Details)
 	}
 }

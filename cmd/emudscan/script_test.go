@@ -1,7 +1,9 @@
 package main
 
 import (
+	"debug/pe"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -202,4 +204,77 @@ func mustFiles(t *testing.T) map[string][]byte {
 		t.Fatal(err)
 	}
 	return files
+}
+
+// The reports give the details without their commands: the command lines and the
+// lines about them are left out; the sentence that led to commands stays, and ends
+// with a period.
+func TestWithoutCommands(t *testing.T) {
+	Lang = 0
+	for _, c := range []struct{ name, details, want string }{
+		{"no command", "Not affected.\n\nNo action needed.", "Not affected.\n\nNo action needed."},
+		{"a sentence, then its command", "Recommended action: update it with uv, which installed it:\n$ uv python upgrade 3.12", "Recommended action: update it with uv, which installed it."},
+		{"in French", "Action recommandée\u00a0: mettez-le à jour avec uv\u00a0:\n$ uv python upgrade 3.12", "Action recommandée\u00a0: mettez-le à jour avec uv."},
+		{"text after the command", "Recommended action: update Flutter:\n$ flutter upgrade\n\nThen rebuild your apps.", "Recommended action: update Flutter.\n\nThen rebuild your apps."},
+		{"what announces the commands", "Its certifi is outdated.\n" + how(T("fix.ps")) + "\n$ & {\n$     $a = 1\n$\n$ }", "Its certifi is outdated."},
+		{"what eMudScan offers to do", "Recommended action: update Example App 1.\n\n" + how("Until then, eMudScan can replace the files. Close it first.") + "\n" + how(T("fix.ps")) + "\n$ a", "Recommended action: update Example App 1."},
+		{"what explains them", "Outdated.\n\n" + how("The following commands replace the file.\n\nPowerShell downloads it.") + "\n" + how(T("fix.psAdmin")) + "\n$ a\n$ b\n\nScan again.", "Outdated.\n\nScan again."},
+		{"a sentence, lines about the commands, the commands", "Recommended action: update uv, then this Python:\n" + how("The last command removes this copy:") + "\n$ a\n" + how("Update with uv:") + "\n$ b", "Recommended action: update uv, then this Python."},
+		{"a bold sentence", "**Or fix the file directly:**\n$ a", "**Or fix the file directly.**"},
+		{"only commands", how(T("fix.ps")) + "\n$ a", ""},
+		{"a restore", "**Restore available:** backed up to:\n• a.bak\n\n" + how("To undo these changes, run the following command.\n⚠ Warning: no more protection.") + "\n" + how(T("fix.ps")) + "\n$ Move-Item a.bak a", "**Restore available:** backed up to:\n• a.bak"},
+	} {
+		if got := withoutCommands(c.details); got != c.want {
+			t.Errorf("%s:\n%q\nwant:\n%q", c.name, got, c.want)
+		}
+	}
+	// a marked line shows as any text; a text read from the PC cannot be one
+	if got := plainText(how("**In PowerShell (Run as administrator):**") + "\n$ a"); got != "In PowerShell (Run as administrator):\n    a" {
+		t.Errorf("shown: %q", got)
+	}
+	if got := how("a\n\nb"); got != "> a\n\n> b" {
+		t.Errorf("how: %q", got)
+	}
+	if _, ok := howOf(plain("> x")); ok {
+		t.Error("plain text reads as a line about commands")
+	}
+	// every fix that the details give is announced by a marked line, or by a sentence
+	// that reads well without it: none of them leaves a command in a report
+	// what eMudScan offers to do is for who runs it, not for who reads its report
+	home := filepath.Join(t.TempDir(), "Example App 1", "python")
+	ssl := pyLayout(t, home, pe.IMAGE_FILE_MACHINE_AMD64, "DLLs", "libssl-3-x64.dll", "libcrypto-3-x64.dll", "_hashlib.pyd")
+	offer := pySSLAdvice(pythonEnvFor(filepath.Join(home, "python.exe")), ssl, "3.11.18", "Example App 1")
+	if !strings.Contains(offer, "> "+Tf("pyssl.offer", "3.11.18", "python-build-standalone", "Example App 1")+"\n> In PowerShell:\n$ & {\n") {
+		t.Fatalf("the offer:\n%s", offer)
+	}
+	if got := withoutCommands(copyWarning("Outdated.\n\nRecommended action: update Example App 1.\n\n" + offer)); got != "Outdated.\n\nRecommended action: update Example App 1." {
+		t.Errorf("the Python fix in a report:\n%s", got)
+	}
+	for _, text := range []string{replaceBundleFix(`C:\Example App 1\cacert.pem`), restoreAdvice(`C:\Example App 1\cacert.pem`), offer} {
+		if got := withoutCommands(text); strings.Contains(got, "$ ") || strings.Contains(got, "PowerShell") || strings.Contains(strings.ToLower(got), "command") {
+			t.Errorf("left in the report:\n%s", got)
+		}
+	}
+}
+
+// The reports keep what came of the fixes, not what ran.
+func TestFixResults(t *testing.T) {
+	Lang = 0
+	lines := []fixLine{{lineNote, "2026-11-04 11:05 · Fix software"},
+		{lineSoftware, "A"}, {lineComment, "Update with Scoop:"}, {lineCommand, "scoop update a"}, {lineOK, ""}, {lineOutput, "Updating a"}, {lineNote, ""},
+		{lineSoftware, "B"}, {lineScript, "# The Python to fix"}, {lineCommand, "$a = 1"}, {lineOK, ""}, {lineScript, ""}, {lineScript, "try {"},
+		{lineCommand, "    & $python -I $check $emudscanFiles after"}, {lineFailed, ""}, {lineOutput, "Worse than before: tls13"}, {lineCmdError, "Exit code 1"},
+		{lineScript, "}"}, {lineScript, "catch {"}, {lineCommand, "    Move-Item a b"}, {lineOK, ""}, {lineCommand, "    throw 'put back'"}, {lineFailed, ""}, {lineCmdError, "put back"}, {lineScript, "}"}, {lineNote, ""},
+		{lineSoftware, "C"}, {lineCommand, "never ran"}, {lineNote, ""},
+		{lineNote, T("fix.checking")}, {lineFixed, Tf("fix.fixed", "A")}, {lineNotFixed, Tf("fix.notFixed", "B")}, {lineEnd, ""}}
+	want := []string{"2026-11-04 11:05 · Fix software", "",
+		Tf("fix.software", "B"), "  ✗     & $python -I $check $emudscanFiles after", "      Worse than before: tls13", "      Exit code 1", "  ✗     throw 'put back'", "      put back", "",
+		T("fix.checking"), Tf("fix.fixed", "A"), Tf("fix.notFixed", "B"), "", fixBar}
+	if got := reportLines(fixResults(lines)); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("results:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	// an error of the run stays
+	if got := reportLines(fixResults([]fixLine{{lineSoftware, "A"}, {lineError, T("fix.adminRefused")}, {lineEnd, ""}})); strings.Join(got, "|") != T("fix.adminRefused")+"||"+fixBar {
+		t.Errorf("an error: %q", got)
+	}
 }

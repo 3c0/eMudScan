@@ -83,7 +83,7 @@ func TestPipCommandsAndOwners(t *testing.T) {
 		}
 		d := items[0].Details
 		hasCmd := strings.Contains(d, pipCmd(exe, "certifi"))
-		if c.want == "" && (!hasCmd || !strings.Contains(d, T("fix.psAdmin"))) || c.want != "" && (hasCmd || !strings.Contains(d, c.want)) {
+		if c.want == "" && (!hasCmd || !strings.Contains(d, how(T("fix.psAdmin")))) || c.want != "" && (hasCmd || !strings.Contains(d, c.want)) {
 			t.Errorf("%s:\n%s", c.name, d)
 		}
 		// the Fix function runs exactly the commands shown, as administrator
@@ -121,7 +121,7 @@ func TestPipBundleCommandAndOwners(t *testing.T) {
 		t.Errorf("inside another program: %q", got)
 	}
 	fakeSecurity(t, nil, nil)
-	if got := pipFix(certifi, exe, "certifi", false, ownerInfo{}); got != T("fix.psAdmin")+"\n"+pipCmd(exe, "certifi") {
+	if got := pipFix(certifi, exe, "certifi", false, ownerInfo{}); got != how(T("fix.psAdmin"))+"\n"+pipCmd(exe, "certifi") {
 		t.Errorf("administrators: %q", got)
 	}
 }
@@ -149,7 +149,7 @@ func TestRestoreAndOwners(t *testing.T) {
 		t.Errorf("another user's folder:\n%s", got)
 	}
 	fakeSecurity(t, nil, map[string][]string{pathKey(filepath.Dir(f)): {sidUsers}}) // may add files: the backup is still the administrators'
-	if got := restoreAdvice(f); !strings.Contains(got, move) || !strings.Contains(got, T("fix.psAdmin")) {
+	if got := restoreAdvice(f); !strings.Contains(got, move) || !strings.Contains(got, how(T("fix.psAdmin"))) {
 		t.Errorf("administrators' backup:\n%s", got)
 	}
 }

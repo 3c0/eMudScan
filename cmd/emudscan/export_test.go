@@ -44,7 +44,7 @@ func exportChecker(t *testing.T) *checker {
 		c.begin(GroupApps, "node", "Node.js", "", func(it *Item) {
 			c.finish(it, result{Status: StWarn, Summary: "Update Node.js & restart", Version: "25.1.0", File: file, Folder: dir,
 				Owner: "Example App 22", OwnerVer: "4.2.0", Component: "Node.js",
-				Details: "Outdated.\n\n" + T("fix.ps") + "\n" + update.lines() + "\n\n" + T("fix.ps") + "\n" + replace.lines()})
+				Details: "Outdated.\n\n" + how(T("fix.ps")) + "\n" + update.lines() + "\n\n" + how(T("fix.ps")) + "\n" + replace.lines()})
 		})
 	}
 	c.add(GroupApps, "app", "=Example App 23", result{Status: StCaution, Summary: "Has its own list of certificates", Version: "0.9.1",
@@ -72,7 +72,7 @@ func TestJSONReport(t *testing.T) {
 	if err := json.Unmarshal(data, &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Format != "emudscan-report" || doc.FormatVersion != 1 || doc.Tool.Name != appName || doc.Tool.URL != appURL ||
+	if doc.Format != "emudscan-report" || doc.FormatVersion != 2 || doc.Tool.Name != appName || doc.Tool.URL != appURL ||
 		doc.Tool.Version == "" || (doc.Tool.Date == "") == (doc.Tool.Commit == "") {
 		t.Errorf("format and tool: %+v", doc)
 	}
@@ -103,7 +103,8 @@ func TestJSONReport(t *testing.T) {
 	if node.Group != "other" || node.Status != "update_needed" || node.Program != "Example App 22" || node.ProgramVersion != "4.2.0" ||
 		node.Component != "Node.js" || node.ComponentVersion != "25.1.0" || node.SoftwareDate != "2026-03-02" ||
 		node.File != `C:\Tools\Example App 22\one\node.exe` || node.Folder != `C:\Tools\Example App 22\one` ||
-		!strings.Contains(node.Details, "Found in 2 places:") || !strings.Contains(node.Details, "    scoop update example-app-22") {
+		!strings.Contains(node.Details, "Found in 2 places:") || !strings.HasSuffix(node.Details, "Outdated.") || // without the commands, and what announces them
+		strings.Contains(node.Details, "scoop update") || strings.Contains(node.Details, "PowerShell") || strings.Contains(node.Details, "node.exe' ") {
 		t.Errorf("Node.js: %+v", node)
 	}
 	if want := []reportPackage{{Manager: "Scoop", ID: "example-app-22", Page: scoopPage("example-app-22")}}; !reflect.DeepEqual(node.Packages, want) {
@@ -114,26 +115,27 @@ func TestJSONReport(t *testing.T) {
 	}
 	// the update once, though both copies show it, then the replacement of each copy
 	if len(node.Fixes) != 3 ||
-		!reflect.DeepEqual(node.Fixes[0], reportFix{Kind: "update", Manager: "Scoop", Commands: []string{"scoop update example-app-22"}}) ||
-		node.Fixes[1].Kind != "replace_node" || !node.Fixes[1].Optional || !node.Fixes[1].Administrator || !strings.Contains(node.Fixes[1].Commands[0], `\one\node.exe`) ||
-		node.Fixes[2].Kind != "replace_node" || !strings.Contains(node.Fixes[2].Commands[0], `\two\node.exe`) {
+		!reflect.DeepEqual(node.Fixes[0], reportFix{Kind: "update", Manager: "Scoop"}) ||
+		node.Fixes[1].Kind != "replace_node" || !node.Fixes[1].Optional || !node.Fixes[1].Administrator || node.Fixes[2].Kind != "replace_node" {
 		t.Errorf("fixes: %+v", node.Fixes)
 	}
 	if app.Status != "warning" || app.Program != "=Example App 23" || app.Component != "" || app.ComponentVersion != "" || app.Fixes != nil {
 		t.Errorf("program: %+v", app)
 	}
 
-	// in French, the same keywords; what the fixes ran follows the elements
+	// in French, the same keywords; what came of the fixes follows the elements: a
+	// command that failed, not one that succeeded
 	Lang = 1
 	defer func() { Lang = 0 }()
-	c.recordFix(fixLine{lineCommand, "scoop update example-app-22"})
-	c.recordFix(fixLine{lineOK, ""})
+	for _, l := range []fixLine{{lineCommand, "scoop update example-app-22"}, {lineOK, ""}, {lineCommand, "scoop update example-app-24"}, {lineFailed, ""}, {lineCmdError, "no such app"}} {
+		c.recordFix(l)
+	}
 	doc = reportDocOf(c, "", now)
 	if doc.Language != "fr" || doc.WorstStatus != "update_needed" || doc.Items[2].Status != "update_needed" || doc.Items[2].Group != "other" ||
 		doc.Items[2].Fixes[0].Kind != "update" || len(doc.Log) != 0 || doc.Log == nil {
 		t.Errorf("in French: %+v", doc)
 	}
-	if want := []string{"  " + markOK + " scoop update example-app-22"}; !reflect.DeepEqual(doc.FixesRun, want) {
+	if want := []string{"  " + markFailed + " scoop update example-app-24", "      no such app"}; !reflect.DeepEqual(doc.FixesRun, want) {
 		t.Errorf("fixes run: %q", doc.FixesRun)
 	}
 }
@@ -146,7 +148,7 @@ func TestJSONReportStates(t *testing.T) {
 	c.setScan(scanRun{took: 1600 * time.Millisecond})
 	fix := newFix(fixAction{Kind: fixBundle, Cmds: []string{"Copy-Item -LiteralPath 'new.pem' -Destination 'C:\\Tools\\Example App 24\\cacert.pem'"}})
 	c.add(GroupApps, "bundle", "Example App 24", result{Status: StOK, Summary: "Up to date", File: `C:\Tools\Example App 24\cacert.pem`,
-		Details: "Replaced.\n\n" + T("fix.ps") + "\n" + fix.lines()})
+		Details: "Replaced.\n\n" + how(T("fix.ps")) + "\n" + fix.lines()})
 	c.begin(GroupApps, "app", "Example App 25", "", nil)
 	doc := reportDocOf(c, "", time.Now())
 	if doc.Scan.Complete || doc.Scan.Seconds != 2 || !doc.Scan.OnlineTest || doc.Scan.Drives == nil || len(doc.Scan.Drives) != 0 {

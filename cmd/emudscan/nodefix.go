@@ -66,5 +66,5 @@ func nodeReplaceAdvice(file string, major int, fixed, program string) string {
 	if !ok {
 		return ""
 	}
-	return Tf("node.replace", major, program) + "\n" + psHeader(file) + "\n" + newFix(f).lines()
+	return how(Tf("node.replace", major, program)) + "\n" + psHeader(file) + "\n" + newFix(f).lines()
 }

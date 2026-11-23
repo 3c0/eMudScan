@@ -5,6 +5,11 @@ package main
 //   [[text|target]]                 link with its own text
 //   **text**                        bold
 //   $ command                       a command line (monospace, copyable)
+//   > text                          a line about the commands below it: what announces or
+//                                   explains them, or what offers that eMudScan runs them
+//                                   ("eMudScan can replace…"). It shows as text; the reports,
+//                                   which leave the commands out, leave it out too
+//                                   (withoutCommands)
 //   @ Label<TAB>value               a field: label and value are shown in two aligned columns
 //   Label: rest                     a short label at the start of a line is shown in bold
 // Plain URLs are turned into links automatically.
@@ -72,7 +77,7 @@ func plain(s string) string {
 		}
 	}
 	lead := len(s) - len(strings.TrimLeftFunc(s, unicode.IsSpace))
-	if rest := s[lead:]; strings.HasPrefix(rest, "$ ") || strings.HasPrefix(rest, "@ ") {
+	if rest := s[lead:]; strings.HasPrefix(rest, "$ ") || strings.HasPrefix(rest, "@ ") || strings.HasPrefix(rest, "> ") {
 		s = s[:lead+1] + "\u00a0" + s[lead+2:]
 	} else if rest == "$" { // would read as an empty line of a script (cmdOf)
 		s += "\u00a0"
@@ -157,6 +162,66 @@ func cmd(s string) string {
 	return "$ " + s
 }
 
+// how marks the lines of a text as being about the commands below it: the sentence
+// that announces them ("In PowerShell:"), what they do, a warning about running them,
+// and the offer that eMudScan runs them, which is for who runs eMudScan, not for who
+// reads its report. Its empty lines stay empty.
+func how(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		if l != "" {
+			lines[i] = "> " + l
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// howOf is the text of a line that how marked.
+func howOf(line string) (string, bool) { return strings.CutPrefix(line, "> ") }
+
+// withoutCommands is the details as the reports give them: the state of the PC and
+// what to do about it, without the commands that do it. Left out: the command lines,
+// and the lines about them (how). The sentence that led to commands ("update it with
+// uv:") stays, and ends with a period instead of its colon. Where lines were left out
+// there is at most one empty line.
+func withoutCommands(details string) string {
+	var out []string
+	for _, line := range strings.Split(strings.ReplaceAll(details, "\r", ""), "\n") {
+		if _, ok := cmdOf(line); ok {
+			if n := len(out); n > 0 {
+				out[n-1] = endSentence(out[n-1])
+			}
+			continue
+		}
+		if _, ok := howOf(line); ok {
+			continue
+		}
+		if strings.TrimSpace(line) == "" && (len(out) == 0 || out[len(out)-1] == "") {
+			continue
+		}
+		out = append(out, line)
+	}
+	for len(out) > 0 && out[len(out)-1] == "" {
+		out = out[:len(out)-1]
+	}
+	return strings.Join(out, "\n")
+}
+
+// endSentence ends with a period a line that ends with a colon, which announced what
+// is left out after it.
+func endSentence(line string) string {
+	bold := strings.HasSuffix(line, "**")
+	s := strings.TrimSuffix(line, "**")
+	if !strings.HasSuffix(s, ":") {
+		return line
+	}
+	s = strings.TrimRight(strings.TrimSuffix(s, ":"), " \u00a0") + "."
+	if bold {
+		s += "**"
+	}
+	return s
+}
+
 // cmdOf is the command of a line that cmd marked.
 func cmdOf(line string) (string, bool) {
 	if line == "$" {
@@ -225,6 +290,9 @@ var (
 func parseLine(line string) []mrun {
 	if c, ok := cmdOf(line); ok {
 		return []mrun{{kind: runCommand, text: c}}
+	}
+	if text, ok := howOf(line); ok { // shown as any text
+		line = text
 	}
 	if label, value, ok := parseField(line); ok {
 		return append([]mrun{{kind: runBold, text: label + labelSep()}}, parseInline(value)...)

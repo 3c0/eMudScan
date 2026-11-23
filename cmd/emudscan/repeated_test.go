@@ -68,7 +68,7 @@ func TestMergeRepeatedDifferentDetails(t *testing.T) {
 	}
 	d := got[0].shownDetails()
 	want := "• [[C:\\a\\python]]\n• [[C:\\b\\python]]\n\nPython 3.14.7 does not reject them.\n\nRecommended action: update it.\n\nUntil then: In PowerShell:\n" +
-		"For [[C:\\a\\python]]:\n" + pipCmd(`C:\a\python\python.exe`, "pip certifi") + "\nFor [[C:\\b\\python]]:\n" + pipCmd(`C:\b\python\python.exe`, "pip certifi")
+		"> For [[C:\\a\\python]]:\n" + pipCmd(`C:\a\python\python.exe`, "pip certifi") + "\n> For [[C:\\b\\python]]:\n" + pipCmd(`C:\b\python\python.exe`, "pip certifi") // they announce commands
 	if !strings.HasSuffix(d, want) {
 		t.Errorf("details:\n%s\nwant the end:\n%s", d, want)
 	}

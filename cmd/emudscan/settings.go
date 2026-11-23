@@ -285,9 +285,9 @@ func (tp *appsContext) settingOne(it *Item, s certSetting) {
 	}
 	removal := T("set.removeLine")
 	if s.remove != "" {
-		header := T("fix.ps")
+		header := how(T("fix.ps"))
 		if s.admin {
-			header = T("fix.psAdmin")
+			header = how(T("fix.psAdmin"))
 		}
 		removal = T("set.remove") + "\n" + header + "\n" + cmd(s.remove)
 	}

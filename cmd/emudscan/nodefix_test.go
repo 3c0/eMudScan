@@ -79,7 +79,7 @@ func TestNodeReplaceFix(t *testing.T) {
 	// the advice: what it does and that the program must be closed, then the commands
 	exe := filepath.Join(dir, "win-x64x", "node.exe")
 	a := nodeReplaceAdvice(exe, 22, "22.23.4", "Example App 1")
-	if !strings.HasPrefix(a, Tf("node.replace", 22, "Example App 1")+"\n"+psHeader(exe)+"\n$ ") || fixesIn(a) == nil || !fixesIn(a)[0].Optional {
+	if !strings.HasPrefix(a, how(Tf("node.replace", 22, "Example App 1"))+"\n"+psHeader(exe)+"\n$ ") || fixesIn(a) == nil || !fixesIn(a)[0].Optional {
 		t.Errorf("advice:\n%s", a)
 	}
 }

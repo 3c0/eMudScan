@@ -62,8 +62,8 @@ func TestFixesOfElement(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "cacert.pem")
 	pkg := newFix(fixAction{Kind: fixPackage, Cmds: []string{"scoop update app"}, Manager: "Scoop"})
 	details := "Outdated.\n\n" + Tf("fix.pkg", "Scoop") + "\n" + pkg.lines() + "\n\n" +
-		T("fix.orDirectly") + "\n" + replaceBundleFix(file) + "\n\n" + T("set.remove") + "\n" + T("fix.ps") + "\n$ git config --global --unset http.sslCAInfo\n\n" +
-		T("fix.ps") + "\n$ Move-Item -LiteralPath a -Destination b -Force"
+		how(T("fix.orDirectly")) + "\n" + replaceBundleFix(file) + "\n\n" + T("set.remove") + "\n" + how(T("fix.ps")) + "\n$ git config --global --unset http.sslCAInfo\n\n" +
+		how(T("fix.ps")) + "\n$ Move-Item -LiteralPath a -Destination b -Force"
 	c := newChecker(nopReporter{}, nil)
 	it := c.begin(GroupApps, "bundle", "App", "", func(it *Item) { c.finish(it, result{Status: StWarn, Details: details}) })
 	if len(it.Fixes) != 2 || it.Fixes[0].Kind != fixPackage || it.Fixes[1].Kind != fixBundle {
@@ -90,7 +90,7 @@ func TestTickedFirst(t *testing.T) {
 	item := func(fixes ...fixAction) Item {
 		var parts []string
 		for _, f := range fixes {
-			parts = append(parts, T("fix.ps")+"\n"+f.lines())
+			parts = append(parts, how(T("fix.ps"))+"\n"+f.lines())
 		}
 		return *c.begin(GroupApps, "bundle", "App", "", func(it *Item) {
 			c.finish(it, result{Status: StWarn, Details: strings.Join(parts, "\n\n")})
@@ -137,7 +137,7 @@ func TestCondaFix(t *testing.T) {
 		{env, "& " + conda + " update -y -p " + psQuote(env) + " ca-certificates certifi"},
 	} {
 		text := condaFix(filepath.Join(c.env, "Library", "ssl", "cacert.pem"))
-		if f := fixesIn(text); len(f) != 1 || f[0].Kind != fixConda || f[0].key() != c.want || !strings.HasPrefix(text, T("conda.fix")+"\n"+T("fix.ps")+"\n") ||
+		if f := fixesIn(text); len(f) != 1 || f[0].Kind != fixConda || f[0].key() != c.want || !strings.HasPrefix(text, T("conda.fix")+"\n"+how(T("fix.ps"))+"\n") ||
 			strings.Join(f[0].Servers, " ") != "repo.anaconda.com conda.anaconda.org" {
 			t.Errorf("%s: %q %+v", c.env, text, f)
 		}

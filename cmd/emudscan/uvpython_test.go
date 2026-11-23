@@ -255,7 +255,7 @@ func TestUvUpdate(t *testing.T) {
 		first      fixAction
 	}{
 		{filepath.Join(home, "scoop", "shims"), T("py.uvFixUpdate"), fixAction{Kind: fixPackage, Manager: "Scoop", Cmds: []string{"scoop update uv"}}},
-		{filepath.Join(choco, "bin"), "Update with Chocolatey (as administrator):\n$ choco upgrade uv -y\nUpdate with uv:\n$ uv python upgrade 3.12", fixAction{Kind: fixPackage, Manager: "Chocolatey", Admin: true, Cmds: []string{"choco upgrade uv -y"}}},
+		{filepath.Join(choco, "bin"), "> The last command removes this copy once a fixed version is installed:\n> Update with Chocolatey (as administrator):\n$ choco upgrade uv -y\n> Update with uv:\n$ uv python upgrade 3.12", fixAction{Kind: fixPackage, Manager: "Chocolatey", Admin: true, Cmds: []string{"choco upgrade uv -y"}}},
 	} {
 		py := filepath.Join(dir, "cpython-3.12.9-windows-x86_64-none")
 		fakePython(t, py, false)

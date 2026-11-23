@@ -55,17 +55,17 @@ func TestJavaVerdicts(t *testing.T) {
 		want, absent []string // in this order; not there
 	}{
 		{"nothing blocked", openJDK, false, header, StWarn,
-			[]string{T("java.fix"), T("java.blockRoots"), ".bak'", "Add-Content", badCerts[0].SHA256, javaRoots[0].sha256, javaRoots[3].sha256},
+			[]string{T("java.fix"), how(T("java.blockRoots")), ".bak'", "Add-Content", badCerts[0].SHA256, javaRoots[0].sha256, javaRoots[3].sha256},
 			[]string{"keytool"}},
 		{"first fix only", openJDK, false, header + intermediates, StCaution,
-			[]string{T("java.blockOnly"), T("java.fix"), T("java.blockRoots"), "Add-Content", javaRoots[0].sha256, javaRoots[3].sha256},
+			[]string{T("java.blockOnly"), T("java.fix"), how(T("java.blockRoots")), "Add-Content", javaRoots[0].sha256, javaRoots[3].sha256},
 			[]string{badCerts[0].SHA256}},
 		{"roots blocked", openJDK, false, header + intermediates + roots, StOK,
 			[]string{T("java.okRootsBlocked")}, []string{"Add-Content", T("java.fix")}},
 		{"roots blocked, not the intermediates", openJDK, false, header + roots, StOK,
 			[]string{T("java.okRootsBlocked")}, []string{"Add-Content"}},
 		{"no roots", nil, false, header, StOK, []string{T("java.okNoRoots")}, []string{"Add-Content"}},
-		{"no block list", openJDK, false, "", StWarn, []string{T("java.fix")}, []string{T("java.blockRoots"), "Add-Content"}},
+		{"no block list", openJDK, false, "", StWarn, []string{T("java.fix")}, []string{how(T("java.blockRoots")), "Add-Content"}},
 		// a root that OpenJDK does not ship, which issued the direct intermediates
 		{"another root, the four blocked", withTLSG3, false, header + roots, StWarn,
 			[]string{T("java.fix"), Tf("java.blockOthers", rootNameTLSG3), "Add-Content", badCerts[0].SHA256, tlsG3},
@@ -75,7 +75,7 @@ func TestJavaVerdicts(t *testing.T) {
 		{"all roots blocked", withTLSG3, false, header + roots + tlsG3, StOK,
 			[]string{T("java.okRootsBlocked")}, []string{"Add-Content"}},
 		{"inside another program", openJDK, true, header, StWarn,
-			[]string{"update Example App 1, which this copy belongs to,", T("java.blockRoots"), T("bundled.warn") + "\n" + T("fix.ps"), "Add-Content"},
+			[]string{"update Example App 1, which this copy belongs to,", how(T("java.blockRoots")), how(T("bundled.warn")) + "\n" + how(T("fix.ps")), "Add-Content"},
 			[]string{T("java.fix")}},
 	} {
 		app := filepath.Join(root, "app"+itoa(i))

@@ -847,7 +847,7 @@ func copyWarning(details string) string {
 			}
 			at := max(j-1, 0) // the line before the commands, if any
 			before, rest := strings.Join(lines[:at], "\n"), strings.Join(lines[at:], "\n")
-			paras[i] = joinParas(before, T("bundled.warn")+"\n"+rest)
+			paras[i] = joinParas(before, how(T("bundled.warn"))+"\n"+rest)
 			return strings.Join(paras, "\n\n") + details[stop:]
 		}
 	}
@@ -1452,7 +1452,7 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 		switch {
 		case len(lists.bad) > 0 && bundled:
 			r.Details = joinParas(r.Details, Tf("py.listsOldSafe."+n(lists.bad), andList(lists.bad)), bundledAdvice(o),
-				listsFix(Tf("py.untilThen", andList(lists.badPkgs))))
+				listsFix(how(Tf("py.untilThen", andList(lists.badPkgs)))))
 		case len(lists.bad) > 0 && noPip != "":
 			r.Details = joinParas(r.Details, Tf("py.listsOldSafe."+n(lists.bad), andList(lists.bad)), noPip)
 		case len(lists.bad) > 0:
@@ -1509,9 +1509,9 @@ func (tp *appsContext) pythonOneEnv(it *Item, env pyEnv) {
 	lead := Tf("py.updateLists", andList(lists.badPkgs))
 	switch {
 	case sslText != "":
-		lead = Tf("py.untilThenAlso", andList(lists.badPkgs))
+		lead = how(Tf("py.untilThenAlso", andList(lists.badPkgs)))
 	case update != "":
-		lead = Tf("py.untilThen", andList(lists.badPkgs))
+		lead = how(Tf("py.untilThen", andList(lists.badPkgs)))
 	}
 	// new virtual environments start with the pip of ensurepip: said when no update of
 	// Python or of its program is recommended
@@ -1820,7 +1820,7 @@ func (tp *appsContext) javaOne(it *Item, home string) {
 		if len(others) > 0 {
 			block += " " + Tf("java.blockOthers", strings.Join(others, ", "))
 		}
-		block += "\n" + c + "\n\n" + T("java.blockAfter")
+		block = how(block) + "\n" + c + "\n\n" + how(T("java.blockAfter"))
 	}
 	// still trusted: an emSign root, which issued the direct intermediates or
 	// cross-signed their issuer, or any root
@@ -2621,7 +2621,7 @@ func condaFix(p string) string {
 			return T("conda.fix") + "\n" + psHeader(env) + "\n" + f.lines()
 		}
 	}
-	return T("fix.header") + "\n" + cmd("conda update ca-certificates certifi")
+	return T("conda.fix") + "\n" + how(T("fix.ps")) + "\n" + cmd("conda update ca-certificates certifi")
 }
 
 // pipFix is what to do about the outdated bundle p of pip or certifi (pkg), in the
@@ -2652,7 +2652,7 @@ func pipFix(p, py, pkg string, bundled bool, o ownerInfo) string {
 		f := newFix(fixAction{Kind: fixPip, Admin: needsAdmin(p), Cmds: []string{pipLine(py, pkg, needsAdmin(p))}, Servers: serversPyPI})
 		command = psHeader(p) + "\n" + f.lines()
 		if bundled {
-			command = T("py.ifYouManage") + "\n" + f.lines()
+			command = how(T("py.ifYouManage")) + "\n" + f.lines()
 		}
 	}
 	if bundled {
@@ -2687,10 +2687,10 @@ func needsAdmin(p string) bool {
 func psHeader(files ...string) string {
 	for _, f := range files {
 		if needsAdmin(f) {
-			return T("fix.psAdmin")
+			return how(T("fix.psAdmin"))
 		}
 	}
-	return T("fix.ps")
+	return how(T("fix.ps"))
 }
 
 // gitBundleAdvice is what to do about the outdated bundles of a Git. A Git older than
@@ -2700,11 +2700,11 @@ func psHeader(files ...string) string {
 func gitBundleAdvice(state FixState, bundled bool, o ownerInfo, files []string) string {
 	switch {
 	case bundled:
-		return joinParas(bundledAdvice(o), T("fix.directly")+"\n"+replaceBundleFix(files...))
+		return joinParas(bundledAdvice(o), how(T("fix.directly"))+"\n"+replaceBundleFix(files...))
 	case state == FixOutdated:
 		return Tf("git.fix", fixedVersionsList("git"))
 	}
-	return joinParas(Tf("git.fix", fixedVersionsList("git")), T("fix.orDirectly")+"\n"+replaceBundleFix(files...))
+	return joinParas(Tf("git.fix", fixedVersionsList("git")), how(T("fix.orDirectly"))+"\n"+replaceBundleFix(files...))
 }
 
 // replaceBundleFix: keep a copy of an outdated bundle and replace it with Mozilla's
@@ -2734,7 +2734,7 @@ func replaceBundleFix(files ...string) string {
 		f.Cmds = append(f.Cmds, backupThenLine(file, "$ok", write, f.Admin))
 		f.Plain = append(f.Plain, changeLine("$ok", write))
 	}
-	return T("fix.replaceBundle") + "\n" + psHeader(files...) + "\n" + newFix(f).lines()
+	return how(T("fix.replaceBundle")) + "\n" + psHeader(files...) + "\n" + newFix(f).lines()
 }
 
 // psQuote quotes a path for PowerShell, where nothing is replaced inside single quotes.

@@ -139,6 +139,56 @@ func reportLines(lines []fixLine) []string {
 	return out
 }
 
+// fixResults is what the reports keep of the lines of the fixes: what came of them, not
+// what ran. Kept: the messages of eMudScan (when the fixes ran, what stopped them),
+// the result of each software after the checks, and the end of the fixes. Of the
+// commands, only one that failed, under its software, with what it showed: it is
+// why a software is not fixed. Left out: the commands that succeeded, with what they
+// showed, the commands that did not run, the comments, and a software whose commands
+// all succeeded, which has its result further down.
+func fixResults(lines []fixLine) []fixLine {
+	var out []fixLine
+	software := -1 // the software whose commands are read, if it is not written yet
+	failed := false
+	blank := func() {
+		if n := len(out); n > 0 && !(out[n-1].kind == lineNote && out[n-1].text == "") {
+			out = append(out, fixLine{lineNote, ""})
+		}
+	}
+	for i, l := range lines {
+		switch l.kind {
+		case lineSoftware:
+			software, failed = i, false
+		case lineCommand:
+			failed = i+1 < len(lines) && lines[i+1].kind == lineFailed
+			if failed {
+				if software >= 0 {
+					out = append(out, lines[software])
+					software = -1
+				}
+				out = append(out, l)
+			}
+		case lineOK, lineFailed, lineOutput, lineCmdError, lineWarning:
+			if failed {
+				out = append(out, l)
+			}
+		case lineComment, lineScript:
+			failed = false
+		case lineNote:
+			failed = false
+			if l.text == "" {
+				blank()
+			} else {
+				out = append(out, l)
+			}
+		default: // the results, an error of the run, the end
+			failed, software = false, -1
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
 // plainLines is lines as text.
 func plainLines(lines []fixLine) []string {
 	out := make([]string, len(lines))

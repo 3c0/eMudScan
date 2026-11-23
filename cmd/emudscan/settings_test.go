@@ -136,8 +136,8 @@ func TestSettingCopyWarning(t *testing.T) {
 		if it.Status != StWarn {
 			t.Fatalf("%s: %v", p, it.Status)
 		}
-		got := strings.Contains(it.Details, T("bundled.warn")+"\n"+T("fix.psAdmin")) || strings.Contains(it.Details, T("bundled.warn")+"\n"+T("fix.ps"))
-		if got != warn || strings.Count(it.Details, T("bundled.warn")) > 1 {
+		got := strings.Contains(it.Details, how(T("bundled.warn"))+"\n"+how(T("fix.psAdmin"))) || strings.Contains(it.Details, how(T("bundled.warn"))+"\n"+how(T("fix.ps")))
+		if got != warn || strings.Count(it.Details, how(T("bundled.warn"))) > 1 {
 			t.Errorf("%s: warning %v, want %v:\n%s", p, got, warn, it.Details)
 		}
 	}

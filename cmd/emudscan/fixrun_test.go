@@ -577,7 +577,9 @@ func TestFixReport(t *testing.T) {
 		c.recordFix(l)
 	}
 	rep = strings.ReplaceAll(buildReport(c, "log"), "\r\n", "\n")
-	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✓ scoop update a\n      Updating a\n  ✗ scoop update b\n      Exit code 1\n    never\n" + T("fix.checking") + "\nA: fixed.\n\n" + fixBar + "\n\nLog\n"
+	// what came of the fixes: the command that failed, with what it showed, under its
+	// software; not the commands that succeeded or did not run
+	want := "\nFixes\n-----\n2026-11-04 11:05 · Fix A\n— A —\n  ✗ scoop update b\n      Exit code 1\n" + T("fix.checking") + "\nA: fixed.\n\n" + fixBar + "\n\nLog\n"
 	if !strings.Contains(rep, want) || strings.Count(rep, fixBar) != 4 {
 		t.Errorf("report without\n%s\nin\n%s", want, rep) // the bar of the fixes ends their section too
 	}

@@ -353,7 +353,7 @@ func pySSLAdvice(env pyEnv, sslLib, fixed, program string) string {
 		return ""
 	}
 	f := newFix(pySSLFix(env.exe, plan))
-	return Tf("pyssl.offer", plan.src.version, plan.src.from(), program) + "\n" + psHeader(plan.dir) + "\n" + f.lines()
+	return how(Tf("pyssl.offer", plan.src.version, plan.src.from(), program)) + "\n" + psHeader(plan.dir) + "\n" + f.lines()
 }
 
 // pySSLRestore offers to restore what pySSLFix changed in the folder of sslLib: all

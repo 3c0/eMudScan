@@ -336,7 +336,7 @@ func TestBundledPythonAdvice(t *testing.T) {
 	root := t.TempDir()
 	program := "Recommended action: update Example App 1, which this copy belongs to,"
 	until := Tf("py.untilThen", "certifi") + "\n"
-	warned := T("bundled.warn") + "\nIn PowerShell:\n" // inside a program
+	warned := how(T("bundled.warn")) + "\n> In PowerShell:\n" // inside a program
 	for i, c := range []struct {
 		name, version string
 		blocklist     bool
@@ -346,8 +346,8 @@ func TestBundledPythonAdvice(t *testing.T) {
 		{"bundled, old", "3.13.17", false, true, []string{"Python 3.13.17 does not reject the compromised certificates yet (Python 3.13.18 does), and its certifi still trusts ", program, until, warned, "pip install --upgrade certifi"}},
 		{"bundled, version unknown", "", false, true, []string{"certifi, in this Python, still trusts ", program, until, warned, "pip install --upgrade certifi"}},
 		{"bundled, fixed", "3.13.18", true, true, []string{"rejects the compromised certificates itself", Tf("py.listsOldSafe.1", "certifi"), program, until, warned, "pip install --upgrade certifi"}},
-		{"own, old", "3.13.17", false, false, []string{"Recommended action: update Python to 3.13.18.", until + "In PowerShell:\n", "pip install --upgrade certifi"}},
-		{"own, fixed", "3.13.18", true, false, []string{Tf("py.listsOldSafe.1", "certifi") + "\nIn PowerShell:\n", "pip install --upgrade certifi"}},
+		{"own, old", "3.13.17", false, false, []string{"Recommended action: update Python to 3.13.18.", until + "> In PowerShell:\n", "pip install --upgrade certifi"}},
+		{"own, fixed", "3.13.18", true, false, []string{Tf("py.listsOldSafe.1", "certifi") + "\n> In PowerShell:\n", "pip install --upgrade certifi"}},
 	} {
 		app := filepath.Join(root, "app"+itoa(i))
 		home := filepath.Join(app, "python")
@@ -375,10 +375,10 @@ func TestBundledPythonAdvice(t *testing.T) {
 			}
 			at += i + len(w)
 		}
-		if n := strings.Count(d, "which this copy belongs to"); n != map[bool]int{true: 1, false: 0}[c.owned] || strings.Contains(d, T("bundled.warn")) != c.owned {
+		if n := strings.Count(d, "which this copy belongs to"); n != map[bool]int{true: 1, false: 0}[c.owned] || strings.Contains(d, how(T("bundled.warn"))) != c.owned {
 			t.Errorf("%s: the program's advice %d times:\n%s", c.name, n, d)
 		}
-		for _, bad := range []string{"If you manage", ":\nIn PowerShell"} {
+		for _, bad := range []string{"If you manage", ":\n> In PowerShell"} {
 			if strings.Contains(d, bad) {
 				t.Errorf("%s: %q:\n%s", c.name, bad, d)
 			}
