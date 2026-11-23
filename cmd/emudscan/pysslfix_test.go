@@ -103,6 +103,10 @@ func TestPySSLFix(t *testing.T) {
 	f := pySSLFix(exe, plan)
 	all := strings.Join(f.Cmds, "\n")
 	want := strings.Join([]string{
+		// what $emudscanFiles is, then its value, shown when the fix runs
+		"# The folder that eMudScan made for this fix, with check_ssl.py and its test certificates. eMudScan deletes it after the fix",
+		"$emudscanFiles",
+		"",
 		"# The Python to fix, and its ssl files",
 		"$python = " + psPath(exe, false),
 		"$folder = " + psPath(filepath.Dir(ssl), false),
@@ -120,7 +124,7 @@ func TestPySSLFix(t *testing.T) {
 		`$archive = "$emudscanFiles\python-3.12.16-20261110-standalone.tar.gz"`,
 		"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
 		"if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $archive }",
-		"if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { throw 'The download does not match its SHA-256.' }",
+		"if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { throw 'The downloaded file is not the expected one (wrong SHA-256). Nothing was changed. Run the fix again.' }",
 		"",
 		"# Take the new ssl files out of the download",
 		`$unpacked = "$emudscanFiles\python-3.12.16-20261110-standalone"`,
@@ -146,7 +150,7 @@ func TestPySSLFix(t *testing.T) {
 		"catch {",
 		`    $files | ForEach-Object { Move-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak" -Destination "$folder\$_" -Force }`,
 		`    $added | ForEach-Object { Remove-Item -LiteralPath "$folder\$_", "$folder\$_.emudscan-$stamp.added" -ErrorAction Ignore }`,
-		"    throw 'The replacement failed: the original files were put back.'",
+		"    throw " + psQuote(T("pyssl.putBack")),
 		"}",
 	}, "\n")
 	if all != want {
@@ -166,7 +170,7 @@ func TestPySSLFix(t *testing.T) {
 			t.Errorf("not a line of the script: %q", c)
 		}
 	}
-	if commands != 28 {
+	if commands != 29 {
 		t.Errorf("%d commands", commands)
 	}
 	// without "Back up the files to change": the same, then the backups and marks
@@ -187,17 +191,23 @@ func TestPySSLFix(t *testing.T) {
 		!strings.Contains(all, " -C $unpacked python/DLLs/_ssl.pyd python/DLLs/libssl-3-x64.dll python/DLLs/libcrypto-3-x64.dll\n") {
 		t.Errorf("standalone:\n%s", all)
 	}
-	// python.org's package: unzipped, and its files checked
+	// python.org's package, a zip: its files taken out by Windows' tar too, named one by
+	// one; no Expand-Archive, which shows a progress bar whatever the script sets
 	home2 := filepath.Join(root, "app2", "python")
 	ssl2 := pyLayout(t, home2, pe.IMAGE_FILE_MACHINE_AMD64, ".", "libssl-3.dll", "libcrypto-3.dll", "_hashlib.pyd")
 	plan2, _ := pySSLPlanFor(pythonEnvFor(filepath.Join(home2, "python.exe")), ssl2, "3.14.10")
 	f2 := pySSLFix(filepath.Join(home2, "python.exe"), plan2)
-	if all := strings.Join(f2.Cmds, "\n"); strings.Contains(all, "tar.exe") || strings.Contains(all, "$unpacked") || !fetchesRight(f2) ||
+	if all := strings.Join(f2.Cmds, "\n"); strings.Contains(all, "Expand-Archive") || strings.Contains(all, "$unpacked") || !fetchesRight(f2) ||
 		!strings.Contains(all, "\n# Download Python 3.14.10 (python.org) and check its SHA-256\n$url     = '"+pyorgSSL["3.14"].url+"'\n") ||
 		!strings.Contains(all, "\n$archive = \"$emudscanFiles\\python-3.14.10-embed.zip\"\n") ||
-		!strings.Contains(all, "\n$new = \"$emudscanFiles\\python-3.14.10-embed\"\nExpand-Archive -LiteralPath $archive -DestinationPath $new -Force\n"+
-			"if ($files | Where-Object { -not (Test-Path -LiteralPath \"$new\\$_\") }) { throw 'A file is missing in the download.' }\n") {
+		!strings.Contains(all, "\n$new = \"$emudscanFiles\\python-3.14.10-embed\"\nNew-Item -ItemType Directory -Force -Path $new | Out-Null\n"+
+			"& \"$env:SystemRoot\\System32\\tar.exe\" -xf $archive -C $new _ssl.pyd libssl-3.dll libcrypto-3.dll\n\n# Check that no program") {
 		t.Errorf("zip:\n%s", all)
+	}
+	// the script that runs alone tells PowerShell when tar failed
+	if all := strings.Join(f2.Alone, "\n"); strings.Contains(all, "Expand-Archive") ||
+		!strings.Contains(all, " -xf $archive -C $new _ssl.pyd libssl-3.dll libcrypto-3.dll\n    if ($LASTEXITCODE -ne 0) { throw "+psQuote(T("pyssl.missing"))+" }\n") {
+		t.Errorf("zip, alone:\n%s", all)
 	}
 }
 

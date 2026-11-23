@@ -174,11 +174,15 @@ func TestCheckFileLink(t *testing.T) {
 			continue
 		}
 		found++
-		if l.text != `$check  = "$emudscanFiles\check_ssl.py"` || n != 12 || tail != 1 {
+		if strings.HasPrefix(l.text, "# ") { // the comment that says what the folder of the fix holds
+			if l.kind != lineScript || l.text[len(l.text)-tail-n:len(l.text)-tail] != pyCheckName {
+				t.Errorf("%q: %d, %d", l.text, n, tail)
+			}
+		} else if l.text != `$check  = "$emudscanFiles\check_ssl.py"` || n != 12 || tail != 1 {
 			t.Errorf("%q: %d, %d", l.text, n, tail)
 		}
 	}
-	if found != 1 {
+	if found != 2 {
 		t.Errorf("%d lines name the file", found)
 	}
 	// counted as the console does, in UTF-16; not in what a command showed
@@ -244,7 +248,7 @@ func TestWithoutCommands(t *testing.T) {
 	home := filepath.Join(t.TempDir(), "Example App 1", "python")
 	ssl := pyLayout(t, home, pe.IMAGE_FILE_MACHINE_AMD64, "DLLs", "libssl-3-x64.dll", "libcrypto-3-x64.dll", "_hashlib.pyd")
 	offer := pySSLAdvice(pythonEnvFor(filepath.Join(home, "python.exe")), ssl, "3.11.18", "Example App 1")
-	if !strings.Contains(offer, "> "+Tf("pyssl.offer", "3.11.18", "python-build-standalone", "Example App 1")+"\n> In PowerShell:\n$ & {\n") {
+	if !strings.Contains(offer, "> "+Tf("pyssl.offer", "3.11.18", "python-build-standalone", "Example App 1")+"\n> In PowerShell:\n$ & {\n$     $ErrorActionPreference = 'Stop'\n") {
 		t.Fatalf("the offer:\n%s", offer)
 	}
 	if got := withoutCommands(copyWarning("Outdated.\n\nRecommended action: update Example App 1.\n\n" + offer)); got != "Outdated.\n\nRecommended action: update Example App 1." {

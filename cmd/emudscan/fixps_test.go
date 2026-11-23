@@ -211,9 +211,14 @@ func psAdapt(lines []string) []string {
 	if runtime.GOOS == "windows" {
 		return lines
 	}
+	// the tar of Windows is bsdtar, which reads a zip too
+	tar := "tar"
+	if _, err := exec.LookPath("bsdtar"); err == nil {
+		tar = "bsdtar"
+	}
 	out := make([]string, len(lines))
 	for i, l := range lines {
-		l = strings.ReplaceAll(l, `& "$env:SystemRoot\System32\tar.exe"`, "& tar")
+		l = strings.ReplaceAll(l, `& "$env:SystemRoot\System32\tar.exe"`, "& "+tar)
 		out[i] = strings.ReplaceAll(l, `\`, "/")
 	}
 	return out
@@ -270,7 +275,7 @@ func TestPySSLFixInPowerShell(t *testing.T) {
 		{name: "fails before", sslDir: "DLLs", replace: pbsShape.replace, backup: true, failBefore: true, stopsAt: "$emudscanFiles before"},
 		{name: "another download", sslDir: "DLLs", replace: pbsShape.replace, backup: true, badSum: true, stopsAt: "Get-FileHash", says: T("pyssl.badSum")},
 		{name: "a file missing", sslDir: "DLLs", replace: pbsShape.replace, backup: true, lacks: "libssl-3-x64.dll", stopsAt: "tar"},
-		{name: "a file missing, python.org", sslDir: ".", replace: orgShape.replace, zip: true, backup: true, lacks: "libssl-3.dll", stopsAt: "Where-Object"},
+		{name: "a file missing, python.org", sslDir: ".", replace: orgShape.replace, zip: true, backup: true, lacks: "libssl-3.dll", stopsAt: "tar"},
 		{name: "in use", sslDir: "DLLs", replace: pbsShape.replace, backup: true, inUse: true, stopsAt: "[IO.File]::Open"},
 		{name: "fails after", sslDir: "DLLs", replace: pbsShape.replace, backup: true, failAfter: true, stopsAt: "$emudscanFiles after"},
 		{name: "fails after, no backups", sslDir: "DLLs", replace: pbsShape.replace, failAfter: true, stopsAt: "$emudscanFiles after"},
@@ -286,6 +291,9 @@ func TestPySSLFixInPowerShell(t *testing.T) {
 				t.Parallel() // each case in its own folders
 				if c.inUse && runtime.GOOS != "windows" {
 					t.Skip("a file in use can be replaced on this system")
+				}
+				if _, err := exec.LookPath("bsdtar"); c.zip && runtime.GOOS != "windows" && err != nil {
+					t.Skip("the tar of this system does not read a zip")
 				}
 				os.MkdirAll(run, 0o755)
 				f, dir := psFixture(t, c, python, root, run)
@@ -326,6 +334,10 @@ func TestPySSLFixInPowerShell(t *testing.T) {
 				}
 				if strings.Join(script, "\n") != strings.Join(unit.cmds, "\n") {
 					t.Errorf("the script of the console:\n%s\nwant:\n%s", strings.Join(script, "\n"), strings.Join(unit.cmds, "\n"))
+				}
+				// the folder of the fix, which the commands name $emudscanFiles, is shown
+				if !strings.Contains(report, "  "+markOK+" $emudscanFiles\n      "+run+"\n") {
+					t.Errorf("the folder of the fix is not shown:\n%s", report)
 				}
 				switch {
 				case c.stopsAt == "" && len(failed) > 0:
@@ -424,6 +436,9 @@ func TestPySSLAloneInPowerShell(t *testing.T) {
 				if c.inUse && runtime.GOOS != "windows" {
 					t.Skip("a file in use can be replaced on this system")
 				}
+				if _, err := exec.LookPath("bsdtar"); c.zip && runtime.GOOS != "windows" && err != nil {
+					t.Skip("the tar of this system does not read a zip")
+				}
 				download := filepath.Join(temp, "eMudScan-fix")
 				os.MkdirAll(download, 0o755)
 				f, dir := psFixture(t, c, python, root, download)
@@ -454,6 +469,9 @@ func TestPySSLAloneInPowerShell(t *testing.T) {
 				if (err == nil) != c.fixed || c.stopsAt != "" && !strings.Contains(tight(string(out)), tight(c.stopsAt)) {
 					t.Errorf("%v, want fixed %v and %q:\n%s", err, c.fixed, c.stopsAt, out)
 				}
+				if c.failAfter && !strings.Contains(tight(string(out)), tight(T("pyssl.a.noNewSsl"))) { // why the files were put back
+					t.Errorf("no %q:\n%s", T("pyssl.a.noNewSsl"), out)
+				}
 				want := map[string]string{"_hashlib.pyd": "old", "libssl-3.dll": "old", "libcrypto-3.dll": "old"}
 				for _, n := range c.replace {
 					want[n] = "old"
@@ -468,6 +486,10 @@ func TestPySSLAloneInPowerShell(t *testing.T) {
 				}
 				if got := folderState(dir); fmt.Sprint(got) != fmt.Sprint(want) {
 					t.Errorf("the folder: %v\nwant: %v\n%s", got, want, out)
+				}
+				// a download that is not the expected one is deleted: the next run downloads it again
+				if _, err := os.Stat(filepath.Join(download, f.py.plan.src.name()+".tar.gz")); c.badSum && err == nil {
+					t.Error("the wrong download is still there")
 				}
 				// the download: deleted at the end; else left for the next time
 				if _, err := os.Stat(download); (err != nil) != c.fixed {

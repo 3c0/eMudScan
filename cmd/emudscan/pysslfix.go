@@ -234,6 +234,9 @@ func pySSLScript(exe string, plan pySSLPlan, admin, alone, backups bool) (lines 
 		lines = append(lines, "& {", indent+"$ErrorActionPreference = 'Stop'", "")
 		title("pyssl.a.python")
 	} else {
+		// what $emudscanFiles is, which the commands use: said, then shown when the fix runs
+		title("pyssl.s.folder", pyCheckName)
+		add("$emudscanFiles")
 		title("pyssl.s.python")
 	}
 	add("$python = "+psPath(exe, admin), "$folder = "+psPath(plan.dir, admin), "$files  = "+list(plan.replace))
@@ -258,16 +261,25 @@ func pySSLScript(exe string, plan pySSLPlan, admin, alone, backups bool) (lines 
 	add("$url     = "+psQuote(plan.src.url), "$sha256  = "+psQuote(plan.src.sha256), `$archive = "`+dir+`\`+plan.src.name()+ext+`"`,
 		`[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12`)
 	fetch = len(lines)
-	add(`if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $archive }`,
-		`if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { throw `+psQuote(T("pyssl.badSum"))+` }`)
+	add(`if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $archive }`)
+	if alone { // its folder stays when it stops: without the file, which the next run would take for a new download
+		add(`if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { Remove-Item -LiteralPath $archive; throw ` + psQuote(T("pyssl.badSum")) + ` }`)
+	} else {
+		add(`if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { throw ` + psQuote(T("pyssl.badSum")) + ` }`)
+	}
 
 	title("pyssl.s.unpack")
 	members := strings.Join(prefixAll("python/DLLs/", append(append([]string(nil), plan.replace...), plan.added...)), " ")
 	switch {
 	case plan.src.zip:
+		// python.org's package is a zip, which Windows' tar reads too: as for the other
+		// download, its files are named one by one, and tar fails when one is missing.
+		// Not Expand-Archive: a function of a module, which shows its progress bar
+		// whatever the script sets, and leaves it on the screen
 		add(`$new = "`+dir+`\`+plan.src.name()+`"`,
-			`Expand-Archive -LiteralPath $archive -DestinationPath $new -Force`,
-			`if (`+all+` | Where-Object { -not (Test-Path -LiteralPath "$new\$_") }) { throw `+psQuote(T("pyssl.missing"))+` }`)
+			`New-Item -ItemType Directory -Force -Path $new | Out-Null`,
+			`& "$env:SystemRoot\System32\tar.exe" -xf $archive -C $new `+strings.Join(append(append([]string(nil), plan.replace...), plan.added...), " "))
+		failed("pyssl.missing")
 	case alone:
 		add(`$new = "$temp\python\DLLs"`, `& "$env:SystemRoot\System32\tar.exe" -xzf $archive -C $temp `+members)
 		failed("pyssl.missing")
@@ -297,7 +309,11 @@ func pySSLScript(exe string, plan pySSLPlan, admin, alone, backups bool) (lines 
 	if alone {
 		add("    if ($LASTEXITCODE -ne 0) { throw " + psQuote(T("pyssl.a.noNewSsl")) + " }")
 	}
-	add("}", "catch {", "    "+each("$files", `Move-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak" -Destination "$folder\$_" -Force`))
+	add("}", "catch {")
+	if alone { // why: the error of the copy or of the test, which eMudScan shows under its command
+		add("    Write-Warning $_")
+	}
+	add("    " + each("$files", `Move-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak" -Destination "$folder\$_" -Force`))
 	if added {
 		add("    " + each("$added", `Remove-Item -LiteralPath "$folder\$_", "$folder\$_.emudscan-$stamp.added" -ErrorAction Ignore`))
 	}
