@@ -3,16 +3,19 @@ package main
 // The other fixes that are scripts, run for real in each PowerShell (testPowerShells),
 // as the Fix function runs them and as the details give them: the certificate bundle,
 // downloaded from a server of the test in place of curl.se; the Java block list; the
-// restore of backups.
+// restore of backups; the node.exe of a program, with a stand-in for its download.
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -37,8 +40,9 @@ func backupsOf(t *testing.T, file string) []string {
 	return out
 }
 
-// runAlone runs the lines of a fix as the details give them, saved as a script.
-func runAlone(t *testing.T, ps string, lines []string) (string, bool) {
+// runAlone runs the lines of a fix as the details give them, saved as a script, with
+// the variables env added to the environment.
+func runAlone(t *testing.T, ps string, lines []string, env ...string) (string, bool) {
 	t.Helper()
 	script := filepath.Join(t.TempDir(), "alone.ps1")
 	os.WriteFile(script, append([]byte{0xEF, 0xBB, 0xBF}, strings.Join(psAdapt(lines), "\r\n")...), 0o644)
@@ -48,6 +52,7 @@ func runAlone(t *testing.T, ps string, lines []string) (string, bool) {
 			cmd.Env = append(cmd.Env, e)
 		}
 	}
+	cmd.Env = append(cmd.Env, env...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err == nil
 }
@@ -206,6 +211,191 @@ func TestJavaAndRestoreInPowerShell(t *testing.T) {
 				}
 				if b := backupsOf(t, list); len(b) != 0 {
 					t.Errorf("backups left: %q", b)
+				}
+			})
+		}
+	}
+}
+
+// standInNode builds, in dir, a program that stands in for node.exe: with --version, it
+// shows the version written at its end, after "version=". It gives the program, with v
+// written at its end.
+func standInNode(t *testing.T, dir string) func(v string) []byte {
+	t.Helper()
+	os.MkdirAll(dir, 0o755)
+	os.WriteFile(filepath.Join(dir, "main.go"), []byte(`package main
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+)
+
+func main() {
+	exe, _ := os.Executable()
+	b, _ := os.ReadFile(exe)
+	if i := bytes.LastIndex(b, []byte("\nversion=")); i >= 0 && len(os.Args) == 2 && os.Args[1] == "--version" {
+		fmt.Println(string(bytes.TrimSpace(b[i+len("\nversion="):])))
+		return
+	}
+	os.Exit(9)
+}
+`), 0o644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/node\n\ngo 1.21\n"), 0o644)
+	exe := filepath.Join(dir, "node.exe")
+	cmd := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-o", exe, ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOFLAGS=")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Skipf("cannot build the stand-in node.exe: %v\n%s", err, out)
+	}
+	data, err := os.ReadFile(exe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return func(v string) []byte { return append(append([]byte(nil), data...), "\nversion="+v+"\n"...) }
+}
+
+// The node.exe of a program: replaced, after its backup, with the download, when it is
+// the expected one (its SHA-256, its signature by the OpenJS Foundation, the version it
+// gives) and the program is closed; unchanged when one of them is not, or when the
+// download fails, which stops all the fixes. The download is already in its folder: the
+// commands name a server that cannot be reached. Only Windows checks signatures: the
+// test gives the signature, but in one case, on Windows, where the stand-in, which is
+// not signed, is checked for real.
+func TestNodeFixInPowerShell(t *testing.T) {
+	Lang = 0
+	shells := testPowerShells(t)
+	base := t.TempDir() // the folders of the cases are in it, by number: short paths, for Windows PowerShell
+	download := standInNode(t, filepath.Join(base, "build"))
+	signed := func(status, subject string) string {
+		return "$signature = [pscustomobject]@{ Status = '" + status + "'; SignerCertificate = [pscustomobject]@{ Subject = '" + subject + "' } }"
+	}
+	openJS := signed("Valid", "CN=OpenJS Foundation, O=OpenJS Foundation, L=San Francisco, S=California, C=US")
+	badSignature, badVersion := T("node.badSignature"), T("node.badVersion")
+	type nodeCase struct {
+		name          string
+		backup, alone bool
+		signature     string // the line in place of Get-AuthenticodeSignature; "" for Windows' own
+		version       string // what the download gives with --version
+		badSum        bool   // the download is not the one the commands name
+		inUse         bool   // the program is running (Windows)
+		offline       bool   // no download, and no server
+		stopsAt       string // the command that fails, by a part of it; "" when none does
+		says          string // what it says
+	}
+	cases := []nodeCase{
+		{name: "fixed", backup: true, signature: openJS, version: "v22.23.5"},
+		{name: "fixed, no backups", signature: openJS, version: "v22.23.5"},
+		{name: "another download", backup: true, signature: openJS, version: "v22.23.5", badSum: true, stopsAt: "Get-FileHash", says: T("fix.badSum")},
+		{name: "another signer", backup: true, signature: signed("Valid", "CN=OpenJS Foundation, O=Example Signer, C=US"), version: "v22.23.5", stopsAt: "$signature.Status", says: badSignature},
+		{name: "a longer name", backup: true, signature: signed("Valid", "CN=Example Signer, O=OpenJS Foundation Example, C=US"), version: "v22.23.5", stopsAt: "$signature.Status", says: badSignature},
+		{name: "a signature not valid", backup: true, signature: signed("HashMismatch", "CN=OpenJS Foundation, O=OpenJS Foundation, C=US"), version: "v22.23.5", stopsAt: "$signature.Status", says: badSignature},
+		{name: "not signed", backup: true, version: "v22.23.5", stopsAt: "$signature.Status", says: badSignature},
+		{name: "another version", backup: true, signature: openJS, version: "v22.23.4", stopsAt: "--version", says: badVersion},
+		{name: "in use", backup: true, signature: openJS, version: "v22.23.5", inUse: true, stopsAt: "[IO.File]::Open", says: "node.exe"},
+		{name: "no server", backup: true, signature: openJS, offline: true, stopsAt: "Invoke-WebRequest"},
+	}
+	for _, c := range cases {
+		if c.offline || c.name == "fixed, no backups" {
+			continue
+		}
+		c.name, c.alone = c.name+", alone", true
+		cases = append(cases, c)
+	}
+	n := 0
+	for version, ps := range shells {
+		for _, c := range cases {
+			n++
+			root, run := filepath.Join(base, fmt.Sprint(n), "a"), filepath.Join(base, fmt.Sprint(n), "r")
+			t.Run("PowerShell "+version+"/"+c.name, func(t *testing.T) {
+				t.Parallel()
+				if (c.inUse || c.signature == "") && runtime.GOOS != "windows" {
+					t.Skip("only Windows checks this")
+				}
+				exe := filepath.Join(root, "Example App 1", "resources", "node.exe")
+				os.MkdirAll(filepath.Dir(exe), 0o755)
+				os.WriteFile(exe, []byte("old node.exe"), 0o644)
+				created := fileCreated(exe)
+				data := download(c.version)
+				sum := sha256.Sum256(data)
+				f := nodeFix(exe, nodeSource{version: "22.23.5", arch: "win-x64", sha256: hex.EncodeToString(sum[:])})
+				if c.badSum {
+					data = append(data, "changed"...)
+				}
+				folder := run // where the commands look for the download
+				if c.alone {
+					folder = filepath.Join(run, "eMudScan-fix")
+				}
+				os.MkdirAll(folder, 0o755)
+				if !c.offline {
+					os.WriteFile(filepath.Join(folder, "node-22.23.5-win-x64.exe"), data, 0o755)
+				}
+				if c.inUse {
+					held, err := os.Open(exe)
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer held.Close()
+				}
+				adapt := func(lines []string) []string {
+					var out []string
+					for _, l := range lines {
+						l = strings.ReplaceAll(l, "https://nodejs.org/", "http://127.0.0.1:9/")
+						if c.signature != "" && strings.TrimSpace(l) == "$signature = Get-AuthenticodeSignature -LiteralPath $new" {
+							l = strings.Replace(l, "$signature = Get-AuthenticodeSignature -LiteralPath $new", c.signature, 1)
+						}
+						out = append(out, l)
+					}
+					return psAdapt(out)
+				}
+				var report string
+				fixed := c.stopsAt == ""
+				if c.alone {
+					out, ok := runAlone(t, ps, adapt(f.Alone), "TEMP="+run)
+					if ok != fixed || !fixed && !strings.Contains(errorText(out), tightText(c.says)) {
+						t.Errorf("ran: %v, want fixed %v and %q\n%s", ok, fixed, c.says, out)
+					}
+					report = out
+					// the download: deleted at the end, or when it is not the expected one; else
+					// left for the next time
+					if _, err := os.Stat(folder); (err != nil) != fixed {
+						t.Errorf("the folder of the download: %v, with fixed %v", err, fixed)
+					}
+					if _, err := os.Stat(filepath.Join(folder, "node-22.23.5-win-x64.exe")); c.badSum && err == nil {
+						t.Error("the wrong download is still there")
+					}
+				} else {
+					unit := (&fixRunner{backup: c.backup}).unit(Item{ID: 1, Name: "Example App 1"}, f)
+					unit.cmds = adapt(unit.cmds)
+					lines, res := psRun(t, ps, run, []fixUnit{unit})
+					report = strings.Join(reportLines(lines), "\n")
+					if len(res) != 1 || !res[0].ran || res[0].ok != fixed || res[0].halted != c.offline || !strings.Contains(report, c.says) {
+						t.Errorf("result %+v, want fixed %v and %q\n%s", res, fixed, c.says, report)
+					}
+					var failed []string
+					for i, l := range lines {
+						if l.kind == lineFailed && i > 0 {
+							failed = append(failed, lines[i-1].text)
+						}
+					}
+					if !fixed && (len(failed) != 1 || !strings.Contains(failed[0], c.stopsAt)) || fixed && len(failed) > 0 {
+						t.Errorf("failed: %q, want %q\n%s", failed, c.stopsAt, report)
+					}
+				}
+				want, backups := []byte("old node.exe"), 0
+				if fixed {
+					want = data
+					if c.backup {
+						backups = 1
+					}
+				}
+				if got, _ := os.ReadFile(exe); !bytes.Equal(got, want) {
+					t.Errorf("node.exe: %.20q, want %.20q\n%s", got, want, report)
+				}
+				found, _ := filepath.Glob(exe + ".emudscan-*.bak")
+				if len(found) != backups || backups == 1 && (fileText(found[0]) != "old node.exe" || fileCreated(found[0]) != created) {
+					t.Errorf("backups %q\n%s", found, report)
 				}
 			})
 		}

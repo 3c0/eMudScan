@@ -117,15 +117,31 @@ another processor, is left as it is.
 
 Node.js 22.23.4, 24.22.1 and 26.12.1, and the later releases of these lines, no
 longer trust the compromised intermediates. A node.exe inside another program,
-of one of these release lines, can be replaced with the latest release of its
-line from nodejs.org, the same major version, so that the program’s native
-modules keep working. Before copying it, after backing up the original,
-PowerShell checks its SHA-256 against the `SHASUMS256.txt` that Node.js
-publishes, its signature by the OpenJS Foundation and its version. This fix is
-not ticked by default in the **Fix software** window, since it changes a program
-that its publisher has not updated yet; close that program first. Deno 2.9.8 is
-fixed: a Deno installed with its own installer is updated with `deno upgrade`,
-one installed with a package manager with that package manager.
+of one of these release lines, can be replaced with nodejs.org’s node.exe of the
+latest release of its line, for the same processor: the same major version, so
+that the program’s native modules keep working. nodejs.org builds no 32-bit
+node.exe for Node.js 24 and later, so such a node.exe cannot be replaced. The
+commands name one release, by its URL. PowerShell checks the download against
+the SHA-256 written in them, then its signature by the OpenJS Foundation and the
+version it gives. Only then does it back up the original and replace it.
+eMudScan itself finds that release when a Fix window opens: in nodejs.org’s list
+of releases (`index.json`), then in the list of SHA-256 of that release
+(`SHASUMS256.txt`). When it finds none, or when **Allow the online test** is
+cleared, the commands name the release written in eMudScan (Node.js 22.23.5,
+24.22.3 or 26.13.1), and the window says so. The SHA-256 checksums of these
+releases come from their `SHASUMS256.txt`, signed by a releaser of Node.js. The
+signed files are in [cmd/emudscan/testdata/node](../cmd/emudscan/testdata/node),
+and the tests check that eMudScan has their values. To check a signature, import
+the [Node.js release keys](https://github.com/nodejs/node#release-keys), then
+run `gpg --verify v22.23.5-SHASUMS256.txt.asc`. As for a Python, the fix is a
+script that stops at its first command that fails, and the detailed information
+gives the version that runs without eMudScan: it downloads into the
+`eMudScan-fix` folder of your Temp folder, and deletes that folder at its end.
+This fix is not ticked by default in the **Fix software** window, since it
+changes a program that its publisher has not updated yet; close that program
+first. Deno 2.9.8 is fixed: a Deno installed with its own installer is updated
+with `deno upgrade`, one installed with a package manager with that package
+manager.
 
 Certificate bundles are not judged by their version: each one is tested against
 the 12 test chains, so the result shows whether that file would really accept a

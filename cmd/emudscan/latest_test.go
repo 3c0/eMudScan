@@ -164,8 +164,8 @@ func TestLatestPySSL(t *testing.T) {
 	// once for each source
 	asked = nil
 	look := latestLooker()
-	look(pbsSSL["3.11"])
-	look(pbsSSL["3.11"])
+	look.py(pbsSSL["3.11"])
+	look.py(pbsSSL["3.11"])
 	if len(asked) != 1 {
 		t.Errorf("asked %v", asked)
 	}
@@ -198,14 +198,14 @@ func TestUseLatest(t *testing.T) {
 		t.Fatalf("fixes: %+v\n%s", old.Fixes, old.Details)
 	}
 	newer := pySSLSource{version: "3.11.19", sha256: testSum, tag: "20270105", url: pbsReleases + "download/20270105/cpython-3.11.19%2B20270105-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"}
-	found := func(s pySSLSource) (pySSLSource, bool) { return newer, s == pbsSSL["3.11"] }
+	found := latestLook{py: func(s pySSLSource) (pySSLSource, bool) { return newer, s == pbsSSL["3.11"] }}
 
 	// the same release: nothing changes
-	if changed := tp.c.useLatest([]int{id}, func(s pySSLSource) (pySSLSource, bool) { return s, true }, "not found"); len(changed) != 0 {
+	if changed := tp.c.useLatest([]int{id}, latestLook{py: func(s pySSLSource) (pySSLSource, bool) { return s, true }}, "not found"); len(changed) != 0 {
 		t.Errorf("same release: %d changed", len(changed))
 	}
 	// not found: the same commands, with a note
-	changed := tp.c.useLatest([]int{id}, func(pySSLSource) (pySSLSource, bool) { return pySSLSource{}, false }, T("fix.latestNotFound"))
+	changed := tp.c.useLatest([]int{id}, notLooking, T("fix.latestNotFound"))
 	got, _ := tp.c.get(id)
 	if len(changed) != 1 || got.Details != old.Details || got.Fixes[0].key() != old.Fixes[0].key() || got.Fixes[0].Note != T("fix.latestNotFound") || old.Fixes[0].Note != "" {
 		t.Errorf("not found: %d changed, note %q", len(changed), got.Fixes[0].Note)
@@ -249,4 +249,175 @@ func hasLine(lines []fixLine, l fixLine) bool {
 		}
 	}
 	return false
+}
+
+// nodeIndexOf is a copy of nodejs.org's list of releases (index.json), with its fields,
+// for the versions given.
+func nodeIndexOf(versions ...string) []byte {
+	var rel []string
+	for _, v := range versions {
+		rel = append(rel, `{"version":"v`+v+`","date":"2026-11-10","files":["linux-x64","win-arm64-zip","win-x64-exe","win-x64-zip","win-x86-exe"],"npm":"11.6.2","v8":"13.6.233.10","uv":"1.51.0","zlib":"1.3.1","openssl":"3.5.4","modules":"137","lts":"Jod","security":true}`)
+	}
+	return []byte("[" + strings.Join(rel, ",") + "]")
+}
+
+// nodejs.org's list of releases gives the latest release of the line of the node.exe
+// written in eMudScan, by its version, whatever the order of the list: never another
+// line or a pre-release, and none that is older than the one written in eMudScan.
+func TestNodeLatestIn(t *testing.T) {
+	index := nodeIndexOf("26.13.2", "24.23.0", "22.9.0", "22.24.1", "22.24.0", "220.1.0", "22.25.0-rc.1", "2.2.0", "24.22.3", "22.23.5")
+	for known, want := range map[nodeSource]string{nodeExe[22]["win-x64"]: "22.24.1", nodeExe[24]["win-arm64"]: "24.23.0", nodeExe[26]["win-x64"]: "26.13.2"} {
+		if got, ok := nodeLatestIn(index, known); !ok || got != want {
+			t.Errorf("%s: %v %q, want %q", known.version, ok, got, want)
+		}
+	}
+	// the same release as the one written in eMudScan
+	if got, ok := nodeLatestIn(nodeIndexOf("22.23.5", "22.23.4"), nodeExe[22]["win-x86"]); !ok || got != "22.23.5" {
+		t.Errorf("same release: %v %q", ok, got)
+	}
+	for name, l := range map[string][]byte{
+		"no release of the line": nodeIndexOf("24.23.0", "220.1.0"),
+		"an older release":       nodeIndexOf("22.23.4", "22.9.0"),
+		"a pre-release only":     nodeIndexOf("22.25.0-rc.1"),
+		"not a list":             []byte("<html>Not Found</html>"),
+		"empty":                  nil,
+	} {
+		if got, ok := nodeLatestIn(l, nodeExe[22]["win-x64"]); ok {
+			t.Errorf("%s: %q", name, got)
+		}
+	}
+}
+
+// The list of SHA-256 of a release (SHASUMS256.txt) gives the SHA-256 of its node.exe
+// for the processor: none when the release has none for it, as the 32-bit one of
+// Node.js 24. The lists are those of testdata/node, with CRLF lines too.
+func TestNodeSumIn(t *testing.T) {
+	for _, src := range []nodeSource{nodeExe[22]["win-x86"], nodeExe[24]["win-arm64"], nodeExe[26]["win-x64"]} {
+		data, err := os.ReadFile(filepath.Join("testdata", "node", "v"+src.version+"-SHASUMS256.txt.asc"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, text := range []string{string(data), strings.ReplaceAll(string(data), "\n", "\r\n")} {
+			if got, ok := nodeSumIn(text, src.arch); !ok || got != src.sha256 {
+				t.Errorf("%s %s: %v %q", src.version, src.arch, ok, got)
+			}
+		}
+		if src.version == "24.22.3" {
+			if got, ok := nodeSumIn(string(data), "win-x86"); ok {
+				t.Errorf("a 32-bit node.exe for Node.js 24: %q", got)
+			}
+		}
+	}
+	// only the node.exe of the processor, as a whole line
+	for name, l := range map[string]string{
+		"another file":      testSum + "  win-x64/node.lib\n" + testSum + "  node-v22.24.1-win-x64.zip\n",
+		"another processor": testSum + "  win-arm64/node.exe\n",
+		"a longer name":     testSum + "  xwin-x64/node.exe\n" + testSum + "  win-x64/node.exe.sig\n",
+		"not a SHA-256":     testSum[:63] + "  win-x64/node.exe\n",
+		"not a list":        "<html>Not Found</html>",
+	} {
+		if got, ok := nodeSumIn(l, "win-x64"); ok {
+			t.Errorf("%s: %q", name, got)
+		}
+	}
+}
+
+// latestNode asks nodejs.org for its list of releases, then, for a release that is not
+// the one written in eMudScan, for its list of SHA-256; nothing without a connection.
+// Once for each node.exe: those of the same release and processor share the answer.
+func TestLatestNode(t *testing.T) {
+	defer func(f func(string, string, int) ([]byte, bool)) { httpsGet = f }(httpsGet)
+	httpsGet = nil
+	if _, ok := latestNode(nodeExe[22]["win-x64"]); ok {
+		t.Error("found without a connection")
+	}
+	var asked []string
+	index := nodeIndexOf("24.22.3", "22.24.1", "22.23.5")
+	sums := testSum + "  win-x64/node.exe\n" + strings.Repeat("1", 64) + "  win-arm64/node.exe\n"
+	httpsGet = func(host, path string, max int) ([]byte, bool) {
+		asked = append(asked, host+path)
+		switch {
+		case host == "nodejs.org" && path == "/dist/index.json":
+			return index, true
+		case host == "nodejs.org" && path == "/dist/v22.24.1/SHASUMS256.txt":
+			return []byte(sums), true
+		}
+		return nil, false
+	}
+	want := nodeSource{version: "22.24.1", arch: "win-x64", sha256: testSum}
+	if got, ok := latestNode(nodeExe[22]["win-x64"]); !ok || got != want || got.url() != "https://nodejs.org/dist/v22.24.1/win-x64/node.exe" {
+		t.Errorf("newer: %v %+v", ok, got)
+	}
+	if strings.Join(asked, " ") != "nodejs.org/dist/index.json nodejs.org/dist/v22.24.1/SHASUMS256.txt" {
+		t.Errorf("asked %v", asked)
+	}
+	// the release written in eMudScan: its SHA-256 is known, no second request
+	asked = nil
+	if got, ok := latestNode(nodeExe[24]["win-x64"]); !ok || got != nodeExe[24]["win-x64"] || len(asked) != 1 {
+		t.Errorf("same release: %v %+v, asked %v", ok, got, asked)
+	}
+	// a release without a node.exe for the processor, or without its list: none found
+	if got, ok := latestNode(nodeExe[22]["win-x86"]); ok {
+		t.Errorf("no 32-bit node.exe: %+v", got)
+	}
+	sums = ""
+	if got, ok := latestNode(nodeExe[22]["win-x64"]); ok {
+		t.Errorf("no list: %+v", got)
+	}
+	// once for each node.exe
+	sums = testSum + "  win-x64/node.exe\n"
+	asked = nil
+	look := latestLooker()
+	look.node(nodeExe[22]["win-x64"])
+	look.node(nodeExe[22]["win-x64"])
+	if len(asked) != 2 {
+		t.Errorf("asked %v", asked)
+	}
+	look.node(nodeExe[22]["win-arm64"])
+	if len(asked) != 4 {
+		t.Errorf("another processor: asked %v", asked)
+	}
+}
+
+// When a Fix window opens, the fix that replaces a node.exe is written again for the
+// latest release of its line: its URL, its SHA-256 and the version it checks, in the
+// fix and in the details. A release that is not found leaves the commands as they are,
+// with a note; the same release changes nothing.
+func TestUseLatestNode(t *testing.T) {
+	Lang = 0
+	exe := filepath.Join(t.TempDir(), "Example App 38", "resources", "node.exe")
+	fakeExeFor(t, exe, pe.IMAGE_FILE_MACHINE_AMD64)
+	c := newChecker(nopReporter{}, nil)
+	id := c.add(GroupApps, "node", "Node.js", result{Status: StWarn, Summary: "Update to 22.23.4 or later", File: exe,
+		Details: "Outdated.\n\n" + nodeReplaceAdvice(exe, 22, "22.23.4", "Example App 38")}).ID
+	old, _ := c.get(id)
+	if len(old.Fixes) != 1 || old.Fixes[0].node == nil || !strings.Contains(old.Details, nodeExe[22]["win-x64"].url()) {
+		t.Fatalf("fixes: %+v\n%s", old.Fixes, old.Details)
+	}
+	newer := nodeSource{version: "22.24.1", arch: "win-x64", sha256: testSum}
+	found := latestLook{node: func(s nodeSource) (nodeSource, bool) { return newer, s == nodeExe[22]["win-x64"] }}
+
+	if changed := c.useLatest([]int{id}, latestLook{node: func(s nodeSource) (nodeSource, bool) { return s, true }}, "not found"); len(changed) != 0 {
+		t.Errorf("same release: %d changed", len(changed))
+	}
+	changed := c.useLatest([]int{id}, notLooking, T("fix.latestNotFound"))
+	got, _ := c.get(id)
+	if len(changed) != 1 || got.Details != old.Details || got.Fixes[0].key() != old.Fixes[0].key() || got.Fixes[0].Note != T("fix.latestNotFound") {
+		t.Errorf("not found: %d changed, note %q", len(changed), got.Fixes[0].Note)
+	}
+	changed = c.useLatest([]int{id}, found, "not found")
+	got, _ = c.get(id)
+	f := got.Fixes[0]
+	all := strings.Join(f.Cmds, "\n")
+	if len(changed) != 1 || f.Kind != fixNode || f.Note != "" || !f.Optional || len(f.Cmds) != len(old.Fixes[0].Cmds) ||
+		!strings.Contains(all, "\n$url    = '"+newer.url()+"'\n$sha256 = '"+testSum+"'\n") || !strings.Contains(all, "-ne 'v22.24.1') { throw") ||
+		strings.Contains(all, "22.23.5") {
+		t.Errorf("found: %d changed\n%s", len(changed), all)
+	}
+	if !strings.Contains(got.Details, f.lines()) || strings.Contains(got.Details, "22.23.5") {
+		t.Errorf("details:\n%s", got.Details)
+	}
+	if again := fixesIn(got.Details); len(again) != 1 || again[0].key() != f.key() || again[0].node == nil || again[0].node.src != newer {
+		t.Errorf("the details do not give the new fix: %+v", again)
+	}
 }

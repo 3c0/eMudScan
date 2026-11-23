@@ -59,9 +59,11 @@ type fixAction struct {
 	// Note is a line that the Fix window shows above the commands, such as the release
 	// that could not be looked for.
 	Note string
-	// py, for a fix that replaces the ssl files of a Python (pySSLFix): what it was made
-	// for, to make it again for the latest release when a Fix window opens (latest.go).
-	py *pySSLTarget
+	// py, for a fix that replaces the ssl files of a Python (pySSLFix), and node, for one
+	// that replaces a node.exe (nodeFix): what it was made for, to make it again for the
+	// latest release when a Fix window opens (latest.go).
+	py   *pySSLTarget
+	node *nodeTarget
 	// Optional: the fix replaces a component inside a program (its node.exe, the ssl
 	// files of its Python), a heavier change than the others, which the Fix window does
 	// not tick: the user ticks it, or clicks Select All.
@@ -70,9 +72,6 @@ type fixAction struct {
 	// anything, by their place (the same in Cmds and Plain): when one fails, the fix has
 	// changed nothing, and the run stops there (fixScript).
 	Fetch []int
-	// Cleanup: the last command removes what the fix downloaded; it runs even when a
-	// download fails and the run stops.
-	Cleanup bool
 	// Servers are, for an update, the servers that its package manager needs: when the
 	// update fails and none of them can be reached, the run stops there (fixScript).
 	Servers []string

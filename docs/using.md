@@ -176,9 +176,10 @@ same script with eMudScan’s own tests of that Python (see
   curl publishes;
 - the compromised certificates added to a Java block list;
 - the node.exe inside a program replaced with the latest release of its Node.js
-  release line, which PowerShell downloads from nodejs.org and checks against
-  the SHA-256 checksum that Node.js publishes, the OpenJS Foundation’s signature
-  and its version; this fix is not ticked by default;
+  release line, which eMudScan looks for when the Fix window opens, and which
+  PowerShell downloads from nodejs.org and checks against its SHA-256 checksum,
+  the OpenJS Foundation’s signature and its version (see
+  [Other software](checks.md#other-software)); this fix is not ticked by default;
 - the ssl files of a Python inside a program replaced with those of the latest
   release of its line, which eMudScan looks for when the Fix window opens, and
   which PowerShell downloads from python.org or python-build-standalone and

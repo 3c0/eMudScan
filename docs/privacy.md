@@ -51,9 +51,8 @@ Fixes connect to the internet once you accept the warning, whether or not
   SHA-256 checksum from [curl.se](https://curl.se/docs/caextract.html), which
   sees your IP address and the User-Agent of Windows PowerShell, which names its
   version, your Windows version and your language;
-- replacing a node.exe downloads the list of Node.js releases, the SHA-256
-  checksums of the chosen release and its node.exe from
-  [nodejs.org](https://nodejs.org/dist/), which sees the same;
+- replacing a node.exe downloads the node.exe of the release that its commands
+  name from [nodejs.org](https://nodejs.org/dist/), which sees the same;
 - replacing the ssl files of a Python downloads the release that its commands
   name from [python.org](https://www.python.org/ftp/python/) (its embeddable
   package) or from GitHub (the build of
@@ -73,18 +72,21 @@ Adding the compromised certificates to a Java block list connects to nothing.
 
 ## The latest release, looked for when a Fix window opens
 
-The commands that replace the ssl files of a Python name one release. During
-the scan, they name the release written in eMudScan. When a Fix window opens
-for such a fix, and **Allow the online test** is checked, eMudScan itself looks
-for the latest release, before you accept anything, so that the window shows
-the commands that will run:
+The commands that replace the ssl files of a Python, or a node.exe, name one
+release. During the scan, they name the release written in eMudScan. When a Fix
+window opens for such a fix, and **Allow the online test** is checked, eMudScan
+itself looks for the latest release, before you accept anything, so that the
+window shows the commands that will run:
 
 - for python-build-standalone, one request to github.com for the list of
   SHA-256 checksums of its latest release, which GitHub redirects to the host
   that serves its files;
 - for python.org, one request to www.python.org for its list of releases, then
   one for the list of the files of a release, repeated for the release before
-  while the release has no Windows files.
+  while the release has no Windows files;
+- for Node.js, one request to nodejs.org for its list of releases, then, when
+  the latest release of the line is not the one written in eMudScan, one for the
+  list of the SHA-256 checksums of that release.
 
 These requests go through Windows (WinHTTP), as those of the online test, with
 the same User-Agent, without cookies, and through the proxy configured in

@@ -195,7 +195,7 @@ func (a *ui) lookLatest(ids []int) {
 	needed := false
 	for _, it := range a.fixItems(ids) {
 		for _, f := range it.Fixes {
-			needed = needed || f.py != nil
+			needed = needed || f.py != nil || f.node != nil
 		}
 	}
 	if !needed {
@@ -203,7 +203,7 @@ func (a *ui) lookLatest(ids []int) {
 	}
 	var changed []Item
 	if a.onlineOff {
-		changed = a.current.useLatest(ids, func(pySSLSource) (pySSLSource, bool) { return pySSLSource{}, false }, T("fix.latestOffline"))
+		changed = a.current.useLatest(ids, notLooking, T("fix.latestOffline"))
 	} else {
 		wait, _, _ := pLoadCursorW.Call(0, 32514 /* IDC_WAIT */)
 		before, _, _ := pSetCursor.Call(wait)

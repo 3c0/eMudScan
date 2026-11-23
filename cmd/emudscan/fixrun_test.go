@@ -63,14 +63,6 @@ func TestFixScript(t *testing.T) {
 	if !fixSimulation && !strings.Contains(s, "-notin 'NameResolutionFailure', 'ProxyNameResolutionFailure', 'ConnectFailure', 'Timeout') { return $true }") {
 		t.Errorf("the test of the servers:\n%s", s)
 	}
-	// a fix that cleans up: its last command runs before the script ends
-	fetch.Cleanup, fetch.Cmds, fetch.Fetch = true, []string{"tls", "download", "check", "remove the download"}, []int{1}
-	s = fixScript([]fixUnit{{fix: fetch, cmds: fetch.Cmds}}, `C:\Temp\fix.log`, "##m", nil)
-	if halt := strings.Index(s, "if ($emudscanFailed) {\nWrite-EmudscanLog '##m halt 0 1'\nWrite-EmudscanLog '##m cmd 0 3'\n"); !fixSimulation &&
-		(halt < 0 || !strings.Contains(s[halt:], "##m end 0 3 ") || !strings.Contains(s[halt:], "exit 0\n}\nWrite-EmudscanLog '##m cmd 0 2'") ||
-			strings.Count(s, "\nremove the download\n") != 2) {
-		t.Errorf("cleanup:\n%s", s)
-	}
 	script := []byte("Write-Output 1\n")
 	boot := fixBootstrap(`C:\Temp\fix.ps1`, script)
 	sum := sha256.Sum256(script)

@@ -994,11 +994,11 @@ func fixMarker() string {
 //
 // A failed connection ends the script, after a "halt" line in the log, so that the run
 // stops (unitResult.halted): a download of a fix that failed (fixAction.Fetch), before
-// the fix changed anything (its cleanup still runs: fixAction.Cleanup); an update that
-// failed, when none of the servers its package manager needs can be reached
-// (fixAction.Servers, Test-EmudscanServers). A failed update does not say why it failed
-// (its exit code is the same for a program in use), so the test decides; a failed
-// download stops the run in any case: its fix cannot go on.
+// the fix changed anything; an update that failed, when none of the servers its package
+// manager needs can be reached (fixAction.Servers, Test-EmudscanServers). A failed
+// update does not say why it failed (its exit code is the same for a program in use),
+// so the test decides; a failed download stops the run in any case: its fix cannot go
+// on.
 func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte) string {
 	var b strings.Builder
 	b.WriteString("$ErrorActionPreference = 'Continue'\n")
@@ -1061,11 +1061,6 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 			run(c)
 			halt := fmt.Sprintf("{ Write-EmudscanLog '%s halt %d %d'; exit 0 }\n", marker, u, c)
 			switch {
-			case unit.fix.fetches(c) && unit.fix.Cleanup && c < len(unit.cmds)-1:
-				// the last command removes what the fix downloaded: it runs before the end
-				fmt.Fprintf(&b, "if ($emudscanFailed) {\nWrite-EmudscanLog '%s halt %d %d'\n", marker, u, c)
-				run(len(unit.cmds) - 1)
-				b.WriteString("exit 0\n}\n")
 			case unit.fix.fetches(c):
 				b.WriteString("if ($emudscanFailed) " + halt)
 			case len(unit.fix.Servers) > 0:

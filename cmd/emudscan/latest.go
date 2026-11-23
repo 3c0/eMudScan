@@ -1,9 +1,10 @@
 package main
 
 // The latest release of what a fix downloads. The commands of a fix that replaces the
-// ssl files of a Python (pysslfix.go) name one release, with its SHA-256. The scan,
-// which connects to nothing, writes them for the release written in eMudScan. When a
-// Fix window opens, eMudScan looks for the latest release of the same minor version
+// ssl files of a Python (pysslfix.go), or a node.exe (nodefix.go), name one release,
+// with its SHA-256. The scan, which connects to nothing, writes them for the release
+// written in eMudScan. When a Fix window opens, eMudScan looks for the latest release of
+// the same line (the same minor version of Python, the same major version of Node.js)
 // and writes the commands again for it, so that the window shows, and runs, the
 // commands of that release:
 //
@@ -11,7 +12,9 @@ package main
 //     (SHA256SUMS; its releases are immutable);
 //   - python.org: in its list of releases, then in the list of the files of a release,
 //     with their SHA-256. A minor version that only gets security fixes has releases
-//     without Windows files: the package is the one of its latest release that has it.
+//     without Windows files: the package is the one of its latest release that has it;
+//   - nodejs.org: in its list of releases (index.json), then in the list of SHA-256 of
+//     that release (SHASUMS256.txt), which has its node.exe for each processor.
 //
 // A release that is found is used when it is at least the one written in eMudScan.
 // When none is found (no connection, a list that changed), the commands stay those
@@ -39,6 +42,8 @@ const (
 	pyorgHost     = "www.python.org"
 	pyorgReleases = "/api/v2/downloads/release/?is_published=true&pre_release=false&version=3"
 	pyorgFilesOf  = "/api/v2/downloads/release_file/?release="
+	nodeHost      = "nodejs.org"
+	nodeIndex     = "/dist/index.json"
 )
 
 // minorOf is the minor version of a version: "3.11" for "3.11.18".
@@ -116,6 +121,72 @@ func pyorgLatestIn(releases []byte, filesOf func(release string) ([]byte, bool),
 	return pySSLSource{}, false
 }
 
+// nodeLatestIn finds, in nodejs.org's list of releases (index.json), the latest release
+// of the line of known, the node.exe written in eMudScan: its version, which must be at
+// least known's. A release is named "v" and three numbers: never a pre-release.
+func nodeLatestIn(index []byte, known nodeSource) (string, bool) {
+	var list []struct {
+		Version string `json:"version"`
+	}
+	if json.Unmarshal(index, &list) != nil {
+		return "", false
+	}
+	line := regexp.MustCompile(`^v(` + regexp.QuoteMeta(strings.SplitN(known.version, ".", 2)[0]) + `\.\d+\.\d+)$`)
+	latest := ""
+	for _, r := range list {
+		if m := line.FindStringSubmatch(r.Version); m != nil && (latest == "" || ParseVersion(m[1]).Cmp(ParseVersion(latest)) > 0) {
+			latest = m[1]
+		}
+	}
+	if latest == "" || ParseVersion(latest).Cmp(ParseVersion(known.version)) < 0 {
+		return "", false
+	}
+	return latest, true
+}
+
+// nodeSumIn finds, in nodejs.org's list of SHA-256 of a release (SHASUMS256.txt), the
+// one of its node.exe for arch: its line is the SHA-256, two spaces, and the name of
+// the file, such as "win-x64/node.exe".
+func nodeSumIn(sums, arch string) (string, bool) {
+	line := regexp.MustCompile(`^([0-9a-f]{64})  ` + regexp.QuoteMeta(arch) + `/node\.exe$`)
+	for _, l := range strings.Split(sums, "\n") {
+		if m := line.FindStringSubmatch(strings.TrimRight(l, "\r")); m != nil {
+			return m[1], true
+		}
+	}
+	return "", false
+}
+
+// latestNode looks online for the latest release of the line of known, the node.exe
+// written in eMudScan, for the same processor; false when it finds none, or a release
+// without a node.exe for that processor. When it is known's release, its SHA-256 is
+// already known.
+func latestNode(known nodeSource) (nodeSource, bool) {
+	if httpsGet == nil {
+		return nodeSource{}, false
+	}
+	index, ok := httpsGet(nodeHost, nodeIndex, 8<<20)
+	if !ok {
+		return nodeSource{}, false
+	}
+	version, ok := nodeLatestIn(index, known)
+	if !ok {
+		return nodeSource{}, false
+	}
+	if version == known.version {
+		return known, true
+	}
+	sums, ok := httpsGet(nodeHost, "/dist/v"+version+"/SHASUMS256.txt", 1<<20)
+	if !ok {
+		return nodeSource{}, false
+	}
+	sum, ok := nodeSumIn(string(sums), known.arch)
+	if !ok {
+		return nodeSource{}, false
+	}
+	return nodeSource{version: version, arch: known.arch, sha256: sum}, true
+}
+
 // latestPySSL looks online for the latest release of the source known, the one
 // written in eMudScan; false when it finds none.
 func latestPySSL(known pySSLSource) (pySSLSource, bool) {
@@ -136,43 +207,86 @@ func latestPySSL(known pySSLSource) (pySSLSource, bool) {
 	return pyorgLatestIn(releases, func(release string) ([]byte, bool) { return httpsGet(pyorgHost, pyorgFilesOf+release, 1<<20) }, known)
 }
 
-// latestLooker gives look, which is latestPySSL, once for each source: several
-// Pythons of the same minor version share its answer.
-func latestLooker() func(pySSLSource) (pySSLSource, bool) {
+// latestLook gives the latest release of what fixes download, by kind of download
+// (latestPySSL, latestNode); false when it finds none.
+type latestLook struct {
+	py   func(pySSLSource) (pySSLSource, bool)
+	node func(nodeSource) (nodeSource, bool)
+}
+
+// notLooking is the latestLook of a Fix window that does not look for the latest
+// releases ("Allow the online test" cleared): it finds none.
+var notLooking = latestLook{
+	py:   func(pySSLSource) (pySSLSource, bool) { return pySSLSource{}, false },
+	node: func(nodeSource) (nodeSource, bool) { return nodeSource{}, false },
+}
+
+// latestLooker gives a latestLook that looks online (latestPySSL, latestNode), once for
+// each release: the fixes of the same release share its answer.
+func latestLooker() latestLook { return latestLook{py: latestPySSL, node: latestNode}.once() }
+
+// once is look, which looks once for each release, by its URL.
+func (look latestLook) once() latestLook {
+	return latestLook{py: onceEach(look.py, func(s pySSLSource) string { return s.url }), node: onceEach(look.node, nodeSource.url)}
+}
+
+// onceEach is look, which gives the answer of its first call for each key of what it is
+// asked for.
+func onceEach[T any](look func(T) (T, bool), key func(T) string) func(T) (T, bool) {
 	type answer struct {
-		src pySSLSource
-		ok  bool
+		found T
+		ok    bool
 	}
 	seen := map[string]answer{}
-	return func(known pySSLSource) (pySSLSource, bool) {
-		a, ok := seen[known.url]
-		if !ok {
-			a.src, a.ok = latestPySSL(known)
-			seen[known.url] = a
+	return func(known T) (T, bool) {
+		a, done := seen[key(known)]
+		if !done {
+			a.found, a.ok = look(known)
+			seen[key(known)] = a
 		}
-		return a.src, a.ok
+		return a.found, a.ok
 	}
 }
 
-// useLatest makes again the fixes of it that download a release (fixAction.py) for
-// the release that look finds for theirs, and writes their commands in its details
+// latest is the fix f made again for the latest release that look finds for what it
+// downloads; false when it finds none. download: f downloads a release that is looked
+// for (fixAction.py or node).
+func (look latestLook) latest(f fixAction) (nf fixAction, download, ok bool) {
+	switch {
+	case f.py != nil:
+		src, ok := look.py(f.py.plan.src)
+		if ok {
+			nf = f.py.fixFrom(src)
+		}
+		return nf, true, ok
+	case f.node != nil:
+		src, ok := look.node(f.node.src)
+		if ok {
+			nf = f.node.fixFrom(src)
+		}
+		return nf, true, ok
+	}
+	return nf, false, false
+}
+
+// useLatest makes again the fixes of it that download a release (fixAction.py or node)
+// for the release that look finds for theirs, and writes their commands in its details
 // in place of the old ones, so that the details show what the fix runs. A fix whose
 // release is not found keeps its commands, with the note notFound, which says why. It
 // tells whether it changed.
-func useLatest(it *Item, look func(pySSLSource) (pySSLSource, bool), notFound string) bool {
+func useLatest(it *Item, look latestLook, notFound string) bool {
 	fixes, changed := slices.Clone(it.Fixes), false // the copies of the element keep theirs
 	for i, f := range fixes {
-		if f.py == nil {
+		nf, download, ok := look.latest(f)
+		if !download {
 			continue
 		}
-		src, ok := look(f.py.plan.src)
 		if !ok {
 			if f.Note != notFound {
 				fixes[i].Note, changed = notFound, true
 			}
 			continue
 		}
-		nf := f.py.fixFrom(src)
 		if nf.key() == f.key() && f.Note == "" {
 			continue
 		}
@@ -190,37 +304,27 @@ func useLatest(it *Item, look func(pySSLSource) (pySSLSource, bool), notFound st
 
 // useLatest looks for the latest releases of what the fixes of the elements ids
 // download, before a Fix window opens for them, and makes these fixes again for them
-// (useLatest). The connections are made first, without holding the elements. It gives
-// the elements that changed, which are reported as after a check.
-func (c *checker) useLatest(ids []int, look func(pySSLSource) (pySSLSource, bool), notFound string) []Item {
-	answers := map[string]struct {
-		src pySSLSource
-		ok  bool
-	}{}
+// (useLatest). The connections are made first, once for each release, without holding
+// the elements. It gives the elements that changed, which are reported as after a check.
+func (c *checker) useLatest(ids []int, look latestLook, notFound string) []Item {
+	look = look.once()
+	asked := false
 	for _, id := range ids {
 		if it, ok := c.get(id); ok && !fixedStatus(it.Status) {
 			for _, f := range it.Fixes {
-				if f.py != nil {
-					if _, done := answers[f.py.plan.src.url]; !done {
-						src, ok := look(f.py.plan.src)
-						answers[f.py.plan.src.url] = struct {
-							src pySSLSource
-							ok  bool
-						}{src, ok}
-					}
-				}
+				_, download, _ := look.latest(f)
+				asked = asked || download
 			}
 		}
 	}
-	if len(answers) == 0 {
+	if !asked {
 		return nil
 	}
-	known := func(s pySSLSource) (pySSLSource, bool) { a := answers[s.url]; return a.src, a.ok }
 	var out []Item
 	for _, id := range ids {
 		c.mu.Lock()
 		it := c.items[id]
-		changed := it != nil && !fixedStatus(it.Status) && useLatest(it, known, notFound)
+		changed := it != nil && !fixedStatus(it.Status) && useLatest(it, look, notFound)
 		var cp Item
 		if changed {
 			cp = *it
