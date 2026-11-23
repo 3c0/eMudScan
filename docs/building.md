@@ -185,7 +185,10 @@ elsewhere. The cases are those where all goes well and those where a command
 fails (the test before, another download, a missing file, a file in use, the
 test after): the test checks the result of each command and the files left.
 `EMUDSCAN_TEST_POWERSHELL` names other PowerShells to run them in (paths,
-separated by `;`). On Linux or macOS these tests are skipped.
+separated by `;`). On Linux or macOS these tests are skipped. The script of the
+Fix function runs with the environment of the build, as it runs with the one of
+eMudScan: started from a PowerShell 7 window, Windows PowerShell gets the module
+path of PowerShell 7, which the fixes must not depend on.
 
 To test the Fix function without changing anything, `.\scripts\build.ps1 -Simulate`
 (or `./scripts/build.sh --simulate`) writes only `dist/eMudScan-simulation.exe`

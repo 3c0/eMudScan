@@ -249,8 +249,10 @@ func TestFixFiles(t *testing.T) {
 	}
 	s := fixScript(units, `C:\Temp\fix.log`, "##m", files)
 	sum := sha256.Sum256(files["denied.pem"])
-	want := "if ((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $emudscanFiles 'denied.pem')).Hash -ne '" + strings.ToUpper(hex.EncodeToString(sum[:])) + "') { exit 97 }"
-	if !strings.Contains(s, "$emudscanFiles = Split-Path -Parent $emudscanLog\n") || !strings.Contains(s, want) || strings.Index(s, want) > strings.Index(s, "cmd 0 0") {
+	// checked without a command of a module, and a check that cannot be made stops the fixes
+	want := "try { if ((-join ([Security.Cryptography.SHA256]::Create().ComputeHash([IO.File]::ReadAllBytes([IO.Path]::Combine($emudscanFiles, 'denied.pem'))) | ForEach-Object { $_.ToString('X2') })) -ne '" +
+		strings.ToUpper(hex.EncodeToString(sum[:])) + "') { exit 97 } } catch { exit 97 }\n"
+	if !strings.Contains(s, "$emudscanFiles = Split-Path -Parent $emudscanLog\n") || !strings.Contains(s, want) || strings.Index(s, want) > strings.Index(s, "cmd 0 0") || strings.Contains(s[:strings.Index(s, "cmd 0 0")], "Get-FileHash") {
 		t.Errorf("script:\n%s", s[:min(len(s), 1500)])
 	}
 }

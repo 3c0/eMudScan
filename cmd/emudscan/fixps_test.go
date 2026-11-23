@@ -43,6 +43,7 @@ func testPowerShells(t *testing.T) map[string]string {
 		if p, err := exec.LookPath("pwsh"); err == nil {
 			paths = append(paths, p)
 		}
+		paths = append(paths, filepath.Join(os.Getenv("ProgramFiles"), "PowerShell", "7", "pwsh.exe")) // where its installer puts it
 	}
 	paths = append(paths, filepath.SplitList(os.Getenv("EMUDSCAN_TEST_POWERSHELL"))...)
 	found := map[string]string{}
@@ -131,6 +132,7 @@ type psCase struct {
 	failBefore     bool     // its ssl module does not load
 	failAfter      bool     // its ssl module does not load with the new files
 	badSum         bool     // the download is not the one the commands name
+	says           string   // what the command that fails must say
 	lacks          string   // a file that the download does not have
 	inUse          bool     // a program has a file to replace open (Windows)
 	fixed          bool     // what is expected: the new files in place, else the original ones
@@ -218,7 +220,10 @@ func psAdapt(lines []string) []string {
 }
 
 // psRun runs units in the PowerShell ps as runFixes does, in the folder run, and gives
-// the lines of the console and the result of each fix.
+// the lines of the console and the result of each fix. The PowerShell gets the
+// environment of the test, as it gets the one of eMudScan: when the test is started
+// from a PowerShell 7 window, Windows PowerShell gets its module path, which the
+// script must not depend on (fixBootstrap).
 func psRun(t *testing.T, ps, run string, units []fixUnit) ([]fixLine, []unitResult) {
 	t.Helper()
 	logPath, scriptPath, marker := filepath.Join(run, "fix.log"), filepath.Join(run, "fix.ps1"), fixMarker()
@@ -263,7 +268,7 @@ func TestPySSLFixInPowerShell(t *testing.T) {
 		{name: "added files", sslDir: "DLLs", replace: mixedShape.replace, added: mixedShape.added, backup: true, fixed: true},
 		{name: "added files, no backups", sslDir: "DLLs", replace: mixedShape.replace, added: mixedShape.added, fixed: true},
 		{name: "fails before", sslDir: "DLLs", replace: pbsShape.replace, backup: true, failBefore: true, stopsAt: "$emudscanFiles before"},
-		{name: "another download", sslDir: "DLLs", replace: pbsShape.replace, backup: true, badSum: true, stopsAt: "Get-FileHash"},
+		{name: "another download", sslDir: "DLLs", replace: pbsShape.replace, backup: true, badSum: true, stopsAt: "Get-FileHash", says: T("pyssl.badSum")},
 		{name: "a file missing", sslDir: "DLLs", replace: pbsShape.replace, backup: true, lacks: "libssl-3-x64.dll", stopsAt: "tar"},
 		{name: "a file missing, python.org", sslDir: ".", replace: orgShape.replace, zip: true, backup: true, lacks: "libssl-3.dll", stopsAt: "Where-Object"},
 		{name: "in use", sslDir: "DLLs", replace: pbsShape.replace, backup: true, inUse: true, stopsAt: "[IO.File]::Open"},
@@ -331,6 +336,8 @@ func TestPySSLFixInPowerShell(t *testing.T) {
 					t.Errorf("failed: %q, want the test after, then the files put back\n%s", failed, report)
 				case c.stopsAt != "" && !c.failAfter && len(failed) != 1:
 					t.Errorf("failed: %q, want one command\n%s", failed, report)
+				case c.says != "" && !strings.Contains(report, c.says):
+					t.Errorf("the command that failed does not say %q\n%s", c.says, report)
 				}
 				// the files
 				entries, _ := os.ReadDir(dir)
@@ -433,7 +440,14 @@ func TestPySSLAloneInPowerShell(t *testing.T) {
 				script := filepath.Join(temp, "alone.ps1")
 				os.WriteFile(script, append([]byte{0xEF, 0xBB, 0xBF}, strings.Join(psAdapt(f.Alone), "\r\n")...), 0o644) // as Notepad saves it
 				cmd := exec.Command(ps, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script)
-				cmd.Env = append(os.Environ(), "TEMP="+temp)
+				// as in a PowerShell window that the user opened, which has its own module path:
+				// not the one of the PowerShell that the test may have been started from
+				for _, e := range os.Environ() {
+					if !strings.HasPrefix(strings.ToUpper(e), "PSMODULEPATH=") {
+						cmd.Env = append(cmd.Env, e)
+					}
+				}
+				cmd.Env = append(cmd.Env, "TEMP="+temp)
 				out, err := cmd.CombinedOutput()
 				// Windows PowerShell cuts the lines of an error at the width of its window: without the spaces
 				tight := func(s string) string { return strings.Join(strings.Fields(s), "") }
@@ -497,6 +511,48 @@ func TestScriptStopsAlone(t *testing.T) {
 		want := []string{"    # a fix", "  ✓ $a = 1", "", "  ✗ throw 'stop'", "      stop", "    $a = 2", "  ✓ if ($a -ne 1) { throw 'the fix before did not stop' }", "  ✓ $b = 1"}
 		if got := reportLines(lines); strings.Join(got, "\n") != strings.Join(want, "\n") {
 			t.Errorf("PowerShell %s:\n%s\nwant:\n%s", version, strings.Join(got, "\n"), strings.Join(want, "\n"))
+		}
+	}
+}
+
+// The files that eMudScan wrote for a fix are checked before any command runs: one that
+// changed, or that cannot be read, stops the fixes (exit code 97), and nothing runs.
+func TestChangedFileInPowerShell(t *testing.T) {
+	Lang = 0
+	for version, ps := range testPowerShells(t) {
+		for _, how := range []string{"changed", "missing", "as written"} {
+			run := t.TempDir()
+			f := fixAction{Kind: fixPySSL, Script: true, Needs: "pycheck", Cmds: []string{"$a = 1"}}
+			units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, fix: f, cmds: f.Cmds}}
+			files, err := fixFiles(units, time.Now())
+			if err != nil || len(files) == 0 {
+				t.Fatal(err)
+			}
+			logPath, scriptPath := filepath.Join(run, "fix.log"), filepath.Join(run, "fix.ps1")
+			for n, b := range files {
+				os.WriteFile(filepath.Join(run, n), b, 0o600)
+			}
+			script := []byte(fixScript(units, logPath, "##m", files))
+			os.WriteFile(scriptPath, script, 0o600)
+			os.WriteFile(logPath, nil, 0o600)
+			switch how {
+			case "changed":
+				os.WriteFile(filepath.Join(run, pyCheckName), append([]byte("import os\n"), files[pyCheckName]...), 0o600)
+			case "missing":
+				os.Remove(filepath.Join(run, pyCheckName))
+			}
+			out, err := exec.Command(ps, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encodedCommand(fixBootstrap(scriptPath, script))).CombinedOutput()
+			code := 0
+			if e, ok := err.(*exec.ExitError); ok {
+				code = e.ExitCode()
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			log, _ := os.ReadFile(logPath)
+			ran := strings.Contains(string(log), "##m cmd 0 0")
+			if want := how == "as written"; ran != want || (code == fixTampered) == want {
+				t.Errorf("PowerShell %s, %s: exit code %d, ran %v\n%s", version, how, code, ran, out)
+			}
 		}
 	}
 }

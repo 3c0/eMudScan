@@ -844,10 +844,13 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 		names = append(names, n)
 	}
 	sort.Strings(names)
+	// The helper files must be those that eMudScan wrote. The check is made without a
+	// command of a module, as the one of the script itself (fixBootstrap), and anything
+	// that prevents it stops the fixes: a check that cannot be made is not passed.
 	for _, n := range names {
 		sum := sha256.Sum256(files[n])
-		fmt.Fprintf(&b, "if ((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $emudscanFiles %s)).Hash -ne '%s') { exit %d }\n",
-			psQuote(n), strings.ToUpper(hex.EncodeToString(sum[:])), fixTampered)
+		fmt.Fprintf(&b, "try { if ((-join ([Security.Cryptography.SHA256]::Create().ComputeHash([IO.File]::ReadAllBytes([IO.Path]::Combine($emudscanFiles, %s))) | ForEach-Object { $_.ToString('X2') })) -ne '%s') { exit %d } } catch { exit %d }\n",
+			psQuote(n), strings.ToUpper(hex.EncodeToString(sum[:])), fixTampered, fixTampered)
 	}
 	b.WriteString("function Write-EmudscanLog([string]$s) { [IO.File]::AppendAllText($emudscanLog, $s + \"`n\", [Text.UTF8Encoding]::new($false)) }\n")
 	for _, u := range units {
@@ -960,9 +963,17 @@ func fixMarkLines(mark, text string) string {
 
 // fixBootstrap is the command that starts the script: it reads it, and runs it only
 // if its SHA-256 is the one it was written with; otherwise it exits with code 97.
+//
+// Before anything else, it puts the modules of the PowerShell that runs first in its
+// module path. A PowerShell takes that path from the program that started it: when
+// eMudScan is started from a PowerShell 7 window, Windows PowerShell gets the path of
+// PowerShell 7, and takes its modules for its own (Microsoft.PowerShell.Utility,
+// Security…), which do not work in it: Get-FileHash, for one, is then not found. It
+// is an assignment, which needs no module, made before any command looks for one.
 func fixBootstrap(scriptPath string, script []byte) string {
 	sum := sha256.Sum256(script)
-	return fmt.Sprintf("$t = [IO.File]::ReadAllText(%s, [Text.Encoding]::UTF8)\n"+
+	return fmt.Sprintf("$env:PSModulePath = \"$PSHOME\\Modules;$env:PSModulePath\"\n"+
+		"$t = [IO.File]::ReadAllText(%s, [Text.Encoding]::UTF8)\n"+
 		"$h = -join ([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($t)) | ForEach-Object { $_.ToString('X2') })\n"+
 		"if ($h -ne '%s') { exit 97 }\n"+
 		". ([scriptblock]::Create($t))\n", psQuote(scriptPath), strings.ToUpper(hex.EncodeToString(sum[:])))

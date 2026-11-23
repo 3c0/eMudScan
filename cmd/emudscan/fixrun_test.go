@@ -74,7 +74,9 @@ func TestFixScript(t *testing.T) {
 	script := []byte("Write-Output 1\n")
 	boot := fixBootstrap(`C:\Temp\fix.ps1`, script)
 	sum := sha256.Sum256(script)
-	if !strings.Contains(boot, strings.ToUpper(hex.EncodeToString(sum[:]))) || !strings.Contains(boot, `'C:\Temp\fix.ps1'`) || !strings.Contains(boot, fmt.Sprint("exit ", fixTampered)) {
+	// first, the modules of the PowerShell that runs, before those of the program that started eMudScan
+	if !strings.HasPrefix(boot, "$env:PSModulePath = \"$PSHOME\\Modules;$env:PSModulePath\"\n$t = ") ||
+		!strings.Contains(boot, strings.ToUpper(hex.EncodeToString(sum[:]))) || !strings.Contains(boot, `'C:\Temp\fix.ps1'`) || !strings.Contains(boot, fmt.Sprint("exit ", fixTampered)) {
 		t.Errorf("bootstrap:\n%s", boot)
 	}
 	raw, err := base64.StdEncoding.DecodeString(encodedCommand("é‘x"))
