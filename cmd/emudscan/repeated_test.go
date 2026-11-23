@@ -148,7 +148,7 @@ func TestMergeRepeatedScripts(t *testing.T) {
 		_, s, _ = strings.Cut(s, "\n")
 		return s
 	}
-	want := "> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell:\n" +
+	want := "> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell 5.1, 7.6 or 7.7:\n" +
 		"> For [[C:\\a\\python]]:\n" + script(a) + "\n> For [[C:\\b\\python]]:\n" + script(b)
 	if !strings.HasPrefix(script(a), "$ & {\n$     $ErrorActionPreference = 'Stop'\n") || !strings.HasSuffix(d, want) {
 		t.Errorf("details:\n%s\nwant the end:\n%s", d, want)

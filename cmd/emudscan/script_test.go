@@ -3,7 +3,9 @@ package main
 import (
 	"debug/pe"
 	"fmt"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -293,6 +295,7 @@ func TestGuide(t *testing.T) {
 	one := newFix(fixAction{Kind: fixPip, Cmds: []string{"pip install --upgrade example-app-1"}})
 	several := newFix(fixAction{Kind: fixBundle, Admin: true, Cmds: []string{"$a = 1", "Copy-Item a b"}})
 	script := newFix(fixAction{Kind: fixPySSL, Script: true, Cmds: []string{"# run by the Fix window", "$a = 1"}, Alone: []string{"& {", "    $a = 2", "    $b = 3", "}"}})
+	scriptAdmin := newFix(fixAction{Kind: fixBundle, Admin: true, Script: true, Cmds: []string{"# the file", "$a = 1", "Copy-Item a b"}})
 	undo1 := newFix(fixAction{Kind: fixRestore, Cmds: []string{"Move-Item a.bak a"}, Files: []string{"a"}})
 	undo2 := newFix(fixAction{Kind: fixRestore, Cmds: []string{"Move-Item a.bak a", "Move-Item b.bak b"}, Files: []string{"a", "b"}})
 	ps, admin := how(T("fix.ps")), how(T("fix.psAdmin"))
@@ -305,7 +308,9 @@ func TestGuide(t *testing.T) {
 		{"good to do", "Still good practice.\n" + ps + "\n" + one.lines(), false, "Still good practice.\n> To do so, click **Fix this software**, or run this command yourself in PowerShell:\n" + one.lines()},
 		{"commands, as administrator", admin + "\n" + several.lines(), true, "> To fix this vulnerability, click **Fix this software**, or run these commands yourself in PowerShell !!(Run as administrator)!!:\n" + several.lines()},
 		{"as administrator, by the fix", ps + "\n" + several.lines(), true, "> To fix this vulnerability, click **Fix this software**, or run these commands yourself in PowerShell !!(Run as administrator)!!:\n" + several.lines()},
-		{"a script", ps + "\n" + script.lines(), true, "> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell:\n" + script.lines()},
+		{"a script", ps + "\n" + script.lines(), true, "> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell 5.1, 7.6 or 7.7:\n" + script.lines()},
+		{"a script, as administrator", ps + "\n" + scriptAdmin.lines(), true,
+			"> To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell 5.1, 7.6 or 7.7 !!(Run as administrator)!!:\n" + scriptAdmin.lines()},
 		{"two fixes under one line", "Update uv, then this Python.\n" + ps + "\n" + how("Update with Scoop:") + "\n" + one.lines() + "\n" + how("Update with uv:") + "\n" + several.lines(), true,
 			"Update uv, then this Python.\n> To fix this vulnerability, click **Fix this software**, or run these commands yourself in PowerShell:\n> Update with Scoop:\n" + one.lines() + "\n> Update with uv:\n" + several.lines()},
 		{"a restore", "Fixed.\n\n" + ps + "\n" + undo1.lines(), false, "Fixed.\n\n> To undo the fix, click **Restore the backup**, or run this command yourself in PowerShell:\n" + undo1.lines()},
@@ -324,6 +329,10 @@ func TestGuide(t *testing.T) {
 		if len(fixesIn(guide(c.details, c.vulnerable))) != len(fixesIn(c.details)) {
 			t.Errorf("%s: the fixes changed", c.name)
 		}
+	}
+	// something good to do, by a script: the same versions
+	if got := guide(ps+"\n"+scriptAdmin.lines(), false); !strings.HasPrefix(got, "> To do so, click **Fix this software**, or run this script yourself in PowerShell 5.1, 7.6 or 7.7 !!(") {
+		t.Errorf("good to do, a script:\n%s", got)
 	}
 	// an advice that led to its commands ends there, before what to do with them
 	if got := fixBlock("Recommended action: update it with uv, which installed it:", one); got != "Recommended action: update it with uv, which installed it.\n"+ps+"\n"+one.lines() {
@@ -389,5 +398,23 @@ func TestFixLabels(t *testing.T) {
 	defer func() { Lang = 0 }()
 	if got := fixLabels([]Item{two})[labelKey(2, bundle)]; got != "Correction 2, si la mise à jour ne le corrige pas : Remplacement du fichier de certificats par celui, à jour, de Mozilla (en tant qu’administrateur)" {
 		t.Errorf("in French: %q", got)
+	}
+}
+
+// The versions of PowerShell that the sentence above a script names are those that
+// the tests run the scripts in, on GitHub, where one that does not run fails them.
+func TestTestedVersions(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "powershell.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile(`EMUDSCAN_TEST_POWERSHELL_WANT: ([0-9.]+(?:,[0-9.]+)+)\n`).FindSubmatch(data)
+	if m == nil {
+		t.Fatal("no EMUDSCAN_TEST_POWERSHELL_WANT in the workflow")
+	}
+	v := strings.Split(string(m[1]), ",")
+	list := strings.Join(v[:len(v)-1], ", ")
+	if en, fr := tr["fix.tested"][0], tr["fix.tested"][1]; en != " "+list+" or "+v[len(v)-1] || fr != " "+list+" ou "+v[len(v)-1] {
+		t.Errorf("%q, %q; the tests run in %s", en, fr, m[1])
 	}
 }

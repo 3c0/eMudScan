@@ -356,6 +356,9 @@ func guide(details string, vulnerable bool) string {
 		if text == T("fix.psAdmin") || recorded && f.Admin {
 			admin = T("fix.withAdmin")
 		}
+		if recorded && f.Script { // the tests run it in these PowerShells (fixps_test.go)
+			admin = T("fix.tested") + admin
+		}
 		switch {
 		case !recorded:
 			lines[i] = how(Tf("fix.runSelf", what, admin))

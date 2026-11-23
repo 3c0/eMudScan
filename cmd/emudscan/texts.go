@@ -818,7 +818,8 @@ Code de sortie\u00a0: 0 OK ou information seule, 1 avertissement, 2 mise à jour
 	// then writes, in their place, what to do with the commands (fix.do…)
 	"fix.ps":      {"In PowerShell:", "Dans PowerShell\u00a0:"},
 	"fix.psAdmin": {"**In PowerShell (Run as administrator):**", "**Dans PowerShell (Exécuter en tant qu’administrateur)\u00a0:**"},
-	// %s: the name of the button, the commands (fix.what…), fix.withAdmin or nothing
+	// %s: the name of the button, the commands (fix.what…), then fix.tested for a script,
+	// fix.withAdmin, both or nothing
 	"fix.do":         {"To fix this vulnerability, click **%s**, or run %s yourself in PowerShell%s:", "Pour corriger cette vulnérabilité, cliquez sur **%s**, ou exécutez vous-même %s dans PowerShell%s\u00a0:"},
 	"fix.doSo":       {"To do so, click **%s**, or run %s yourself in PowerShell%s:", "Pour cela, cliquez sur **%s**, ou exécutez vous-même %s dans PowerShell%s\u00a0:"},
 	"fix.undo":       {"To undo the fix, click **%s**, or run %s yourself in PowerShell%s:", "Pour annuler la correction, cliquez sur **%s**, ou exécutez vous-même %s dans PowerShell%s\u00a0:"},
@@ -828,6 +829,9 @@ Code de sortie\u00a0: 0 OK ou information seule, 1 avertissement, 2 mise à jour
 	"fix.whatN":      {"these commands", "ces commandes"},
 	"fix.whatScript": {"this script", "ce script"},
 	"fix.withAdmin":  {" !!(Run as administrator)!!", " !!(Exécuter en tant qu’administrateur)!!"},
+	// the versions of PowerShell that the tests run the scripts in, on GitHub
+	// (.github/workflows/powershell.yml)
+	"fix.tested": {" 5.1, 7.6 or 7.7", " 5.1, 7.6 ou 7.7"},
 	"fix.replaceBundle": {"The following script replaces the file with Mozilla’s current certificate bundle, as published by curl.\n\nPowerShell downloads the bundle into memory, protected by the Windows block list, and checks it against the SHA-256 checksum published by curl.\n\nIf the download is complete, the file is backed up, then overwritten. Otherwise, nothing is changed.",
 		"Le script suivant remplace le fichier par le fichier de certificats actuel de Mozilla, publié par curl.\n\nPowerShell le télécharge en mémoire, protégé par la liste de blocage de Windows, et le vérifie avec l’empreinte SHA-256 publiée par curl.\n\nSi le téléchargement est complet, le fichier est sauvegardé, puis remplacé. Sinon, rien n’est modifié."},
 	// the comments of the scripts of the fixes (scriptLines)

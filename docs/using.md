@@ -130,12 +130,14 @@ stays out of them. The links and the copied paths keep the full path.
 Above the commands of a fix, a sentence says what to do with them: click
 **Fix this software**, or run them yourself in PowerShell (“To fix this
 vulnerability, click **Fix this software**, or run this script yourself in
-PowerShell:”). For the restore of backups, it names the button as it then reads,
+PowerShell 5.1, 7.6 or 7.7:”). The versions, which only scripts have, are those
+of Windows PowerShell and PowerShell that the tests run the scripts in, on
+GitHub. For the restore of backups, it names the button as it then reads,
 **Restore the backups**. When the commands need administrator rights, it ends
 with “in PowerShell (Run as administrator):”, the last words in bold red: open
 PowerShell with **Run as administrator** to run them yourself; the button asks
-for these rights itself. Commands that the button does
-not run, such as removing a setting, only say “Run this command in PowerShell:”.
+for these rights itself. Commands that the button does not run, such as removing
+a setting, only say “Run this command in PowerShell:”.
 
 Before changing a file, these commands back it up next to the original, with the
 date and time in its name (`cacert.pem.emudscan-20261031-011500.bak`) and the
