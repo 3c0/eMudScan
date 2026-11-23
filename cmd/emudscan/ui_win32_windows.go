@@ -184,6 +184,7 @@ const (
 	wmMouseWheel     = 0x020A
 	wmMouseLeave     = 0x02A3
 	wmKeyDown        = 0x0100
+	wmChar           = 0x0102
 	wmSysKeyDown     = 0x0104
 	wmSetFocus       = 0x0007
 	wmKillFocus      = 0x0008

@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Copying text with Ctrl+C, or selecting it all with Ctrl+A, in the log, the console of the Fix window or the detailed information no longer plays the default sound of Windows. The dialog manager took the character of these keys for the shortcut of a button, found none, and beeped.
 - When eMudScan was started from a PowerShell 7 window, Windows PowerShell, which runs the fixes, got the module path of PowerShell 7 and took its modules for its own: `Get-FileHash` was then not found. A fix that checks a SHA-256 (a certificate bundle, Node.js, the ssl files of a Python) failed without changing anything, and the check of eMudScan’s own files, before a fix that needs some, was not made. The fixes now put the modules of the PowerShell that runs them first. The check of eMudScan’s own files no longer uses a command of a module, and stops the fixes when it cannot be made.
 - `scripts/build.ps1` now works in Windows PowerShell 5.1, where it stopped with “no Go files”: it no longer gives go an empty `-tags` option, which Windows PowerShell 5.1 does not pass.
 

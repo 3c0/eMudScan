@@ -877,7 +877,7 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		}
 		return 0
 	case wmGetDlgCode:
-		return 0x1 // DLGC_WANTARROWS
+		return viewDlgCode(lParam)
 	case wmKeyDown:
 		page := max(v.visibleRows()-1, 1)
 		switch ctrl := ctrlDown(); {
@@ -1040,4 +1040,21 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	}
 	r, _, _ := pDefWindowProcW.Call(hwnd, uintptr(msg), wParam, lParam)
 	return r
+}
+
+// viewDlgCode answers WM_GETDLGCODE for the text views (the log, the console, the
+// detailed information), in windows whose keys go through IsDialogMessage: the
+// arrows, which scroll them, and the character that a Ctrl key makes with a letter
+// (Ctrl+C: 3, Ctrl+A: 1). The view acts on the key itself (WM_KEYDOWN); without this,
+// the dialog manager takes that character for the mnemonic of a button, finds none,
+// and Windows plays its default sound at each copy. Tab, Enter and Escape stay with
+// the dialog manager, and so do the letters, which can still be mnemonics.
+func viewDlgCode(lParam uintptr) uintptr {
+	const dlgcWantArrows, dlgcWantMessage = 0x1, 0x4
+	if lParam != 0 {
+		if m := (*msgT)(ptr(lParam)); m.Message == wmChar && ctrlChar(m.WParam) {
+			return dlgcWantArrows | dlgcWantMessage
+		}
+	}
+	return dlgcWantArrows
 }

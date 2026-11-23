@@ -1038,7 +1038,7 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			v.setScroll(v.scroll - delta*a.scale(54)/120)
 			return 0
 		case wmGetDlgCode:
-			return 0x1 // DLGC_WANTARROWS
+			return viewDlgCode(lParam)
 		case wmKeyDown:
 			ctrl := ctrlDown()
 			step := a.scale(40)
