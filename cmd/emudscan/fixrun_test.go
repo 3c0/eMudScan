@@ -634,3 +634,39 @@ func TestResultLink(t *testing.T) {
 		t.Errorf("French: %q", s)
 	}
 }
+
+// A row of the Fix software window finds the fixes of its software in the console by
+// their head: copies of a software, which have the same title, by their file too.
+func TestFixHeadAt(t *testing.T) {
+	Lang = 0
+	py := func(id int, folder string) Item {
+		return Item{ID: id, Group: GroupApps, Name: "Python", Program: "Builder", Component: "Python", Version: "3.14.7",
+			Folder: folder, File: folder + `\python.exe`,
+			Fixes: []fixAction{{Kind: fixBundle, Script: true, Cmds: []string{"# Do it", "$a = 1", "", "# Then", "write " + folder}}}}
+	}
+	other := Item{ID: 3, Group: GroupApps, Name: "Other", Program: "Other", File: `C:\o\cacert.pem`,
+		Fixes: []fixAction{{Kind: fixBundle, Cmds: []string{"replace other"}}}}
+	items := []Item{py(1, `C:\a\python`), other, py(2, `C:\b\python`)}
+	lines := fixPreview(items, true)
+	heads := fixHeads(items)
+	at := map[int]bool{}
+	for _, it := range items {
+		i := fixHeadAt(lines, heads[it.ID])
+		if i < 0 {
+			t.Fatalf("%d: not found in\n%s", it.ID, strings.Join(plainLines(lines), "\n"))
+		}
+		at[i] = true
+		if lines[i] != (fixLine{lineSoftware, itemTitle(it)}) || lines[i+1] != (fixLine{lineComment, "Location: " + it.File}) {
+			t.Errorf("%d: starts at %v, %v", it.ID, lines[i], lines[i+1])
+		}
+	}
+	if len(at) != len(items) {
+		t.Errorf("the copies share a head: %v", at)
+	}
+	if i := fixHeadAt(lines, itemHead(Item{ID: 9, Name: "None", Program: "None"})); i != -1 {
+		t.Errorf("an element not in the console found at %d", i)
+	}
+	if i := fixHeadAt(lines, nil); i != -1 {
+		t.Errorf("no head found at %d", i)
+	}
+}

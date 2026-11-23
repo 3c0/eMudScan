@@ -51,13 +51,14 @@ type fixDlg struct {
 	title                        uintptr // the title of the console
 	font                         uintptr // its font, bold
 	console                      *logView
-	lines                        []fixLine      // what the console shows
-	lineAt                       []int          // the line of the console where each starts
-	cmdLine                      int            // the line of the console of the command running, or -1
-	results                      bool           // the console shows the results of the commands
-	report                       string         // the report saved after the fixes, whose path is a link at the end of the console
-	titles                       map[int]string // the titles of the elements in the console (fixTitles)
-	frame                        rect           // the black frame around the console
+	lines                        []fixLine         // what the console shows
+	lineAt                       []int             // the line of the console where each starts
+	cmdLine                      int               // the line of the console of the command running, or -1
+	results                      bool              // the console shows the results of the commands
+	report                       string            // the report saved after the fixes, whose path is a link at the end of the console
+	titles                       map[int]string    // the titles of the elements in the console (fixTitles)
+	heads                        map[int][]fixLine // the heads of their fixes in the console (itemHead)
+	frame                        rect              // the black frame around the console
 	bBackup, bFix, bStop, bClose uintptr
 	ids                          []int  // the elements to fix (from the details)
 	label                        string // what the window fixes, for the report
@@ -801,7 +802,7 @@ func (d *fixDlg) preview(a *ui) {
 	d.results = false
 	d.console.updateCopyTip()
 	items := d.selected(a)
-	d.titles = fixTitles(items)
+	d.titles, d.heads = fixTitles(items), fixHeads(items)
 	lines := fixPreview(items, d.backup())
 	// "Back up the files to change" only when a fix backs up files
 	show := uintptr(0) // SW_HIDE
@@ -945,33 +946,24 @@ var (
 	consoleFailed = rgb(0xF9, 0x26, 0x72)
 )
 
-// showRow scrolls the console to the commands of a row of the list, or to what they
-// did, up to the blank line after them, as little as needed, so that what is above
-// stays in view when it can; it reports whether the console shows them.
+// showRow scrolls the console so that the head of the fixes of a row of the list
+// (itemHead), or of what they did, is at its top. It reports whether the console shows
+// them.
 func (d *fixDlg) showRow(row int) bool {
 	if row < 0 || row >= len(d.rows) {
 		return false
 	}
-	want := map[string]bool{}
-	for _, id := range d.rows[row].memberIDs() {
-		if t, ok := d.titles[id]; ok {
-			want[t] = true
+	first := -1
+	for _, id := range d.rows[row].memberIDs() { // the first one in the console
+		if i := fixHeadAt(d.lines, d.heads[id]); i >= 0 && (first < 0 || i < first) {
+			first = i
 		}
 	}
-	for i, l := range d.lines {
-		if l.kind == lineSoftware && want[l.text] {
-			last := d.lineAt[len(d.lineAt)-1]
-			for j := i + 1; j < len(d.lines); j++ {
-				if d.lines[j] == (fixLine{lineNote, ""}) {
-					last = d.lineAt[j] - 1
-					break
-				}
-			}
-			d.console.showLines(d.lineAt[i], last)
-			return true
-		}
+	if first < 0 {
+		return false
 	}
-	return false
+	d.console.showAtTop(d.lineAt[first])
+	return true
 }
 
 // showNear scrolls the console to the commands of a row just ticked, or, for a row
@@ -1207,6 +1199,7 @@ func (d *fixDlg) run(a *ui) {
 	d.results = true
 	d.console.updateCopyTip()
 	d.titles = fixTitles(pick.items(a.fixItems(ids))) // as the runner names them
+	d.heads = fixHeads(pick.items(a.fixItems(ids)))
 	c := a.current
 	// the console, also kept for the report, after a line that says when and what
 	out := func(l fixLine) {

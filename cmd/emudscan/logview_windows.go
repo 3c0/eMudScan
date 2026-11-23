@@ -628,26 +628,13 @@ func (v *logView) nextLine() int {
 	return n
 }
 
-// showLines scrolls as little as needed for the lines first to last to be in view, or,
-// when they do not fit, the first ones: not at all when they already are.
-func (v *logView) showLines(first, last int) {
-	a, b := -1, -1
+// showAtTop scrolls the log so that a line is at its top, or as near as its end allows.
+func (v *logView) showAtTop(line int) {
 	for i, r := range v.rows {
-		if r.line == first && a < 0 {
-			a = i
+		if r.line == line {
+			v.scrollTo(i)
+			return
 		}
-		if r.line == last {
-			b = i
-		}
-	}
-	if a < 0 {
-		return
-	}
-	switch vis := v.visibleRows(); {
-	case a < v.top:
-		v.scrollTo(a)
-	case max(a, b) >= v.top+vis:
-		v.scrollTo(min(a, max(a, b)-vis+1))
 	}
 }
 

@@ -776,7 +776,7 @@ func fixPreview(items []Item, backup bool) []fixLine {
 		var updates []fixAction
 		seen := map[string]bool{}
 		for _, it := range group {
-			out = append(out, softwareHead(itemTitle(it), shownPath(it.copyPath()))...)
+			out = append(out, itemHead(it)...)
 			for _, f := range it.Fixes {
 				if f.Kind == fixPackage && !seen[f.key()] {
 					seen[f.key()] = true
@@ -814,6 +814,34 @@ func softwareHead(title, place string) []fixLine {
 		out = append(out, fixLine{lineComment, Tf("fix.location", place)})
 	}
 	return out
+}
+
+// itemHead is the head of the fixes of an element in the console (softwareHead): its
+// title, then its file, which also tells copies of a software apart. The log of the
+// fixes that run names them in the same way (fixUnit.names and places).
+func itemHead(it Item) []fixLine { return softwareHead(itemTitle(it), shownPath(it.copyPath())) }
+
+// fixHeads are the heads of the fixes of items in the console (itemHead), by ID.
+func fixHeads(items []Item) map[int][]fixLine {
+	out := map[int][]fixLine{}
+	for _, it := range items {
+		out[it.ID] = itemHead(it)
+	}
+	return out
+}
+
+// fixHeadAt is where the fixes of an element, whose head is head (itemHead), start in
+// the lines of the console, before or after they run, or -1 when they are not there.
+func fixHeadAt(lines, head []fixLine) int {
+	if len(head) == 0 {
+		return -1
+	}
+	for i := 0; i+len(head) <= len(lines); i++ {
+		if slices.Equal(lines[i:i+len(head)], head) {
+			return i
+		}
+	}
+	return -1
 }
 
 // fixOrderDiffers: the fixes of items run in another order (runOrder) than fixPreview

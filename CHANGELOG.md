@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - When eMudScan was started from a PowerShell 7 window, Windows PowerShell, which runs the fixes, got the module path of PowerShell 7 and took its modules for its own: `Get-FileHash` was then not found. A fix that checks a SHA-256 (a certificate bundle, Node.js, the ssl files of a Python) failed without changing anything, and the check of eMudScan’s own files, before a fix that needs some, was not made. The fixes now put the modules of the PowerShell that runs them first. The check of eMudScan’s own files no longer uses a command of a module, and stops the fixes when it cannot be made.
 - In a narrow Fix window, the line drawn across the console at the end of the fixes no longer leaves empty rows under it: like the new line between two software, it takes a single row, whatever the width of the window.
 - In the detailed information, the Fix windows and the log, a word too long for its line, such as a URL or a path, is cut after a slash, a backslash or a hyphen, instead of in the middle of a name such as x86_64.
+- In the Fix software window, a click on a row scrolls the console so that the head of its software is at its top. A click on a copy of a software, such as one of two copies of Python inside the same program, did not scroll it at all.
 - `scripts/build.ps1` now works in Windows PowerShell 5.1, where it stopped with “no Go files”: it no longer gives go an empty `-tags` option, which Windows PowerShell 5.1 does not pass.
 
 ## [3.1.2] - 2026-11-12
