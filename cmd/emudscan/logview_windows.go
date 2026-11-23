@@ -173,12 +173,13 @@ func (v *logView) setMark(line int, mark string, color uint32) {
 	}
 }
 
-// setBar draws a line of the log as a horizontal bar across its width, in color; its
-// text is still what a copy gives.
+// setBar draws a line of the log as a horizontal bar across its width, in color, in a
+// single row; its text is still what a copy gives.
 func (v *logView) setBar(line int, color uint32) {
 	if line >= 0 && line < len(v.lines) {
 		v.lines[line].bar, v.lines[line].barColor = true, color
-		pInvalidateRect.Call(v.hwnd, 0, 0)
+		v.layoutFrom(line) // one row (cut)
+		v.update()
 	}
 }
 
@@ -507,6 +508,10 @@ func (v *logView) fit(dc uintptr, font int, s []uint16, width int32) int {
 // start after ↪ and half a space, at its indent (paint draws the signs).
 func (v *logView) cut(dc uintptr, ln *logLine) {
 	ln.rows = ln.rows[:0]
+	if ln.bar { // drawn across the log in one row, however long its text
+		ln.rows = append(ln.rows, nil)
+		return
+	}
 	var row []logFrag
 	x := int32(0)
 	xMax, next := v.width, int32(0) // the end of the rows, the start of the rows after the first
