@@ -842,7 +842,7 @@ func copyWarning(details string) string {
 	for i, p := range paras {
 		lines := strings.Split(p, "\n")
 		for j, line := range lines {
-			if !strings.HasPrefix(line, "$ ") {
+			if _, ok := cmdOf(line); !ok {
 				continue
 			}
 			at := max(j-1, 0) // the line before the commands, if any

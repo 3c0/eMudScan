@@ -144,52 +144,182 @@ func (p pySSLPlan) files() []string {
 	return out
 }
 
-// pySSLFix replaces the ssl files of the Python exe as plan says. Its commands, in
-// order: the checks before (the ssl module must load); the download, checked against
-// its SHA-256; its files taken out (both once for the Pythons fixed in the same run
-// from the same download); the files to change must not be in use (the program
-// closed); a backup of each file replaced, and a mark for each file added, named after
-// the same time, with the creation date of its file (see backupThen); the copy; the
-// checks after; when they fail, the original files put
-// back and the added ones removed. The backups are made in any case, for the files to
-// be put back; without "Back up the files to change" (Plain), they and the marks are
-// deleted once the checks after pass.
+// pySSLFix replaces the ssl files of the Python exe as plan says. It is a script
+// (fixAction.Script), which stops at its first command that fails. In order: the
+// checks before (the ssl module must load); the download, checked against its SHA-256
+// (once for the Pythons fixed in the same run from the same download); its files taken
+// out; the files to replace must not be in use (the program closed); a backup of each
+// file replaced, with the creation date of its file (see backupThen), and a mark for
+// each file added, all named after the same time; then, in a "try", the copy and the
+// checks after: when one of them fails, its "catch" puts the original files back and
+// removes the added ones. The backups are made in any case, for the files to be put
+// back; without "Back up the files to change" (Plain), they and the marks are deleted
+// at the end, which is reached only when the checks after pass.
+//
+// It has two versions (pySSLScript). The Fix function runs the one above, with the
+// checks of pycheck.go, which only eMudScan has. The details page shows the other one
+// (Alone), which a user can copy and run without eMudScan.
 func pySSLFix(exe string, plan pySSLPlan) fixAction {
 	admin := needsAdmin(plan.dir)
+	cmds, fetch := pySSLScript(exe, plan, admin, false, true)
+	plain, _ := pySSLScript(exe, plan, admin, false, false)
+	alone, _ := pySSLScript(exe, plan, admin, true, true)
+	return fixAction{Kind: fixPySSL, Admin: admin, Optional: true, Script: true, Needs: "pycheck", Files: plan.files(), Cmds: cmds, Plain: plain, Alone: alone, Fetch: []int{fetch},
+		py: &pySSLTarget{exe: exe, plan: plan}}
+}
+
+// pySSLScript is the script of pySSLFix, and the place of its download among its
+// lines; without backups, it deletes them at its end.
+//
+// The version that runs alone differs in what eMudScan does for the other one. It is
+// one block, in which every error stops the script ("& {", $ErrorActionPreference),
+// with a line after each program that tells PowerShell when it failed: so it stops at
+// its first error by itself, also when it is pasted into a PowerShell window, and it
+// leaves no setting and no variable behind. Its test is that the ssl module loads
+// (with _hashlib, which the new libraries serve too), before and after. Its download
+// goes to a folder of its own in the user's Temp folder, deleted at its end.
+func pySSLScript(exe string, plan pySSLPlan, admin, alone, backups bool) (lines []string, fetch int) {
 	list := func(names []string) string {
-		if len(names) == 0 {
-			return "@()"
-		}
 		q := make([]string, len(names))
 		for i, n := range names {
 			q[i] = psQuote(n)
 		}
 		return strings.Join(q, ", ")
 	}
-	archive, extract, inside := plan.src.name()+".tar.gz", `New-Item -ItemType Directory -Force -Path $pyNew | Out-Null; & "$env:SystemRoot\System32\tar.exe" -xzf $pyArchive -C $pyNew `+
-		strings.Join(prefixAll("python/DLLs/", pbsFiles), " "), ` $pyNew = Join-Path $pyNew 'python\DLLs';`
+	each := func(names, do string) string { return names + " | ForEach-Object { " + do + " }" }
+	added := len(plan.added) > 0
+	all := "$files"
+	if added {
+		all = "$files + $added"
+	}
+	from := plan.src.from()
+	if !plan.src.zip {
+		from += " " + plan.src.tag
+	}
+	indent, dir := "", "$emudscanFiles"
+	if alone {
+		indent, dir = "    ", "$temp"
+	}
+	add := func(ls ...string) {
+		for _, l := range ls {
+			if l != "" {
+				l = indent + l
+			}
+			lines = append(lines, l)
+		}
+	}
+	first := true
+	title := func(key string, args ...any) {
+		if !first {
+			add("")
+		}
+		first = false
+		add("# " + Tf(key, args...))
+	}
+	// failed tells PowerShell that the program of the line before failed: eMudScan
+	// sees it by itself
+	failed := func(key string) {
+		if alone {
+			add("if ($LASTEXITCODE -ne 0) { throw " + psQuote(T(key)) + " }")
+		}
+	}
+	test := func(when string) string {
+		if alone {
+			return `& $python -I -c 'import ssl, _hashlib; print(ssl.OPENSSL_VERSION)'`
+		}
+		return `& $python -I $check $emudscanFiles ` + when
+	}
+
+	if alone {
+		lines = append(lines, "& {", indent+"$ErrorActionPreference = 'Stop'", "")
+		title("pyssl.a.python")
+	} else {
+		title("pyssl.s.python")
+	}
+	add("$python = "+psPath(exe, admin), "$folder = "+psPath(plan.dir, admin), "$files  = "+list(plan.replace))
+	if added {
+		add("$added  = " + list(plan.added))
+	}
+	if alone {
+		add(`$temp   = "$env:TEMP\eMudScan-fix"`, `New-Item -ItemType Directory -Force -Path $temp | Out-Null`)
+		title("pyssl.a.test")
+	} else {
+		add(`$check  = "$emudscanFiles\` + pyCheckName + `"`)
+		title("pyssl.s.before")
+	}
+	add(test("before"))
+	failed("pyssl.a.noSsl")
+
+	title("pyssl.s.download", plan.src.version, from)
+	ext := ".tar.gz"
 	if plan.src.zip {
-		archive, extract, inside = plan.src.name()+".zip", `Add-Type -AssemblyName System.IO.Compression.FileSystem; [IO.Compression.ZipFile]::ExtractToDirectory($pyArchive, $pyNew)`, ""
+		ext = ".zip"
 	}
-	check := `& $pyExe -I (Join-Path $emudscanFiles 'check_ssl.py') $emudscanFiles`
-	cmds := []string{
-		fmt.Sprintf(`$pyExe = %s; $pyDir = %s; $pyFiles = %s; $pyAdded = %s`, psPath(exe, admin), psPath(plan.dir, admin), list(plan.replace), list(plan.added)),
-		check + ` before; $pyOK = $LASTEXITCODE -eq 0`,
-		`[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12`,
-		fmt.Sprintf(`$pyArchive = Join-Path $emudscanFiles %s; if ($pyOK -and -not (Test-Path -LiteralPath $pyArchive)) { Invoke-WebRequest -UseBasicParsing -Uri '%s' -OutFile $pyArchive }; $pyOK = $pyOK -and (Test-Path -LiteralPath $pyArchive) -and (Get-FileHash -LiteralPath $pyArchive).Hash -eq '%s'`, psQuote(archive), plan.src.url, plan.src.sha256),
-		`$pyNew = Join-Path $emudscanFiles ` + psQuote(plan.src.name()) + `; if ($pyOK -and -not (Test-Path -LiteralPath $pyNew)) { ` + extract + ` };` + inside + ` $pyOK = $pyOK -and -not ($pyFiles + $pyAdded | Where-Object { -not (Test-Path -LiteralPath (Join-Path $pyNew $_)) })`,
-		// in use (the program is running): nothing changes
-		`if ($pyOK) { foreach ($n in $pyFiles) { try { [IO.File]::Open((Join-Path $pyDir $n), 'Open', 'ReadWrite', 'None').Dispose() } catch { $pyOK = $false; Write-Warning ` + psQuote(T("pyssl.inUse")) + ` } } }`,
-		`$pyStamp = Get-Date -Format 'yyyyMMdd-HHmmss'; if ($pyOK) { foreach ($n in $pyFiles) { if ($pyOK) { $pyBak = Copy-Item -LiteralPath (Join-Path $pyDir $n) -Destination (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -PassThru; if ($pyBak) { $pyBak.CreationTimeUtc = (Get-Item -LiteralPath (Join-Path $pyDir $n)).CreationTimeUtc }; $pyOK = [bool]$pyBak } }; foreach ($n in $pyAdded) { $pyOK = $pyOK -and [bool](New-Item -ItemType File -Force -Path (Join-Path $pyDir "$n.emudscan-$pyStamp.added")) } }`,
-		`if ($pyOK) { foreach ($n in $pyFiles + $pyAdded) { Copy-Item -LiteralPath (Join-Path $pyNew $n) -Destination (Join-Path $pyDir $n) -Force } }`,
-		`$pyGood = $false; if ($pyOK) { ` + check + ` after; $pyGood = $LASTEXITCODE -eq 0 }`,
-		`if ($pyOK -and -not $pyGood) { foreach ($n in $pyFiles) { Move-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -Destination (Join-Path $pyDir $n) -Force }; foreach ($n in $pyAdded) { Remove-Item -LiteralPath (Join-Path $pyDir $n), (Join-Path $pyDir "$n.emudscan-$pyStamp.added") -Force }; Write-Warning ` + psQuote(T("pyssl.putBack")) + ` }`,
-		`if (-not $pyOK) { Write-Warning ` + psQuote(T("pyssl.unchanged")) + ` }`,
+	add("$url     = "+psQuote(plan.src.url), "$sha256  = "+psQuote(plan.src.sha256), `$archive = "`+dir+`\`+plan.src.name()+ext+`"`,
+		`[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12`)
+	fetch = len(lines)
+	add(`if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $archive }`,
+		`if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { throw `+psQuote(T("pyssl.badSum"))+` }`)
+
+	title("pyssl.s.unpack")
+	members := strings.Join(prefixAll("python/DLLs/", append(append([]string(nil), plan.replace...), plan.added...)), " ")
+	switch {
+	case plan.src.zip:
+		add(`$new = "`+dir+`\`+plan.src.name()+`"`,
+			`Expand-Archive -LiteralPath $archive -DestinationPath $new -Force`,
+			`if (`+all+` | Where-Object { -not (Test-Path -LiteralPath "$new\$_") }) { throw `+psQuote(T("pyssl.missing"))+` }`)
+	case alone:
+		add(`$new = "$temp\python\DLLs"`, `& "$env:SystemRoot\System32\tar.exe" -xzf $archive -C $temp `+members)
+		failed("pyssl.missing")
+	default:
+		add(`$unpacked = "$emudscanFiles\`+plan.src.name()+`"`, `$new      = "$unpacked\python\DLLs"`,
+			`New-Item -ItemType Directory -Force -Path $unpacked | Out-Null`,
+			`& "$env:SystemRoot\System32\tar.exe" -xzf $archive -C $unpacked `+members)
 	}
-	plain := append(append([]string(nil), cmds...),
-		`if ($pyGood) { foreach ($n in $pyFiles) { Remove-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -Force }; foreach ($n in $pyAdded) { Remove-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.added") -Force } }`)
-	return fixAction{Kind: fixPySSL, Admin: admin, Optional: true, Needs: "pycheck", Files: plan.files(), Cmds: cmds, Plain: plain, Fetch: []int{3},
-		py: &pySSLTarget{exe: exe, plan: plan}}
+
+	title("pyssl.s.inUse")
+	add(each("$files", `[IO.File]::Open("$folder\$_", 'Open', 'ReadWrite', 'None').Dispose()`))
+
+	if added {
+		title("pyssl.s.backupAdded")
+	} else {
+		title("pyssl.s.backup")
+	}
+	add(`$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'`,
+		each("$files", `Copy-Item -LiteralPath "$folder\$_" -Destination "$folder\$_.emudscan-$stamp.bak"`),
+		each("$files", `(Get-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak").CreationTime = (Get-Item -LiteralPath "$folder\$_").CreationTime`))
+	if added {
+		add(each("$added", `New-Item -ItemType File -Path "$folder\$_.emudscan-$stamp.added" | Out-Null`))
+	}
+
+	title("pyssl.s.replace")
+	add("try {", "    "+each(all, `Copy-Item -LiteralPath "$new\$_" -Destination "$folder\$_" -Force`), "    "+test("after"))
+	if alone {
+		add("    if ($LASTEXITCODE -ne 0) { throw " + psQuote(T("pyssl.a.noNewSsl")) + " }")
+	}
+	add("}", "catch {", "    "+each("$files", `Move-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak" -Destination "$folder\$_" -Force`))
+	if added {
+		add("    " + each("$added", `Remove-Item -LiteralPath "$folder\$_", "$folder\$_.emudscan-$stamp.added" -ErrorAction Ignore`))
+	}
+	add("    throw "+psQuote(T("pyssl.putBack")), "}")
+
+	if !backups {
+		if added {
+			title("pyssl.s.noBackupAdded")
+		} else {
+			title("pyssl.s.noBackup")
+		}
+		add(each("$files", `Remove-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak"`))
+		if added {
+			add(each("$added", `Remove-Item -LiteralPath "$folder\$_.emudscan-$stamp.added"`))
+		}
+	}
+	if alone {
+		title("pyssl.a.clean")
+		add(`Remove-Item -Recurse -Force -LiteralPath $temp`)
+		lines = append(lines, "}")
+	}
+	return lines, fetch
 }
 
 // pySSLTarget is what pySSLFix was made for, kept with the fix: the same fix can be

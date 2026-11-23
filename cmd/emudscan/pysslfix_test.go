@@ -84,10 +84,12 @@ func TestPySSLPins(t *testing.T) {
 	}
 }
 
-// The commands: the checks before, the download checked against its SHA-256, its
-// files, nothing when a file is in use, a backup of each file and a mark for each added
-// one (named after the same time), the copy, the checks after, and, when they fail, the
-// original files back and the added ones removed. Optional, with the checks' files.
+// The fix is a script, which stops at its first command that fails: the checks before,
+// the download checked against its SHA-256, its files, the files that must not be in
+// use, a backup of each file and a mark for each added one (named after the same
+// time), then, in a "try", the copy and the checks after, and, in its "catch", the
+// original files back and the added ones removed. Each line is a whole command, a
+// comment, a line of a block or an empty line. Optional, with the checks' files.
 func TestPySSLFix(t *testing.T) {
 	Lang = 0
 	root := t.TempDir()
@@ -100,39 +102,101 @@ func TestPySSLFix(t *testing.T) {
 	}
 	f := pySSLFix(exe, plan)
 	all := strings.Join(f.Cmds, "\n")
-	for _, want := range []string{
-		"$pyExe = " + psPath(exe, false) + "; $pyDir = " + psPath(filepath.Dir(ssl), false) + "; $pyFiles = '_ssl.pyd', '_hashlib.pyd'; $pyAdded = 'libssl-3-x64.dll', 'libcrypto-3-x64.dll'",
-		"& $pyExe -I (Join-Path $emudscanFiles 'check_ssl.py') $emudscanFiles before; $pyOK = $LASTEXITCODE -eq 0",
-		// once for the Pythons fixed in the same run from the same download, with the same files
-		"$pyArchive = Join-Path $emudscanFiles 'python-3.12.16-20261110-standalone.tar.gz'; if ($pyOK -and -not (Test-Path -LiteralPath $pyArchive)) {",
-		"-Uri '" + pbsSSL["3.12"].url + "' -OutFile $pyArchive", "(Get-FileHash -LiteralPath $pyArchive).Hash -eq '" + pbsSSL["3.12"].sha256 + "'",
-		"$pyNew = Join-Path $emudscanFiles 'python-3.12.16-20261110-standalone'; if ($pyOK -and -not (Test-Path -LiteralPath $pyNew)) {",
-		`tar.exe" -xzf $pyArchive -C $pyNew python/DLLs/_ssl.pyd python/DLLs/_hashlib.pyd python/DLLs/libssl-3-x64.dll python/DLLs/libcrypto-3-x64.dll }; $pyNew = Join-Path $pyNew 'python\DLLs';`,
-		"[IO.File]::Open((Join-Path $pyDir $n), 'Open', 'ReadWrite', 'None')",
-		`"$n.emudscan-$pyStamp.bak"`, `"$n.emudscan-$pyStamp.added"`,
-		"$pyBak.CreationTimeUtc = (Get-Item -LiteralPath (Join-Path $pyDir $n)).CreationTimeUtc", // the creation date of the file
-		"Copy-Item -LiteralPath (Join-Path $pyNew $n) -Destination (Join-Path $pyDir $n) -Force",
-		"$emudscanFiles after; $pyGood = $LASTEXITCODE -eq 0",
-		"if ($pyOK -and -not $pyGood) { foreach ($n in $pyFiles) { Move-Item",
-	} {
-		if !strings.Contains(all, want) {
-			t.Errorf("no %q in\n%s", want, all)
-		}
+	want := strings.Join([]string{
+		"# The Python to fix, and its ssl files",
+		"$python = " + psPath(exe, false),
+		"$folder = " + psPath(filepath.Dir(ssl), false),
+		"$files  = '_ssl.pyd', '_hashlib.pyd'",
+		"$added  = 'libssl-3-x64.dll', 'libcrypto-3-x64.dll'",
+		`$check  = "$emudscanFiles\check_ssl.py"`,
+		"",
+		"# Test this Python before the replacement",
+		"& $python -I $check $emudscanFiles before",
+		"",
+		"# Download Python 3.12.16 (python-build-standalone 20261110) and check its SHA-256",
+		"$url     = '" + pbsSSL["3.12"].url + "'",
+		"$sha256  = '" + pbsSSL["3.12"].sha256 + "'",
+		// once for the Pythons fixed in the same run from the same download
+		`$archive = "$emudscanFiles\python-3.12.16-20261110-standalone.tar.gz"`,
+		"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
+		"if (-not (Test-Path -LiteralPath $archive)) { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $archive }",
+		"if ((Get-FileHash -LiteralPath $archive).Hash -ne $sha256) { throw 'The download does not match its SHA-256.' }",
+		"",
+		"# Take the new ssl files out of the download",
+		`$unpacked = "$emudscanFiles\python-3.12.16-20261110-standalone"`,
+		`$new      = "$unpacked\python\DLLs"`,
+		"New-Item -ItemType Directory -Force -Path $unpacked | Out-Null",
+		// named one by one: tar fails when the download does not have one of them
+		`& "$env:SystemRoot\System32\tar.exe" -xzf $archive -C $unpacked python/DLLs/_ssl.pyd python/DLLs/_hashlib.pyd python/DLLs/libssl-3-x64.dll python/DLLs/libcrypto-3-x64.dll`,
+		"",
+		"# Check that no program is using the files to replace",
+		`$files | ForEach-Object { [IO.File]::Open("$folder\$_", 'Open', 'ReadWrite', 'None').Dispose() }`,
+		"",
+		"# Back up the files to replace, with their dates, and mark the files to add",
+		"$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'",
+		`$files | ForEach-Object { Copy-Item -LiteralPath "$folder\$_" -Destination "$folder\$_.emudscan-$stamp.bak" }`,
+		`$files | ForEach-Object { (Get-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak").CreationTime = (Get-Item -LiteralPath "$folder\$_").CreationTime }`, // the creation date of the file
+		`$added | ForEach-Object { New-Item -ItemType File -Path "$folder\$_.emudscan-$stamp.added" | Out-Null }`,
+		"",
+		"# Replace the files, then test this Python again. If a line fails, put the original files back",
+		"try {",
+		`    $files + $added | ForEach-Object { Copy-Item -LiteralPath "$new\$_" -Destination "$folder\$_" -Force }`,
+		"    & $python -I $check $emudscanFiles after",
+		"}",
+		"catch {",
+		`    $files | ForEach-Object { Move-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak" -Destination "$folder\$_" -Force }`,
+		`    $added | ForEach-Object { Remove-Item -LiteralPath "$folder\$_", "$folder\$_.emudscan-$stamp.added" -ErrorAction Ignore }`,
+		"    throw 'The replacement failed: the original files were put back.'",
+		"}",
+	}, "\n")
+	if all != want {
+		t.Errorf("the script:\n%s\nwant:\n%s", all, want)
 	}
-	if f.Kind != fixPySSL || !f.Optional || f.Needs != "pycheck" || len(f.Files) != 4 || !backsUp([]Item{{Fixes: []fixAction{f}}}) || !fetchesRight(f) {
+	if f.Kind != fixPySSL || !f.Optional || !f.Script || f.Needs != "pycheck" || len(f.Files) != 4 || !backsUp([]Item{{Fixes: []fixAction{f}}}) || !fetchesRight(f) {
 		t.Errorf("%+v", f)
 	}
-	// without "Back up the files to change": the same, then the backups and marks deleted once the checks pass
-	if len(f.Plain) != len(f.Cmds)+1 || strings.Join(f.Plain[:len(f.Cmds)], "\n") != all ||
-		f.Plain[len(f.Cmds)] != `if ($pyGood) { foreach ($n in $pyFiles) { Remove-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.bak") -Force }; foreach ($n in $pyAdded) { Remove-Item -LiteralPath (Join-Path $pyDir "$n.emudscan-$pyStamp.added") -Force } }` {
+	// each line is a whole command, a comment, a line of a block or an empty line: no
+	// flag carried from a command to the next, no loop over several lines
+	commands := 0
+	for _, c := range f.Plain {
+		if isCommand(c) {
+			commands++
+		}
+		if strings.Contains(c, "foreach (") || strings.Contains(c, "$pyOK") || strings.Count(c, "{") != strings.Count(c, "}") && !blockLine(c) {
+			t.Errorf("not a line of the script: %q", c)
+		}
+	}
+	if commands != 28 {
+		t.Errorf("%d commands", commands)
+	}
+	// without "Back up the files to change": the same, then the backups and marks
+	// deleted, at the end, which is reached only when the checks after pass
+	end := []string{"", "# Delete the backups and the marks",
+		`$files | ForEach-Object { Remove-Item -LiteralPath "$folder\$_.emudscan-$stamp.bak" }`,
+		`$added | ForEach-Object { Remove-Item -LiteralPath "$folder\$_.emudscan-$stamp.added" }`}
+	if len(f.Plain) != len(f.Cmds)+len(end) || strings.Join(f.Plain[:len(f.Cmds)], "\n") != all || strings.Join(f.Plain[len(f.Cmds):], "\n") != strings.Join(end, "\n") {
 		t.Errorf("plain:\n%s", strings.Join(f.Plain, "\n"))
 	}
-	// python.org's package: unzipped
+	// a Python laid out as python-build-standalone's: nothing added
+	home1 := filepath.Join(root, "app1", "python")
+	ssl1 := pyLayout(t, home1, pe.IMAGE_FILE_MACHINE_AMD64, "DLLs", "libssl-3-x64.dll", "libcrypto-3-x64.dll", "_hashlib.pyd")
+	plan1, _ := pySSLPlanFor(pythonEnvFor(filepath.Join(home1, "python.exe")), ssl1, "3.11.18")
+	f1 := pySSLFix(filepath.Join(home1, "python.exe"), plan1)
+	if all := strings.Join(f1.Plain, "\n"); strings.Contains(all, "$added") || strings.Contains(all, ".added") || !strings.Contains(all, "\n# Back up the files to replace, with their dates\n") ||
+		!strings.Contains(all, "\n    $files | ForEach-Object { Copy-Item -LiteralPath \"$new\\$_\"") || !strings.HasSuffix(all, "\n\n# Delete the backups\n"+end[2]) ||
+		!strings.Contains(all, " -C $unpacked python/DLLs/_ssl.pyd python/DLLs/libssl-3-x64.dll python/DLLs/libcrypto-3-x64.dll\n") {
+		t.Errorf("standalone:\n%s", all)
+	}
+	// python.org's package: unzipped, and its files checked
 	home2 := filepath.Join(root, "app2", "python")
 	ssl2 := pyLayout(t, home2, pe.IMAGE_FILE_MACHINE_AMD64, ".", "libssl-3.dll", "libcrypto-3.dll", "_hashlib.pyd")
 	plan2, _ := pySSLPlanFor(pythonEnvFor(filepath.Join(home2, "python.exe")), ssl2, "3.14.10")
-	if all := strings.Join(pySSLFix(filepath.Join(home2, "python.exe"), plan2).Cmds, "\n"); !strings.Contains(all, "[IO.Compression.ZipFile]::ExtractToDirectory($pyArchive, $pyNew)") || strings.Contains(all, "tar.exe") ||
-		!strings.Contains(all, "'python-3.14.10-embed.zip'") || !strings.Contains(all, "$pyNew = Join-Path $emudscanFiles 'python-3.14.10-embed';") {
+	f2 := pySSLFix(filepath.Join(home2, "python.exe"), plan2)
+	if all := strings.Join(f2.Cmds, "\n"); strings.Contains(all, "tar.exe") || strings.Contains(all, "$unpacked") || !fetchesRight(f2) ||
+		!strings.Contains(all, "\n# Download Python 3.14.10 (python.org) and check its SHA-256\n$url     = '"+pyorgSSL["3.14"].url+"'\n") ||
+		!strings.Contains(all, "\n$archive = \"$emudscanFiles\\python-3.14.10-embed.zip\"\n") ||
+		!strings.Contains(all, "\n$new = \"$emudscanFiles\\python-3.14.10-embed\"\nExpand-Archive -LiteralPath $archive -DestinationPath $new -Force\n"+
+			"if ($files | Where-Object { -not (Test-Path -LiteralPath \"$new\\$_\") }) { throw 'A file is missing in the download.' }\n") {
 		t.Errorf("zip:\n%s", all)
 	}
 }
@@ -159,7 +223,8 @@ func TestPySSLOffer(t *testing.T) {
 	})
 	d, at := got.Details, 0
 	for _, w := range []string{"Recommended action: update Example App 1", Tf("pyssl.offer", "3.11.18", "python-build-standalone", "Example App 1"),
-		T("bundled.warn"), "$ $pyExe = ", Tf("py.untilThenAlso", "certifi"), "pip install --upgrade certifi"} {
+		T("bundled.warn"), "In PowerShell:\n$ & {\n$     $ErrorActionPreference = 'Stop'\n$\n$     # The Python to fix, its ssl files, and a folder for the download\n$     $python = ",
+		"\n$\n$     # Test that this Python loads its ssl module\n", "\n$     }\n$\n$     # Delete the download\n$     Remove-Item -Recurse -Force -LiteralPath $temp\n$ }\n", Tf("py.untilThenAlso", "certifi"), "pip install --upgrade certifi"} {
 		i := strings.Index(d[at:], w)
 		if i < 0 {
 			t.Fatalf("%q missing or out of order:\n%s", w, d)

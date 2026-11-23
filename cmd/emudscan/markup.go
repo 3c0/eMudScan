@@ -74,6 +74,8 @@ func plain(s string) string {
 	lead := len(s) - len(strings.TrimLeftFunc(s, unicode.IsSpace))
 	if rest := s[lead:]; strings.HasPrefix(rest, "$ ") || strings.HasPrefix(rest, "@ ") {
 		s = s[:lead+1] + "\u00a0" + s[lead+2:]
+	} else if rest == "$" { // would read as an empty line of a script (cmdOf)
+		s += "\u00a0"
 	}
 	return s
 }
@@ -146,8 +148,22 @@ func browserLink(target string) (exe, u string, ok bool) {
 	return exe, u, true
 }
 
-// cmd marks a line as a command.
-func cmd(s string) string { return "$ " + s }
+// cmd marks a line as a command, or as another line of a script (fixAction.Script): a
+// comment, a line of a block, an empty line, which is the mark alone.
+func cmd(s string) string {
+	if s == "" {
+		return "$"
+	}
+	return "$ " + s
+}
+
+// cmdOf is the command of a line that cmd marked.
+func cmdOf(line string) (string, bool) {
+	if line == "$" {
+		return "", true
+	}
+	return strings.CutPrefix(line, "$ ")
+}
 
 // Links to other elements: in the window they open that element's details; their
 // text says where the element is, for the report.
@@ -207,8 +223,8 @@ var (
 
 // parseLine splits one line of markup into runs.
 func parseLine(line string) []mrun {
-	if strings.HasPrefix(line, "$ ") {
-		return []mrun{{kind: runCommand, text: line[2:]}}
+	if c, ok := cmdOf(line); ok {
+		return []mrun{{kind: runCommand, text: c}}
 	}
 	if label, value, ok := parseField(line); ok {
 		return append([]mrun{{kind: runBold, text: label + labelSep()}}, parseInline(value)...)
@@ -339,7 +355,7 @@ func markupBlocks(s string) []docBlock {
 			}
 			continue
 		}
-		if c, ok := strings.CutPrefix(line, "$ "); ok {
+		if c, ok := cmdOf(line); ok {
 			if l := last(); l != nil && l.kind == dkCmds {
 				l.cmds = append(l.cmds, c)
 			} else {

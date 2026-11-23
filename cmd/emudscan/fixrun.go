@@ -69,6 +69,10 @@ const (
 	lineCmdError                    // an error of a command, or its exit code
 	lineWarning                     // a warning of a command
 	lineEnd                         // the end of the fixes: a horizontal bar
+	// lineScript is a line of a script (fixAction.Script) that has no result: a comment,
+	// an empty line, a line of a block, or a command that did not run. It shows as a
+	// command does, without a mark.
+	lineScript
 )
 
 // fixBar is the end of the fixes (lineEnd) as text: in the report, where it also
@@ -98,7 +102,7 @@ func (l fixLine) plain() string {
 		return Tf("fix.software", l.text)
 	case lineComment:
 		return "# " + l.text
-	case lineCommand:
+	case lineCommand, lineScript:
 		return "    " + l.text
 	case lineOK, lineFailed, lineOutput, lineCmdError, lineWarning:
 		return "      " + ansiStrip(l.text) // without the colors of the output
@@ -142,6 +146,25 @@ func plainLines(lines []fixLine) []string {
 		out[i] = l.plain()
 	}
 	return out
+}
+
+// pyCheckName is the name of the file of the checks of a Python's ssl module
+// (pyCheckFiles), as the script of its fix names it.
+const pyCheckName = "check_ssl.py"
+
+// checkFileLink is where a line of a script names the file of the checks: the length
+// of the name, and of what follows it on the line, in UTF-16 characters, as the
+// console counts them. The console makes the name a link that shows the file, so
+// that the user can read what the fix runs.
+func checkFileLink(l fixLine) (n, tail int, ok bool) {
+	if l.kind != lineCommand && l.kind != lineScript {
+		return 0, 0, false
+	}
+	i := strings.LastIndex(l.text, pyCheckName)
+	if i < 0 {
+		return 0, 0, false
+	}
+	return len(pyCheckName), len(utf16.Encode([]rune(l.text[i+len(pyCheckName):]))), true
 }
 
 // unitResult is what came of a fix: whether its commands ran, and all succeeded; halted:
@@ -607,7 +630,11 @@ func fixPreview(items []Item, backup bool) []fixLine {
 			cmds = f.Plain
 		}
 		for _, c := range cmds {
-			out = append(out, fixLine{lineCommand, c})
+			if f.runs(c) {
+				out = append(out, fixLine{lineCommand, c})
+			} else {
+				out = append(out, fixLine{lineScript, c})
+			}
 		}
 	}
 	titles := fixTitles(items)
@@ -790,6 +817,12 @@ func fixMarker() string {
 // in the script's scope, so that the variables of a fix ($cacert, $ok) go from one
 // command to the next.
 //
+// The lines of a fix that is a script (fixAction.Script) run in the same way, each
+// command with its result. Its comments and empty lines are left out, and the lines
+// of its blocks ("try {", "catch {", "}") are written as they are, around its
+// commands. A command that fails raises an error after its result is written: the fix
+// stops there or, inside "try", goes on in "catch"; the fixes that follow still run.
+//
 // The helper files of the fixes (fixFiles) are next to the script, in $emudscanFiles:
 // the script exits with code 97, as when it changed, if one of them did.
 //
@@ -846,7 +879,16 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 			b.WriteString("Write-EmudscanLog (\"$emudscanOut\".TrimEnd())\n")
 			fmt.Fprintf(&b, "Write-EmudscanLog ('%s end %d %d ' + [int]$emudscanFailed + ' ' + $emudscanCode)\n", marker, u, c)
 		}
+		if unit.fix.Script {
+			b.WriteString("try {\n")
+		}
 		for c := range unit.cmds {
+			if !unit.fix.runs(unit.cmds[c]) {
+				if blockLine(unit.cmds[c]) {
+					b.WriteString(unit.cmds[c] + "\n")
+				}
+				continue
+			}
 			run(c)
 			halt := fmt.Sprintf("{ Write-EmudscanLog '%s halt %d %d'; exit 0 }\n", marker, u, c)
 			switch {
@@ -864,6 +906,12 @@ func fixScript(units []fixUnit, logPath, marker string, files map[string][]byte)
 				}
 				b.WriteString("if ($emudscanFailed -and -not (Test-EmudscanServers " + strings.Join(q, ", ") + ")) " + halt)
 			}
+			if unit.fix.Script {
+				b.WriteString("if ($emudscanFailed) { throw 'eMudScan: a command failed' }\n")
+			}
+		}
+		if unit.fix.Script {
+			b.WriteString("} catch { }\n")
 		}
 	}
 	b.WriteString("exit 0\n")
@@ -965,10 +1013,35 @@ type fixLog struct {
 	partial string    // a line not complete yet
 	shown   []fixLine // what the command running showed, given after its result
 	errors  bool      // the command running showed an error
+	// for the scripts (fixAction.Script): the fix whose commands run, or -1, and the
+	// first of its lines that is not written yet
+	unit, next int
 }
 
 func newFixLog(units []fixUnit, marker string, out func(fixLine), titles bool) *fixLog {
-	return &fixLog{units: units, marker: marker, out: out, titles: titles, results: make([]unitResult, len(units))}
+	return &fixLog{units: units, marker: marker, out: out, titles: titles, results: make([]unitResult, len(units)), unit: -1}
+}
+
+// scriptTo writes the lines of the script of the fix running, up to its line to (not
+// included), which have no result: its comments, its empty lines, the lines of its
+// blocks, and the commands that did not run (the rest of a "try" after a failure, a
+// "catch" that was not needed, what follows the command where the fix stopped). So the
+// console has the whole script, in its order, with a result for each command that ran.
+func (l *fixLog) scriptTo(to int) {
+	if l.unit < 0 || !l.units[l.unit].fix.Script {
+		return
+	}
+	for ; l.next < to && l.next < len(l.units[l.unit].cmds); l.next++ {
+		l.out(fixLine{lineScript, l.units[l.unit].cmds[l.next]})
+	}
+}
+
+// scriptEnd writes what is left of the script of the fix running, which ended.
+func (l *fixLog) scriptEnd() {
+	if l.unit >= 0 {
+		l.scriptTo(len(l.units[l.unit].cmds))
+	}
+	l.unit, l.next = -1, 0
 }
 
 // write takes what was added to the log since the last call.
@@ -988,6 +1061,7 @@ func (l *fixLog) close() {
 		l.partial = ""
 	}
 	l.flush()
+	l.scriptEnd()
 }
 
 // flush gives what the last command showed.
@@ -1035,6 +1109,9 @@ func (l *fixLog) line(s string) {
 	switch f[0] {
 	case "cmd":
 		l.flush()
+		if u != l.unit {
+			l.scriptEnd()
+		}
 		if l.titles && l.last != l.units[u].ids[0]+1 {
 			if l.last != 0 { // a blank line after the commands of the software before
 				l.out(fixLine{lineNote, ""})
@@ -1044,9 +1121,12 @@ func (l *fixLog) line(s string) {
 				l.out(fixLine{lineSoftware, t})
 			}
 		}
+		l.unit = u
+		l.scriptTo(c)
+		l.next = c + 1
 		l.out(fixLine{lineCommand, l.units[u].cmds[c]})
 		l.errors = false
-		if c == 0 {
+		if !l.results[u].ran {
 			l.results[u] = unitResult{ran: true, ok: true}
 		}
 	case "end":

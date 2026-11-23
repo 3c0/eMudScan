@@ -1,9 +1,11 @@
 package main
 
 // Fixes: the commands that the details page gives to fix an element, described as
-// data, so that the Fix function runs exactly what the page shows. Each fix is made
-// where its commands are written (newFix), and the page shows its commands as they
-// are recorded. When an element is finished, its fixes are the recorded ones whose
+// data, so that the Fix function runs exactly what the page shows; but a fix whose
+// commands use what only eMudScan has, of which the page shows a version that runs
+// alone (fixAction.Alone), and the Fix window the commands that it runs. Each fix is
+// made where its commands are written (newFix), and the page shows its commands as
+// they are recorded. When an element is finished, its fixes are the recorded ones whose
 // commands appear in its details, in the order of the page (Item.Fixes). Restoring a
 // backup is recorded too, but kept apart (Item.Restores): it runs only from the
 // Restore button of the details, never with the fixes. Other commands are never
@@ -11,6 +13,7 @@ package main
 // a setting.
 
 import (
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -33,9 +36,20 @@ const (
 
 // fixAction is one fix: commands that run together, in Windows PowerShell.
 type fixAction struct {
-	Kind    fixKind
-	Admin   bool     // the commands need administrator rights
-	Cmds    []string // the commands, as the details page shows them (with their backups)
+	Kind  fixKind
+	Admin bool     // the commands need administrator rights
+	Cmds  []string // the commands, as the details page shows them (with their backups)
+	// Script: the commands are the lines of a script written to be read: its commands,
+	// each on one line, and between them comments, empty lines and the lines that open
+	// or close a block ("try {", "catch {", "}"). Each command that runs has its result;
+	// the fix stops at its first command that fails, and inside "try" the failure goes
+	// to "catch", as in any PowerShell script whose errors all stop it (fixScript).
+	Script bool
+	// Alone is the script that the details page shows, when it is not the commands
+	// that the Fix function runs: a version of them that runs without eMudScan, for a
+	// fix whose commands use what only eMudScan has (the checks of a Python's ssl
+	// module). The Fix window shows, and runs, the commands.
+	Alone   []string
 	Plain   []string // the same commands without the backups of the files; nil when they make none
 	Files   []string // the files the commands change, backed up first
 	From    []string // for a restore: the backup of each file, which is put back in its place
@@ -67,6 +81,22 @@ type fixAction struct {
 // fetches: the command c of the fix downloads what it needs (Fetch).
 func (f fixAction) fetches(c int) bool { return slices.Contains(f.Fetch, c) }
 
+// blockLineRe is a line of a script that only opens or closes a block.
+var blockLineRe = regexp.MustCompile(`^\s*(try \{|catch \{|& \{|\})\s*$`)
+
+// blockLine: the line s of a script only opens or closes a block.
+func blockLine(s string) bool { return blockLineRe.MatchString(s) }
+
+// isCommand: the line s of a script is a command, which runs and has a result: not an
+// empty line, a comment or a line of a block.
+func isCommand(s string) bool {
+	t := strings.TrimSpace(s)
+	return t != "" && !strings.HasPrefix(t, "#") && !blockLine(s)
+}
+
+// runs: the line s of the fix is a command. Every line is one, but in a script.
+func (f fixAction) runs(s string) bool { return !f.Script || isCommand(s) }
+
 // The servers of the updates (fixAction.Servers): those of their package managers'
 // default sources.
 var (
@@ -84,10 +114,19 @@ var (
 	}
 )
 
+// shown are the commands of the fix that the details page shows: those that the Fix
+// function runs, or their version that runs alone (Alone).
+func (f fixAction) shown() []string {
+	if f.Alone != nil {
+		return f.Alone
+	}
+	return f.Cmds
+}
+
 // lines are the commands of the fix as the details page shows them.
 func (f fixAction) lines() string {
 	var out []string
-	for _, c := range f.Cmds {
+	for _, c := range f.shown() {
 		out = append(out, cmd(c))
 	}
 	return strings.Join(out, "\n")
@@ -219,8 +258,8 @@ func fixWarningText(items []Item) string {
 	return joinParas(fixWarnings(items), first, order, rest)
 }
 
-// key identifies a fix by its commands.
-func (f fixAction) key() string { return strings.Join(f.Cmds, "\n") }
+// key identifies a fix by its commands, as the details page shows them.
+func (f fixAction) key() string { return strings.Join(f.shown(), "\n") }
 
 // recordedFixes are the fixes made so far, by their commands: the same commands are
 // the same fix wherever they are shown.
@@ -258,7 +297,7 @@ func fixesIn(details string) []fixAction {
 		}
 	}
 	for _, line := range strings.Split(strings.ReplaceAll(details, "\r", ""), "\n") {
-		if c, ok := strings.CutPrefix(line, "$ "); ok {
+		if c, ok := cmdOf(line); ok {
 			group = append(group, c)
 			continue
 		}

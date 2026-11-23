@@ -219,8 +219,8 @@ func TestUseLatest(t *testing.T) {
 	f := got.Fixes[0]
 	all := strings.Join(f.Cmds, "\n")
 	if len(changed) != 1 || f.Kind != fixPySSL || f.Note != "" || len(got.Fixes) != 2 || got.Fixes[1].Kind != fixPip ||
-		!strings.Contains(all, "-Uri '"+newer.url+"' -OutFile $pyArchive") || !strings.Contains(all, "(Get-FileHash -LiteralPath $pyArchive).Hash -eq '"+testSum+"'") ||
-		!strings.Contains(all, "'python-3.11.19-20270105-standalone.tar.gz'") || strings.Contains(all, pbsTag) || len(f.Cmds) != len(old.Fixes[0].Cmds) {
+		!strings.Contains(all, "\n$url     = '"+newer.url+"'\n") || !strings.Contains(all, "\n$sha256  = '"+testSum+"'\n") ||
+		!strings.Contains(all, `\python-3.11.19-20270105-standalone.tar.gz"`) || strings.Contains(all, pbsTag) || len(f.Cmds) != len(old.Fixes[0].Cmds) {
 		t.Errorf("found: %d changed\n%s", len(changed), all)
 	}
 	if !strings.Contains(got.Details, f.lines()) || strings.Contains(got.Details, pbsSSL["3.11"].url) {

@@ -95,13 +95,22 @@ python.org, in its list of releases, where it takes the latest one of the line
 that has Windows files. When it finds none, or when **Allow the online test**
 is cleared, the commands name the release written in eMudScan (Python 3.14.10
 or 3.15.2; python-build-standalone 20261110), and the window says so.
-PowerShell backs up each file it replaces. Before and after the replacement,
-that Python runs eMudScan’s tests, with certificates made for the fix, valid one
+The fix is a script that stops at its first command that fails.
+PowerShell backs up each file it replaces. It has two versions. The detailed
+information gives the one that runs without eMudScan, also when it is pasted
+into a PowerShell window: before and after the replacement, it tests that this
+Python loads its `ssl` module, it downloads into a folder of its own in your
+Temp folder (`eMudScan-fix`), and deletes that folder at its end. The **Fix
+software** window shows, and runs, the other one: before and after the replacement,
+that Python runs eMudScan’s tests
+([check_ssl.py](../cmd/emudscan/check_ssl.py), a file of the source code that
+eMudScan.exe contains as it is, and that the window shows when you click its
+name in the commands), with certificates made for the fix, valid one
 hour, and without connecting to anything: its `ssl` and `hashlib` modules load
 and give 7 known results, the Windows roots load, TLS 1.2 and TLS 1.3
 connections succeed in memory, and a chain through a compromised intermediate
 is rejected. If a test that passed before fails after, or the chain is not
-rejected, the original files are put back. This fix is not ticked by default in
+rejected, or if a file cannot be replaced, the original files are put back. This fix is not ticked by default in
 the **Fix software** window, since it changes a program that its publisher has
 not updated yet; close that program first. A free-threaded Python, or one for
 another processor, is left as it is.

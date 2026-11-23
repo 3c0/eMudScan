@@ -295,20 +295,28 @@ func (b *aboutBox) paint(hwnd, dc uintptr, rc rect) {
 }
 
 // ---------------------------------------------------------------------------
-// Licenses and notices: a resizable box with the text in a read-only edit control
-// (it scrolls, and its text can be selected and copied).
+// A text to read: a resizable box with the text in a read-only edit control (it
+// scrolls, and its text can be selected and copied), and a button that copies all of
+// it. The licenses and notices; the file of the checks of a Python's ssl module, from
+// the Fix window.
 
 type licBox struct {
-	edit, ok, font uintptr
-	over           uintptr // the window it is centred on
-	barH           int32
+	edit, ok, copy, font uintptr
+	over                 uintptr // the window it is centred on
+	barH                 int32
+	text                 string
 }
 
 var licDlg *licBox
 
-func (a *ui) licenses(owner uintptr) {
-	licDlg = &licBox{over: owner}
-	modalBox(owner, T("lic.caption"), true, licDlgProc)
+const idTextCopy = 101 // the button that copies the text of the box
+
+func (a *ui) licenses(owner uintptr) { a.textBox(owner, T("lic.caption"), licensesText()) }
+
+// textBox shows text in a box over owner, and returns when it is closed.
+func (a *ui) textBox(owner uintptr, caption, text string) {
+	licDlg = &licBox{over: owner, text: text}
+	modalBox(owner, caption, true, licDlgProc)
 	if licDlg.font != 0 {
 		pDeleteObject.Call(licDlg.font)
 	}
@@ -324,7 +332,7 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 	switch msg {
 	case wmInitDialog:
 		b.font = createFont(9, a.dpi, 400, false, "Consolas")
-		text := strings.ReplaceAll(licensesText(), "\n", "\r\n")
+		text := strings.ReplaceAll(b.text, "\n", "\r\n")
 		b.edit, _, _ = pCreateWindowExW.Call(0, up("EDIT"), up(text), uintptr(wsChild|wsVisible|wsVScroll|wsTabStop|0x4|0x40|0x800), // MULTILINE|AUTOVSCROLL|READONLY
 			0, 0, 10, 10, hwnd, 100, 0, 0)
 		send(b.edit, wmSetFont, b.font, 0)
@@ -333,6 +341,9 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 		b.ok, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up("OK"), uintptr(wsChild|wsVisible|wsTabStop|0x1 /* BS_DEFPUSHBUTTON */),
 			0, 0, 10, 10, hwnd, 1 /* IDOK */, 0, 0)
 		send(b.ok, wmSetFont, a.fontUI, 0)
+		b.copy, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up(T("dlg.copyAll")), uintptr(wsChild|wsVisible|wsTabStop),
+			0, 0, 10, 10, hwnd, idTextCopy, 0, 0)
+		send(b.copy, wmSetFont, a.fontUI, 0)
 		b.barH = s(13) + s(30) + s(13)
 		a.placeBox(hwnd, b.over, s(660), s(540))
 		pSetFocus.Call(b.edit)
@@ -343,6 +354,7 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 		top := s(10)
 		pSetWindowPos.Call(b.edit, 0, 0, uintptr(top), uintptr(w), uintptr(max(h-b.barH-top, 0)), 0x0004|0x0010)
 		pSetWindowPos.Call(b.ok, 0, uintptr(w-s(16)-s(88)), uintptr(h-b.barH+s(13)), uintptr(s(88)), uintptr(s(30)), 0x0004|0x0010)
+		pSetWindowPos.Call(b.copy, 0, uintptr(s(16)), uintptr(h-b.barH+s(13)), uintptr(s(110)), uintptr(s(30)), 0x0004|0x0010)
 		pInvalidateRect.Call(hwnd, 0, 0)
 		return 1
 	case wmGetMinMaxInfo:
@@ -350,8 +362,12 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 		pt[0], pt[1] = s(420), s(300)
 		return 1
 	case wmCommand:
-		if id := loword(wParam); id == 1 || id == 2 {
+		switch id := loword(wParam); {
+		case id == 1 || id == 2:
 			pEndDialog.Call(hwnd, uintptr(id))
+			return 1
+		case id == idTextCopy && hiword(wParam) == 0: // BN_CLICKED
+			setClipboard(hwnd, b.text)
 			return 1
 		}
 	case wmCtlColorStatic: // the read-only text, on white

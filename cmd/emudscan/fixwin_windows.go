@@ -169,6 +169,7 @@ func (a *ui) openFix(owner uintptr, it Item) {
 		a.fix, a.fixUnder = a.fixUnder, nil
 		return
 	}
+	d.links(a, true)
 	a.showFix(d)
 }
 
@@ -865,6 +866,9 @@ func (d *fixDlg) show(l fixLine) {
 	if id != 0 {
 		d.console.setLink(d.lineAt[len(d.lineAt)-1], len(utf16.Encode([]rune(link))), id)
 	}
+	if n, tail, ok := checkFileLink(l); ok { // the file of the checks of a Python: a click shows it
+		d.console.setLinkAt(d.lineAt[len(d.lineAt)-1], n, tail, fixCheckLink)
+	}
 	if l.kind == lineEnd { // drawn in the middle of its row, then an empty line
 		d.console.setBar(d.lineAt[len(d.lineAt)-1], rgb(0x76, 0x76, 0x76))
 		d.console.append(consoleRuns(blank), false)
@@ -885,15 +889,22 @@ func (d *fixDlg) resultOf(l fixLine) int {
 	return checkResultOf(l, d.titles)
 }
 
-// links makes the links after the checks (resultOf) work, or not while the fixes run.
+// links makes the links of the console work, or not while the fixes run: the name of
+// the file of the checks of a Python, in its fix, which shows that file; in the Fix
+// software window, the links after the checks (resultOf) and the saved report.
 func (d *fixDlg) links(a *ui, on bool) {
 	d.console.onLink = nil
-	if on && d.list != 0 {
-		d.console.onLink = func(id int) {
-			if id == fixReportLink { // shown in File Explorer, as by the message that gave it
-				openPath(d.hwnd, d.report)
-				return
-			}
+	if !on {
+		return
+	}
+	d.console.onLink = func(id int) {
+		switch {
+		case id == fixCheckLink:
+			a.textBox(d.hwnd, T("pyssl.checkCaption"), pyCheckScript)
+		case d.list == 0: // the Fix window of the details has no other link
+		case id == fixReportLink: // shown in File Explorer, as by the message that gave it
+			openPath(d.hwnd, d.report)
+		default:
 			a.openResult(d, id)
 		}
 	}
@@ -902,6 +913,9 @@ func (d *fixDlg) links(a *ui, on bool) {
 // fixReportLink is the link of the saved report, in the console; the others are the
 // elements of the results (resultOf).
 const fixReportLink = -1
+
+// fixCheckLink is the link of the file of the checks of a Python (checkFileLink).
+const fixCheckLink = -2
 
 // openResult opens the details of the element of a link after a check (resultOf), as
 // a double-click on its row does.
@@ -978,7 +992,7 @@ func (d *fixDlg) showNear(row int) {
 func consoleRuns(l fixLine) []logRun {
 	text, color, bold := l.text, rgb(220, 220, 220), false
 	switch l.kind {
-	case lineCommand:
+	case lineCommand, lineScript:
 		var runs []logRun
 		for _, tk := range psTokens(l.text) {
 			c := color

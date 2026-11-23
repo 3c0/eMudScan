@@ -150,7 +150,11 @@ open in it.
 ## Fixing software
 
 eMudScan can run for you the commands that the detailed information gives to fix
-a software, and no others:
+a software, and no others. One fix has two versions, the one that replaces the
+ssl files of a Python: the detailed information gives a script that you can copy
+and run without eMudScan, and the **Fix software** window shows, and runs, the
+same script with eMudScan’s own tests of that Python (see
+[Other software](checks.md#other-software)). The fixes:
 
 - an update through the package manager that installed the software or its
   component: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx,
@@ -201,7 +205,9 @@ has, from top to bottom:
   the warning before they run explains it. The button in their top right corner
   copies them, with their comments, as in the detailed information window; after
   the fixes, it copies their results. You can also select part of the text and
-  copy it (Ctrl+C, or right-click).
+  copy it (Ctrl+C, or right-click). In the fix of the ssl files of a Python, the
+  name `check_ssl.py` is a link: click it to read that file, the tests that the
+  fix runs in that Python, before you run anything.
 - **Back up the files to change**, **Fix the selected software**, **Stop** and
   **Close**.
 
@@ -246,7 +252,12 @@ Once you accept:
    result in the column on its left: “…” while it runs, then a green ✔ or a red
    ✘. Below come what it showed, its warnings in yellow, its errors in red, then
    its exit code when it failed, and a blank line after the commands of each
-   software. **Stop** never stops a command in the middle: Windows PowerShell
+   software. The fix of the ssl files of a Python is a script: each of its lines
+   is one command, a comment, or a line that opens or closes a block. It stops
+   at its first command that fails (✘); inside `try`, the failure goes to
+   `catch`, which puts the original files back. Only the commands that ran have
+   a result: a comment, a line of a block, or a command that did not run, has
+   none. The other fixes still run. **Stop** never stops a command in the middle: Windows PowerShell
    first ends the commands it was given (those of one software, or all those
    that need administrator rights), then a red line says “Fix interrupted!”, and
    the software not reached is left as it was. A failed connection stops the
@@ -371,7 +382,7 @@ Each item has these fields; a field without a value is left out:
 | `homepage` | The homepage of the software |
 | `packages` | The packages of the software: `manager`, `id` and `page` |
 | `copies` | When the same finding is in several places, the other places: `file` and `folder` |
-| `fixes` | What **Fix** can run: `kind`, `manager` (for an update), `optional` (not ticked when the Fix window opens), `administrator` (needs administrator rights) and `commands` |
+| `fixes` | What **Fix** can run: `kind`, `manager` (for an update), `optional` (not ticked when the Fix window opens), `administrator` (needs administrator rights) and `commands`, as the detailed information gives them |
 
 The kinds of fixes are `update` (with the package manager), `pip`, `conda`,
 `tool`, `replace_bundle`, `java_block_list`, `replace_node` and

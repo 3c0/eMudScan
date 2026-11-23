@@ -63,8 +63,9 @@ type logLine struct {
 	// bar: drawn as a horizontal line across the log, in barColor, in place of its text
 	bar      bool
 	barColor uint32
-	// link: its last linkN characters are a link, underlined, which calls onLink(link)
-	link, linkN int
+	// link: linkN of its characters are a link, underlined, which calls onLink(link):
+	// its last ones, or those that end linkTail characters before its end
+	link, linkN, linkTail int
 }
 
 type logRowRef struct{ line, row int }
@@ -181,9 +182,13 @@ func (v *logView) setBar(line int, color uint32) {
 
 // setLink makes the last n characters of a line, before its line break, a link: a
 // click on it calls onLink(id).
-func (v *logView) setLink(line, n, id int) {
+func (v *logView) setLink(line, n, id int) { v.setLinkAt(line, n, 0, id) }
+
+// setLinkAt makes n characters of a line a link, those that end tail characters before
+// its line break.
+func (v *logView) setLinkAt(line, n, tail, id int) {
 	if line >= 0 && line < len(v.lines) && id != 0 {
-		v.lines[line].link, v.lines[line].linkN = id, n
+		v.lines[line].link, v.lines[line].linkN, v.lines[line].linkTail = id, n, tail
 		pInvalidateRect.Call(v.hwnd, 0, 0)
 	}
 }
@@ -194,7 +199,7 @@ func (v *logView) linkRange(ln *logLine) (int, int) {
 	for _, sp := range ln.spans {
 		end += sp.n
 	}
-	return end - ln.linkN, end
+	return end - ln.linkTail - ln.linkN, end - ln.linkTail
 }
 
 // linkAt is the link under a point, or 0.

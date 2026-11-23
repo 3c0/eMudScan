@@ -310,7 +310,7 @@ func itemFixes(it Item) []fixAction {
 	seen := map[string]bool{}
 	for _, m := range append([]Item{it}, it.Copies...) {
 		for _, f := range m.Fixes {
-			if k := strings.Join(f.Cmds, "\n"); !seen[k] {
+			if k := f.key(); !seen[k] {
 				seen[k] = true
 				out = append(out, f)
 			}
@@ -351,7 +351,7 @@ func reportItemOf(it Item) reportItem {
 	}
 	for _, f := range itemFixes(it) {
 		out.Fixes = append(out.Fixes, reportFix{Kind: f.Kind.keyword(), Manager: f.Manager, Optional: f.Optional,
-			Administrator: f.Admin, Commands: append([]string{}, f.Cmds...)})
+			Administrator: f.Admin, Commands: append([]string{}, f.shown()...)})
 	}
 	return out
 }
