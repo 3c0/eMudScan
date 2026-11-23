@@ -94,6 +94,7 @@ type logView struct {
 	markAscent int32
 	markTops   map[string]int32 // where each mark is drawn in its row (markTop)
 	bg         uintptr          // its background brush
+	signColor  uint32           // the color of its wrap signs (wrapSignColor if 0)
 	// the copy button of the console, in its top right corner, as the commands of the
 	// details page have: copyText is what it copies, copyTip its tooltip
 	copyText            func() string
@@ -235,8 +236,8 @@ func (v *logView) linkAt(pt point) int {
 	return 0
 }
 
-// logViews are the logs shown, by window: the main window's, and the console of the
-// Fix window.
+// logViews are the logs shown, by window: the main window's, the console of the Fix
+// window, and the script of the box of check_ssl.py.
 var logViews = map[uintptr]*logView{}
 
 // newLogView makes a log as a child of parent.
@@ -252,10 +253,23 @@ func (a *ui) newLogView(parent uintptr, id int) *logView {
 // newConsoleView makes the console of the Fix window, as a child of parent: it is
 // not a tab stop (a click selects its text, the wheel scrolls it).
 func (a *ui) newConsoleView(parent uintptr, id int) *logView {
+	return a.consoleView(parent, id, 0, true, consoleBg)
+}
+
+// newPythonView makes a console that shows a Python script to read, in its own colors
+// (pyColor) on its own background, as a child of parent: a tab stop, for the keys that
+// select, copy and scroll it, without the column of the results of the commands.
+func (a *ui) newPythonView(parent uintptr, id int) *logView {
+	v := a.consoleView(parent, id, wsTabStop, false, pyBackground)
+	v.signColor = pySignColor
+	return v
+}
+
+func (a *ui) consoleView(parent uintptr, id int, style uint32, marks bool, bg uint32) *logView {
 	h, _, _ := pCreateWindowExW.Call(0, up("eMudScanLog"), 0,
-		uintptr(wsChild|wsVisible|wsVScroll), 0, 0, 10, 10, parent, uintptr(id), 0, 0)
-	v := &logView{hwnd: h, console: true, marks: true}
-	v.bg, _, _ = pCreateSolidBrush.Call(consoleBg)
+		uintptr(wsChild|wsVisible|wsVScroll|style), 0, 0, 10, 10, parent, uintptr(id), 0, 0)
+	v := &logView{hwnd: h, console: true, marks: marks}
+	v.bg, _, _ = pCreateSolidBrush.Call(uintptr(bg))
 	logViews[h] = v
 	pSetWindowTheme.Call(h, up("DarkMode_Explorer"), 0) // a dark scroll bar, where Windows has one
 	v.setFonts(a.dpi)
@@ -827,7 +841,11 @@ func (v *logView) paint() {
 		}
 	}
 	pSelectObject.Call(dc, v.fonts[logSymbol])
-	pSetTextColor.Call(dc, uintptr(wrapSignColor))
+	signColor := uint32(wrapSignColor)
+	if v.signColor != 0 {
+		signColor = v.signColor
+	}
+	pSetTextColor.Call(dc, uintptr(signColor))
 	for _, g := range signs { // in gray, never selected
 		ty := g.y + v.ascent - v.ascents[logSymbol]
 		pExtTextOutW.Call(dc, uintptr(g.x), uintptr(ty), 0, 0, uintptr(unsafe.Pointer(&g.s[0])), uintptr(len(g.s)), 0)

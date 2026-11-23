@@ -908,7 +908,7 @@ func (d *fixDlg) links(a *ui, on bool) {
 	d.console.onLink = func(id int) {
 		switch {
 		case id == fixCheckLink:
-			a.textBox(d.hwnd, T("pyssl.checkCaption"), pyCheckScript)
+			a.pythonBox(d.hwnd, T("pyssl.checkCaption"), pyCheckScript)
 		case d.list == 0: // the Fix window of the details has no other link
 		case id == fixReportLink: // shown in File Explorer, as by the message that gave it
 			openPath(d.hwnd, d.report)

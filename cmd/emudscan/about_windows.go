@@ -297,14 +297,18 @@ func (b *aboutBox) paint(hwnd, dc uintptr, rc rect) {
 // ---------------------------------------------------------------------------
 // A text to read: a resizable box with the text in a read-only edit control (it
 // scrolls, and its text can be selected and copied), and a button that copies all of
-// it. The licenses and notices; the file of the checks of a Python's ssl module, from
-// the Fix window.
+// it: the licenses and notices. Or a Python script, the file of the checks of a
+// Python's ssl module, from the Fix window: in its own colors on a very dark blue
+// (pyColor), other than those of the PowerShell commands, its long lines cut with the
+// wrap signs, as in the consoles.
 
 type licBox struct {
 	edit, ok, copy, font uintptr
-	over                 uintptr // the window it is centred on
+	script               *logView // the Python script, in place of edit
+	over                 uintptr  // the window it is centred on
 	barH                 int32
 	text                 string
+	python               bool
 }
 
 var licDlg *licBox
@@ -315,10 +319,20 @@ func (a *ui) licenses(owner uintptr) { a.textBox(owner, T("lic.caption"), licens
 
 // textBox shows text in a box over owner, and returns when it is closed.
 func (a *ui) textBox(owner uintptr, caption, text string) {
-	licDlg = &licBox{over: owner, text: text}
-	modalBox(owner, caption, true, licDlgProc)
-	if licDlg.font != 0 {
-		pDeleteObject.Call(licDlg.font)
+	a.readBox(&licBox{over: owner, text: text}, caption)
+}
+
+// pythonBox shows a Python script in a box over owner, in colors, and returns when it
+// is closed.
+func (a *ui) pythonBox(owner uintptr, caption, script string) {
+	a.readBox(&licBox{over: owner, text: script, python: true}, caption)
+}
+
+func (a *ui) readBox(b *licBox, caption string) {
+	licDlg = b
+	modalBox(b.over, caption, true, licDlgProc)
+	if b.font != 0 {
+		pDeleteObject.Call(b.font)
 	}
 	licDlg = nil
 }
@@ -331,13 +345,28 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 	s := a.scale
 	switch msg {
 	case wmInitDialog:
-		b.font = createFont(9, a.dpi, 400, false, "Consolas")
-		text := strings.ReplaceAll(b.text, "\n", "\r\n")
-		b.edit, _, _ = pCreateWindowExW.Call(0, up("EDIT"), up(text), uintptr(wsChild|wsVisible|wsVScroll|wsTabStop|0x4|0x40|0x800), // MULTILINE|AUTOVSCROLL|READONLY
-			0, 0, 10, 10, hwnd, 100, 0, 0)
-		send(b.edit, wmSetFont, b.font, 0)
-		m := uintptr(s(14))
-		send(b.edit, 0x00D3 /* EM_SETMARGINS */, 0x1|0x2, m|m<<16)
+		if b.python {
+			b.script = a.newPythonView(hwnd, 100)
+			b.edit = b.script.hwnd
+			for _, toks := range pyTokens(strings.TrimSuffix(b.text, "\n")) {
+				runs := []logRun{}
+				for _, tk := range toks {
+					r, g, bl := pyColor(tk.kind)
+					runs = append(runs, logRun{tk.text, rgb(r, g, bl), false, false})
+				}
+				r, g, bl := pyColor(pySymbol)
+				runs = append(runs, logRun{"\n", rgb(r, g, bl), false, false})
+				b.script.appendScript(runs, false) // its long lines with the wrap signs
+			}
+		} else {
+			b.font = createFont(9, a.dpi, 400, false, "Consolas")
+			text := strings.ReplaceAll(b.text, "\n", "\r\n")
+			b.edit, _, _ = pCreateWindowExW.Call(0, up("EDIT"), up(text), uintptr(wsChild|wsVisible|wsVScroll|wsTabStop|0x4|0x40|0x800), // MULTILINE|AUTOVSCROLL|READONLY
+				0, 0, 10, 10, hwnd, 100, 0, 0)
+			send(b.edit, wmSetFont, b.font, 0)
+			m := uintptr(s(14))
+			send(b.edit, 0x00D3 /* EM_SETMARGINS */, 0x1|0x2, m|m<<16)
+		}
 		b.ok, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up("OK"), uintptr(wsChild|wsVisible|wsTabStop|0x1 /* BS_DEFPUSHBUTTON */),
 			0, 0, 10, 10, hwnd, 1 /* IDOK */, 0, 0)
 		send(b.ok, wmSetFont, a.fontUI, 0)
@@ -345,13 +374,26 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 			0, 0, 10, 10, hwnd, idTextCopy, 0, 0)
 		send(b.copy, wmSetFont, a.fontUI, 0)
 		b.barH = s(13) + s(30) + s(13)
-		a.placeBox(hwnd, b.over, s(660), s(540))
+		if b.python {
+			a.placeBox(hwnd, b.over, s(900), s(700))
+			b.script.scrollTo(0)
+		} else {
+			a.placeBox(hwnd, b.over, s(660), s(540))
+			send(b.edit, 0x00B1 /* EM_SETSEL */, 0, 0)
+		}
 		pSetFocus.Call(b.edit)
-		send(b.edit, 0x00B1 /* EM_SETSEL */, 0, 0)
 		return 0
+	case wmDestroy:
+		if b.script != nil {
+			b.script.destroy()
+			b.script = nil
+		}
 	case wmSize:
 		w, h := int32(loword(lParam)), int32(hiword(lParam))
 		top := s(10)
+		if b.python { // the console up to the bar
+			top = 0
+		}
 		pSetWindowPos.Call(b.edit, 0, 0, uintptr(top), uintptr(w), uintptr(max(h-b.barH-top, 0)), 0x0004|0x0010)
 		pSetWindowPos.Call(b.ok, 0, uintptr(w-s(16)-s(88)), uintptr(h-b.barH+s(13)), uintptr(s(88)), uintptr(s(30)), 0x0004|0x0010)
 		pSetWindowPos.Call(b.copy, 0, uintptr(s(16)), uintptr(h-b.barH+s(13)), uintptr(s(110)), uintptr(s(30)), 0x0004|0x0010)

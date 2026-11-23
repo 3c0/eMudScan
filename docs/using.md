@@ -221,18 +221,17 @@ has, from top to bottom:
   `# Fix 2, if the update does not fix it: Replace the certificate bundle…`. The
   console shows the same while the fixes run. A line too long for the console
   ends with ↩ and goes on after ↪, as in the detailed information window. If
-  they run in a different order,
-  the warning before they run explains it. When copied, the line between two
-  software is a comment, which PowerShell skips. The button in their top right corner
-  copies them, with their comments, as in the detailed information window; after
-  the fixes, it copies their results. You can also select part of the text and
-  copy it (Ctrl+C, or right-click). In the fix of the ssl files of a Python, the
-  name `check_ssl.py` is a link: click it to read that file, the tests that the
-  fix runs in that Python, before you run anything. That fix first says what
-  `$emudscanFiles` is, which its commands use: the folder that eMudScan makes
-  for the fix in your Temp folder, with `check_ssl.py` and its test
-  certificates, and deletes after it. When the fix runs, its first command
-  shows that folder.
+  they run in a different order, the warning before they run explains it. When
+  copied, the line between two software is a comment, which PowerShell skips.
+  The button in their top right corner copies them, with their comments, as in
+  the detailed information window; after the fixes, it copies their results. You
+  can also select part of the text and copy it (Ctrl+C, or right-click). In the
+  fix of the ssl files of a Python, the name `check_ssl.py` is a link: click it
+  to read that file, in colors, the tests that the fix runs in that Python,
+  before you run anything. That fix first says what `$emudscanFiles` is, which
+  its commands use: the folder that eMudScan makes for the fix in your Temp
+  folder, with `check_ssl.py` and its test certificates, and deletes after it.
+  When the fix runs, its first command shows that folder.
 - **Back up the files to change**, **Fix the selected software**, **Stop** and
   **Close**.
 
