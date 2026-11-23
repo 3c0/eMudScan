@@ -101,8 +101,9 @@ func TestFixScript(t *testing.T) {
 // those of a fix that they share), after a blank line below those of the one before.
 func TestFixLog(t *testing.T) {
 	Lang = 0
-	units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, cmds: []string{"$a = 1", "write"}}, {ids: []int{2, 4}, titles: []string{"B", "B › D"}, cmds: []string{"scoop update app"}},
-		{ids: []int{3}, titles: []string{"C"}, cmds: []string{"never"}}}
+	units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, names: []string{"A"}, places: []string{`C:\A\cacert.pem`}, label: "Fix: Replace", cmds: []string{"$a = 1", "write"}},
+		{ids: []int{2, 4}, titles: []string{"B", "B › D"}, names: []string{"B", "B › D"}, places: []string{"", ""}, label: "Fix 1: Update", cmds: []string{"scoop update app"}},
+		{ids: []int{3}, titles: []string{"C"}, names: []string{"C"}, places: []string{""}, cmds: []string{"never"}}}
 	log := "##m cmd 0 0\n\n##m end 0 0 0 0\n##m cmd 0 1\nwritten\n##m? careful\n##m end 0 1 0 0\n" +
 		"##m cmd 1 0\nUpdating app\n##other cmd 2 0\n##m! It broke\n##m end 1 0 1 2\n##m cmd 9 0\n##m end 1"
 	for _, titles := range []bool{false, true} {
@@ -116,10 +117,15 @@ func TestFixLog(t *testing.T) {
 		if fixSimulation {
 			done, exit = "Done (simulated)", "Failed (simulated)"
 		}
-		want := []fixLine{{lineCommand, "$a = 1"}, {lineOK, done}, {lineCommand, "write"}, {lineOK, done}, {lineOutput, "written"}, {lineWarning, "WARNING: careful"},
-			{lineCommand, "scoop update app"}, {lineFailed, ""}, {lineOutput, "Updating app"}, {lineOutput, "##other cmd 2 0"}, {lineCmdError, "It broke"}, {lineCmdError, exit}}
+		// each fix after the line that says which it is, an empty line between two fixes; with
+		// the titles, a line drawn between two software, and each one's name and place
+		a := []fixLine{{lineComment, "Fix: Replace"}, {lineCommand, "$a = 1"}, {lineOK, done}, {lineCommand, "write"}, {lineOK, done}, {lineOutput, "written"}, {lineWarning, "WARNING: careful"}}
+		b := []fixLine{{lineComment, "Fix 1: Update"}, {lineCommand, "scoop update app"}, {lineFailed, ""}, {lineOutput, "Updating app"}, {lineOutput, "##other cmd 2 0"}, {lineCmdError, "It broke"}, {lineCmdError, exit}}
+		blank := fixLine{lineNote, ""}
+		want := append(append(append([]fixLine(nil), a...), blank), b...)
 		if titles {
-			want = append(append([]fixLine{{lineSoftware, "A"}}, want[:6]...), append([]fixLine{{lineNote, ""}, {lineSoftware, "B"}, {lineSoftware, "B › D"}}, want[6:]...)...)
+			want = append(append([]fixLine{{lineSoftware, "A"}, {lineComment, `Location: C:\A\cacert.pem`}}, a...),
+				append([]fixLine{blank, {lineRule, ""}, blank, {lineSoftware, "B"}, {lineSoftware, "B › D"}}, b...)...)
 		}
 		if fmt.Sprint(console) != fmt.Sprint(want) {
 			t.Errorf("titles %v, console:\n%s", titles, strings.Join(plainLines(console), "\n"))
@@ -452,8 +458,8 @@ func TestFixPreview(t *testing.T) {
 		if !backup {
 			last = "write"
 		}
-		want := []fixLine{{lineSoftware, itemTitle(it)}, {lineComment, "Update with Scoop:"}, {lineCommand, "scoop update app"}, {lineComment, T("fix.ifStillNeeded")},
-			{lineComment, "Replace the certificate bundle with Mozilla’s current one (as administrator):"}, {lineCommand, "$a = 1"}, {lineCommand, last}, {lineNote, ""}}
+		want := []fixLine{{lineSoftware, itemTitle(it)}, {lineComment, "Fix 1: Update with Scoop"}, {lineCommand, "scoop update app"}, {lineNote, ""},
+			{lineComment, "Fix 2, if the update does not fix it: Replace the certificate bundle with Mozilla’s current one (as administrator)"}, {lineCommand, "$a = 1"}, {lineCommand, last}}
 		if got := fixPreview([]Item{it}, backup); fmt.Sprint(got) != fmt.Sprint(want) {
 			t.Errorf("backup %v:\n%s", backup, strings.Join(plainLines(got), "\n"))
 		}
@@ -461,14 +467,14 @@ func TestFixPreview(t *testing.T) {
 	// its file, even when it is the only one
 	one := it
 	one.File = `C:\App\app.exe`
-	if got := fixPreview([]Item{one}, true); len(got) < 2 || got[1] != (fixLine{lineComment, one.File}) {
+	if got := fixPreview([]Item{one}, true); len(got) < 2 || got[1] != (fixLine{lineComment, "Location: " + one.File}) {
 		t.Errorf("one:\n%s", strings.Join(plainLines(got), "\n"))
 	}
 	// several copies: each one's file is named below its title; an element without
 	// fixes is left out
 	copy := it
 	copy.ID, copy.File, copy.Fixes = 3, `C:\Other\app.exe`, it.Fixes[1:]
-	if got := fixPreview([]Item{it, none, copy}, true); len(got) != 14 || got[8] != (fixLine{lineSoftware, itemTitle(copy)}) || got[9] != (fixLine{lineComment, copy.File}) {
+	if got := fixPreview([]Item{it, none, copy}, true); len(got) != 15 || got[8] != (fixLine{lineRule, ""}) || got[10] != (fixLine{lineSoftware, itemTitle(copy)}) || got[11] != (fixLine{lineComment, "Location: " + copy.File}) {
 		t.Errorf("copies:\n%s", strings.Join(plainLines(got), "\n"))
 	}
 	// two problems of a software that one update may fix: shown together, with the
@@ -479,22 +485,23 @@ func TestFixPreview(t *testing.T) {
 	other := Item{ID: 6, Group: GroupApps, Name: "Other", Program: "Other", File: `C:\o\cacert.pem`, Fixes: it.Fixes[1:]}
 	got := strings.Join(plainLines(fixPreview([]Item{exe, other, bundle}, true)), "\n")
 	want := `— tool —
-# C:\t\tool.exe
+# Location: C:\t\tool.exe
 — tool › Certificate bundle —
-# C:\t\cacert.pem
-# Update with Scoop:
+# Location: C:\t\cacert.pem
+# Fix 1: Update with Scoop
     scoop update app
-# Then, if the update does not fix tool › Certificate bundle:
-# Replace the certificate bundle with Mozilla’s current one (as administrator):
+
+# Fix 2, if the update does not fix tool › Certificate bundle: Replace the certificate bundle with Mozilla’s current one (as administrator)
     $a = 1
     backup; write
 
+` + scriptRule + `
+
 — Other —
-# C:\o\cacert.pem
-# Replace the certificate bundle with Mozilla’s current one (as administrator):
+# Location: C:\o\cacert.pem
+# Fix: Replace the certificate bundle with Mozilla’s current one (as administrator)
     $a = 1
-    backup; write
-`
+    backup; write`
 	if got != want {
 		t.Errorf("shared update:\n%s", got)
 	}
@@ -543,10 +550,10 @@ func TestFixTitles(t *testing.T) {
 		t.Errorf("titles: %v", got)
 	}
 	// the preview names the file of each below its title, which needs no place then
-	if lines := fixPreview(items[:2], true); len(lines) < 2 || lines[0].text != itemTitle(items[0]) || lines[1].text != `C:\a\python\cacert.pem` {
+	if lines := fixPreview(items[:2], true); len(lines) < 2 || lines[0].text != itemTitle(items[0]) || lines[1].text != `Location: C:\a\python\cacert.pem` {
 		t.Errorf("preview: %v", lines)
 	}
-	if lines := fixPreview(items[2:4], true); len(lines) < 2 || lines[0].text != itemTitle(items[2]) || lines[1].text != `C:\c\1.pem` {
+	if lines := fixPreview(items[2:4], true); len(lines) < 2 || lines[0].text != itemTitle(items[2]) || lines[1].text != `Location: C:\c\1.pem` {
 		t.Errorf("preview: %v", lines)
 	}
 }

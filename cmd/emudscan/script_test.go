@@ -116,7 +116,8 @@ func TestFixLogOfScript(t *testing.T) {
 	}
 	script := fixAction{Kind: fixPySSL, Script: true, Cmds: []string{"# what it does", "$a = 1", "", "try {", "    copy", "    test", "}", "catch {", "    put back", "    throw 'no'", "}", "", "# the end", "clean"}}
 	other := fixAction{Kind: fixBundle, Cmds: []string{"# not a comment here", "$b = 2"}}
-	units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, fix: script, cmds: script.Cmds}, {ids: []int{2}, titles: []string{"B"}, fix: other, cmds: other.Cmds}}
+	units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, names: []string{"A"}, places: []string{""}, label: "Fix: Replace", fix: script, cmds: script.Cmds},
+		{ids: []int{2}, titles: []string{"B"}, names: []string{"B"}, places: []string{""}, label: "Fix: Bundle", fix: other, cmds: other.Cmds}}
 	run := func(log string, titles bool) ([]string, []unitResult) {
 		var console []fixLine
 		l := newFixLog(units, "##m", func(s fixLine) { console = append(console, s) }, titles)
@@ -129,21 +130,22 @@ func TestFixLogOfScript(t *testing.T) {
 	ok := func(c int) string { return fmt.Sprintf("##m cmd 0 %d\n##m end 0 %d 0 0\n", c, c) }
 	// all goes well: the "catch" did not run
 	got, res := run(ok(1)+ok(4)+ok(5)+ok(13)+"##m cmd 1 0\n##m end 1 0 0 0\n##m cmd 1 1\n##m end 1 1 0 0\n", false)
-	want := []string{"    # what it does", "  ✓ $a = 1", "", "    try {", "  ✓     copy", "  ✓     test", "    }", "    catch {", "        put back", "        throw 'no'", "    }", "", "    # the end", "  ✓ clean",
-		"  ✓ # not a comment here", "  ✓ $b = 2"}
+	// the line of the fix, an empty line before its own comments; an empty line between two fixes
+	want := []string{"# Fix: Replace", "", "    # what it does", "  ✓ $a = 1", "", "    try {", "  ✓     copy", "  ✓     test", "    }", "    catch {", "        put back", "        throw 'no'", "    }", "", "    # the end", "  ✓ clean",
+		"", "# Fix: Bundle", "  ✓ # not a comment here", "  ✓ $b = 2"}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") || !res[0].ok || !res[1].ok {
 		t.Errorf("all well: %+v\n%s", res, strings.Join(got, "\n"))
 	}
 	// the test fails: the "catch" ran, and the fix stopped there; the next fix ran
 	got, res = run(ok(1)+ok(4)+"##m cmd 0 5\nno ssl\n##m end 0 5 1 1\n"+ok(8)+"##m cmd 0 9\n##m! no\n##m end 0 9 1 0\n"+"##m cmd 1 0\n##m end 1 0 0 0\n", true)
-	want = []string{Tf("fix.software", "A"), "    # what it does", "  ✓ $a = 1", "", "    try {", "  ✓     copy", "  ✗     test", "      no ssl", "      Exit code 1", "    }", "    catch {", "  ✓     put back", "  ✗     throw 'no'", "      no", "    }", "", "    # the end", "    clean",
-		"", Tf("fix.software", "B"), "  ✓ # not a comment here"}
+	want = []string{Tf("fix.software", "A"), "# Fix: Replace", "", "    # what it does", "  ✓ $a = 1", "", "    try {", "  ✓     copy", "  ✗     test", "      no ssl", "      Exit code 1", "    }", "    catch {", "  ✓     put back", "  ✗     throw 'no'", "      no", "    }", "", "    # the end", "    clean",
+		"", scriptRule, "", Tf("fix.software", "B"), "# Fix: Bundle", "  ✓ # not a comment here"}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") || !res[0].ran || res[0].ok || !res[1].ok {
 		t.Errorf("the test fails: %+v\n%s", res, strings.Join(got, "\n"))
 	}
 	// it stops at its first command: the rest has no result
 	got, res = run("##m cmd 0 1\n##m! broken\n##m end 0 1 1 0\n", false)
-	if strings.Join(got, "\n") != "    # what it does\n  ✗ $a = 1\n      broken\n\n    try {\n        copy\n        test\n    }\n    catch {\n        put back\n        throw 'no'\n    }\n\n    # the end\n    clean" || res[0].ok || res[1].ran {
+	if strings.Join(got, "\n") != "# Fix: Replace\n\n    # what it does\n  ✗ $a = 1\n      broken\n\n    try {\n        copy\n        test\n    }\n    catch {\n        put back\n        throw 'no'\n    }\n\n    # the end\n    clean" || res[0].ok || res[1].ran {
 		t.Errorf("stops at once: %+v\n%s", res, strings.Join(got, "\n"))
 	}
 	// the preview: the same lines, the commands apart
@@ -343,5 +345,49 @@ func TestGuide(t *testing.T) {
 	defer func() { Lang = 0 }()
 	if got, want := guide(how(T("fix.psAdmin"))+"\n"+several.lines(), true), "> Pour corriger cette vulnérabilité, cliquez sur **Corriger ce logiciel**, ou exécutez vous-même ces commandes dans PowerShell !!(Exécuter en tant qu’administrateur)!!\u00a0:\n"+several.lines(); got != want {
 		t.Errorf("in French:\n%s", got)
+	}
+}
+
+// Above the commands of each fix, the console says which fix it is: "Fix:" when its
+// software has only this one, else "Fix 1:", "Fix 2:"…, and, after an update, "if
+// the update does not fix it".
+func TestFixLabels(t *testing.T) {
+	Lang = 0
+	update := fixAction{Kind: fixPackage, Manager: "Scoop", Cmds: []string{"scoop update example-app-1"}}
+	bundle := fixAction{Kind: fixBundle, Admin: true, Cmds: []string{"$a = 1"}}
+	pip := fixAction{Kind: fixPip, Cmds: []string{"pip install --upgrade certifi"}}
+	python := fixAction{Kind: fixPySSL, Script: true, Cmds: []string{"# x", "$b = 1"}}
+	one := Item{ID: 1, Group: GroupApps, Name: "Example App 1", Program: "Example App 1", Fixes: []fixAction{python}}
+	two := Item{ID: 2, Group: GroupApps, Name: "Example App 2", Program: "Example App 2", Fixes: []fixAction{update, bundle}}
+	three := Item{ID: 3, Group: GroupApps, Name: "Example App 3", Program: "Example App 3", Fixes: []fixAction{bundle, pip}}
+	got := fixLabels([]Item{one, two, three})
+	for _, c := range []struct {
+		id   int
+		f    fixAction
+		want string
+	}{
+		{1, python, "Fix: Replace the ssl files of Python, checked before and after"},
+		{2, update, "Fix 1: Update with Scoop"},
+		{2, bundle, "Fix 2, if the update does not fix it: Replace the certificate bundle with Mozilla’s current one (as administrator)"},
+		{3, bundle, "Fix 1: Replace the certificate bundle with Mozilla’s current one (as administrator)"},
+		{3, pip, "Fix 2: Update with pip"},
+	} {
+		if got[labelKey(c.id, c.f)] != c.want {
+			t.Errorf("%d %v: %q, want %q", c.id, c.f.Kind, got[labelKey(c.id, c.f)], c.want)
+		}
+	}
+	// the runner gives each fix its line
+	r := &fixRunner{labels: got}
+	if u := r.unit(two, bundle); u.label != got[labelKey(2, bundle)] || u.names[0] != itemTitle(two) {
+		t.Errorf("unit: %+v", u)
+	}
+	// the line between two software is a comment: copied and run, PowerShell skips it
+	if !strings.HasPrefix(scriptRule, "# ") || strings.Trim(scriptRule[2:], "─") != "" || len([]rune(scriptRule)) != 78 {
+		t.Errorf("rule: %q", scriptRule)
+	}
+	Lang = 1
+	defer func() { Lang = 0 }()
+	if got := fixLabels([]Item{two})[labelKey(2, bundle)]; got != "Correction 2, si la mise à jour ne le corrige pas : Remplacement du fichier de certificats par celui, à jour, de Mozilla (en tant qu’administrateur)" {
+		t.Errorf("in French: %q", got)
 	}
 }

@@ -873,6 +873,9 @@ func (d *fixDlg) show(l fixLine) {
 		d.console.setBar(d.lineAt[len(d.lineAt)-1], rgb(0x76, 0x76, 0x76))
 		d.console.append(consoleRuns(blank), false)
 	}
+	if l.kind == lineRule { // between the fixes of two software, drawn in the middle of its row
+		d.console.setBar(d.lineAt[len(d.lineAt)-1], rgb(0x5A, 0x5A, 0x5A))
+	}
 	if l.kind == lineCommand && d.running {
 		d.cmdLine = d.lineAt[len(d.lineAt)-1]
 		d.console.setMark(d.cmdLine, "…", rgb(0x76, 0x76, 0x76))
@@ -1024,6 +1027,8 @@ func consoleRuns(l fixLine) []logRun {
 		color = rgb(97, 214, 214)
 	case lineEnd:
 		text, color = fixBar, rgb(0x76, 0x76, 0x76) // drawn as a line (setBar), copied as text
+	case lineRule:
+		text, color = scriptRule, rgb(0x5A, 0x5A, 0x5A) // drawn as a line (setBar), copied as a comment
 	}
 	if l.kind == lineOutput || l.kind == lineOK || l.kind == lineFailed || l.kind == lineCmdError || l.kind == lineWarning {
 		// what a command showed, in its own colors when it has some (ansiPieces)

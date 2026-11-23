@@ -530,7 +530,7 @@ func TestScriptStopsAlone(t *testing.T) {
 		if len(res) != 2 || !res[0].ran || res[0].ok || !res[1].ran || !res[1].ok {
 			t.Errorf("PowerShell %s: %+v\n%s", version, res, strings.Join(reportLines(lines), "\n"))
 		}
-		want := []string{"    # a fix", "  ✓ $a = 1", "", "  ✗ throw 'stop'", "      stop", "    $a = 2", "  ✓ if ($a -ne 1) { throw 'the fix before did not stop' }", "  ✓ $b = 1"}
+		want := []string{"    # a fix", "  ✓ $a = 1", "", "  ✗ throw 'stop'", "      stop", "    $a = 2", "", "  ✓ if ($a -ne 1) { throw 'the fix before did not stop' }", "  ✓ $b = 1"} // an empty line between two fixes
 		if got := reportLines(lines); strings.Join(got, "\n") != strings.Join(want, "\n") {
 			t.Errorf("PowerShell %s:\n%s\nwant:\n%s", version, strings.Join(got, "\n"), strings.Join(want, "\n"))
 		}
@@ -575,6 +575,17 @@ func TestChangedFileInPowerShell(t *testing.T) {
 			if want := how == "as written"; ran != want || (code == fixTampered) == want {
 				t.Errorf("PowerShell %s, %s: exit code %d, ran %v\n%s", version, how, code, ran, out)
 			}
+		}
+	}
+}
+
+// The line between the fixes of two software, as the copy of the console gives it, is a
+// comment: pasted into PowerShell, it does nothing and raises no error.
+func TestRuleInPowerShell(t *testing.T) {
+	for version, ps := range testPowerShells(t) {
+		out, err := exec.Command(ps, "-NoProfile", "-NonInteractive", "-Command", scriptRule+"\n# Example App 1\n'after the line'").CombinedOutput()
+		if err != nil || strings.TrimSpace(string(out)) != "after the line" {
+			t.Errorf("PowerShell %s: %v\n%s", version, err, out)
 		}
 	}
 }

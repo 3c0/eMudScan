@@ -211,8 +211,15 @@ has, from top to bottom:
   click it again to reverse the order. Drag the bar below the list to make it
   taller or shorter, down to a single row.
 - The PowerShell commands that will run for the ticked software (or for the
-  software you click), grouped by software. If they run in a different order,
-  the warning before they run explains it. The button in their top right corner
+  software you click), grouped by software. A line drawn across the console
+  separates two software. Each one starts with its name, its location
+  (`# Location: …`), then, above the commands of each of its fixes, a line that
+  says which fix it is, such as `# Fix: Replace the ssl files of Python…`, or
+  `# Fix 1: Update with Scoop` and
+  `# Fix 2, if the update does not fix it: Replace the certificate bundle…`. The
+  console shows the same while the fixes run. If they run in a different order,
+  the warning before they run explains it. When copied, the line between two
+  software is a comment, which PowerShell skips. The button in their top right corner
   copies them, with their comments, as in the detailed information window; after
   the fixes, it copies their results. You can also select part of the text and
   copy it (Ctrl+C, or right-click). In the fix of the ssl files of a Python, the

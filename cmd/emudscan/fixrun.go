@@ -49,7 +49,75 @@ type fixUnit struct {
 	titles []string // their titles, for the console
 	fix    fixAction
 	cmds   []string // what runs: the commands, with or without the backups
+	names  []string // the elements, as the console names them above their fixes (itemTitle)
+	places []string // and where each one is (Item.copyPath), or ""
+	label  string   // the line above its commands, which says which fix it is (fixLabels)
 }
+
+// fixLabels are, for each fix of each element of items (labelKey), the line that the
+// console writes above its commands: "Fix:", when its software has only this one,
+// else "Fix 1:", "Fix 2:"…, the fixes after an update "if the update does not fix
+// it", then what the fix does (fixIntro).
+func fixLabels(items []Item) map[string]string {
+	titles := fixTitles(items)
+	out := map[string]string{}
+	what := func(f fixAction) string { return strings.TrimRight(strings.TrimSpace(fixIntro(f)), ":\u00a0 ") }
+	for _, group := range updateGroups(items) {
+		var updates []fixAction
+		seen := map[string]bool{}
+		for _, it := range group {
+			for _, f := range it.Fixes {
+				if f.Kind == fixPackage && !seen[f.key()] {
+					seen[f.key()] = true
+					updates = append(updates, f)
+				}
+			}
+		}
+		type other struct {
+			it Item
+			f  fixAction
+		}
+		var others []other
+		for _, it := range group {
+			for _, f := range it.Fixes {
+				if f.Kind != fixPackage {
+					others = append(others, other{it, f})
+				}
+			}
+		}
+		one := len(updates)+len(others) == 1
+		for i, f := range updates {
+			label := Tf("fix.labelN", i+1, what(f))
+			if one {
+				label = Tf("fix.label", what(f))
+			}
+			for _, it := range group {
+				out[labelKey(it.ID, f)] = label
+			}
+		}
+		for i, o := range others {
+			num := len(updates) + i + 1
+			switch {
+			case one:
+				out[labelKey(o.it.ID, o.f)] = Tf("fix.label", what(o.f))
+			case len(updates) > 0 && len(group) > 1:
+				out[labelKey(o.it.ID, o.f)] = Tf("fix.labelForN", num, titles[o.it.ID], what(o.f))
+			case len(updates) > 0:
+				out[labelKey(o.it.ID, o.f)] = Tf("fix.labelIfN", num, what(o.f))
+			default:
+				out[labelKey(o.it.ID, o.f)] = Tf("fix.labelN", num, what(o.f))
+			}
+		}
+	}
+	return out
+}
+
+// labelKey is the key of the fix f of the element id in fixLabels.
+func labelKey(id int, f fixAction) string { return strconv.Itoa(id) + "\x00" + f.key() }
+
+// scriptRule is the line between the fixes of two software in the console: drawn
+// across its width, and copied as a comment, which PowerShell skips.
+var scriptRule = "# " + strings.Repeat("─", 76)
 
 // fixLineKind is what a line of the console of the Fix window is. The console shows
 // the commands as plain PowerShell, with what they do as comments, then their results.
@@ -73,6 +141,9 @@ const (
 	// an empty line, a line of a block, or a command that did not run. It shows as a
 	// command does, without a mark.
 	lineScript
+	// lineRule is the line between the fixes of two software, drawn across the console
+	// (scriptRule)
+	lineRule
 )
 
 // fixBar is the end of the fixes (lineEnd) as text: in the report, where it also
@@ -108,6 +179,8 @@ func (l fixLine) plain() string {
 		return "      " + ansiStrip(l.text) // without the colors of the output
 	case lineEnd:
 		return fixBar
+	case lineRule:
+		return scriptRule
 	}
 	return l.text
 }
@@ -239,6 +312,7 @@ type fixRunner struct {
 	backup    bool                      // "Back up the files to change"
 	pick      fixPick                   // the fixes of each element that run (the ticked rows); nil: all
 	titles    map[int]string            // the titles of the elements, for the console (fixTitles)
+	labels    map[string]string         // the line above the commands of each fix (fixLabels)
 	fixedAny  bool                      // a software is fixed, or restored: it is to be restarted if it was open
 	restoring bool                      // it restores backups (restore), instead of fixing
 	restores  map[int][]string          // for a restore: the restores of each element, by their commands (fixAction.key)
@@ -269,6 +343,7 @@ func (r *fixRunner) run(ids []int) (stopped bool) {
 		}
 	}
 	r.titles = fixTitles(r.pick.items(items))
+	r.labels = fixLabels(r.pick.items(items))
 	for _, update := range []bool{true, false} {
 		ran, ok, stop := r.round(ids, func(it Item) []fixAction {
 			if fixedStatus(it.Status) {
@@ -384,7 +459,8 @@ func (r *fixRunner) unit(it Item, f fixAction) fixUnit {
 	if !r.backup && f.Plain != nil {
 		cmds = f.Plain
 	}
-	return fixUnit{ids: []int{it.ID}, titles: []string{r.title(it)}, fix: f, cmds: cmds}
+	return fixUnit{ids: []int{it.ID}, titles: []string{r.title(it)}, fix: f, cmds: cmds,
+		names: []string{itemTitle(it)}, places: []string{shownPath(it.copyPath())}, label: r.labels[labelKey(it.ID, f)]}
 }
 
 // title is the title of an element in the console.
@@ -490,6 +566,7 @@ func (r *fixRunner) round(ids []int, actions func(Item) []fixAction) (ran []int,
 			if first := byCmds[k]; first != nil { // already run for another element
 				first.ids = append(first.ids, u.ids...)
 				first.titles = append(first.titles, u.titles...)
+				first.names, first.places = append(first.names, u.names...), append(first.places, u.places...)
 				continue
 			}
 			byCmds[k] = &u
@@ -670,10 +747,15 @@ func resultLink(it Item, title string) string {
 // warning before they run says in which.
 func fixPreview(items []Item, backup bool) []fixLine {
 	var out []fixLine
-	cmdLines := func(f fixAction) {
-		out = append(out, fixLine{lineComment, fixIntro(f)})
+	labels := fixLabels(items)
+	blank := fixLine{lineNote, ""}
+	fixLines := func(it Item, f fixAction) {
+		out = append(out, fixLine{lineComment, labels[labelKey(it.ID, f)]})
 		if f.Note != "" {
 			out = append(out, fixLine{lineComment, f.Note})
+		}
+		if f.Script { // its own comments follow
+			out = append(out, blank)
 		}
 		cmds := f.Cmds
 		if !backup && f.Plain != nil {
@@ -687,15 +769,14 @@ func fixPreview(items []Item, backup bool) []fixLine {
 			}
 		}
 	}
-	titles := fixTitles(items)
-	for _, group := range updateGroups(items) {
+	for i, group := range updateGroups(items) {
+		if i > 0 {
+			out = append(out, blank, fixLine{lineRule, ""}, blank)
+		}
 		var updates []fixAction
 		seen := map[string]bool{}
 		for _, it := range group {
-			out = append(out, fixLine{lineSoftware, itemTitle(it)})
-			if p := it.copyPath(); p != "" {
-				out = append(out, fixLine{lineComment, shownPath(p)})
-			}
+			out = append(out, softwareHead(itemTitle(it), shownPath(it.copyPath()))...)
 			for _, f := range it.Fixes {
 				if f.Kind == fixPackage && !seen[f.key()] {
 					seen[f.key()] = true
@@ -703,27 +784,34 @@ func fixPreview(items []Item, backup bool) []fixLine {
 				}
 			}
 		}
+		first := true
+		next := func(it Item, f fixAction) {
+			if !first {
+				out = append(out, blank)
+			}
+			first = false
+			fixLines(it, f)
+		}
 		for _, f := range updates {
-			cmdLines(f)
+			next(group[0], f)
 		}
 		for _, it := range group {
-			first := true
 			for _, f := range it.Fixes {
-				if f.Kind == fixPackage {
-					continue
+				if f.Kind != fixPackage {
+					next(it, f)
 				}
-				if first && len(updates) > 0 {
-					if len(group) > 1 {
-						out = append(out, fixLine{lineComment, Tf("fix.stillFor", titles[it.ID])})
-					} else {
-						out = append(out, fixLine{lineComment, T("fix.ifStillNeeded")})
-					}
-				}
-				first = false
-				cmdLines(f)
 			}
 		}
-		out = append(out, fixLine{lineNote, ""})
+	}
+	return out
+}
+
+// softwareHead is the head of the fixes of an element in the console: its title, then
+// where it is.
+func softwareHead(title, place string) []fixLine {
+	out := []fixLine{{lineSoftware, title}}
+	if place != "" {
+		out = append(out, fixLine{lineComment, Tf("fix.location", place)})
 	}
 	return out
 }
@@ -1077,6 +1165,7 @@ type fixLog struct {
 	// for the scripts (fixAction.Script): the fix whose commands run, or -1, and the
 	// first of its lines that is not written yet
 	unit, next int
+	started    bool // a fix began: the next one comes after an empty line
 }
 
 func newFixLog(units []fixUnit, marker string, out func(fixLine), titles bool) *fixLog {
@@ -1170,16 +1259,30 @@ func (l *fixLog) line(s string) {
 	switch f[0] {
 	case "cmd":
 		l.flush()
-		if u != l.unit {
+		if u != l.unit { // a fix begins: as in the list (fixPreview)
 			l.scriptEnd()
-		}
-		if l.titles && l.last != l.units[u].ids[0]+1 {
-			if l.last != 0 { // a blank line after the commands of the software before
+			unit := l.units[u]
+			if l.started {
 				l.out(fixLine{lineNote, ""})
 			}
-			l.last = l.units[u].ids[0] + 1
-			for _, t := range l.units[u].titles {
-				l.out(fixLine{lineSoftware, t})
+			if l.titles && l.last != unit.ids[0]+1 { // another software: a line, then its name
+				if l.started {
+					l.out(fixLine{lineRule, ""})
+					l.out(fixLine{lineNote, ""})
+				}
+				l.last = unit.ids[0] + 1
+				for i, name := range unit.names {
+					for _, line := range softwareHead(name, unit.places[i]) {
+						l.out(line)
+					}
+				}
+			}
+			l.started = true
+			if unit.label != "" {
+				l.out(fixLine{lineComment, unit.label})
+				if unit.fix.Script { // its own comments follow
+					l.out(fixLine{lineNote, ""})
+				}
 			}
 		}
 		l.unit = u
