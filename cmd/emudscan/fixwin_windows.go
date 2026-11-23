@@ -165,7 +165,7 @@ func (a *ui) openFix(owner uintptr, it Item) {
 		return
 	}
 	a.fixUnder = a.fix
-	if !a.newFixWindow(d, 860, 600) {
+	if !a.newFixWindow(d, 900, 600) {
 		a.fix, a.fixUnder = a.fixUnder, nil
 		return
 	}

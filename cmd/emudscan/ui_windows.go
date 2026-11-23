@@ -2067,7 +2067,7 @@ func (a *ui) openDetails(it Item, pos int) {
 	}
 	a.dlg = d
 	wa := a.workArea()
-	w := min(a.scale(850), wa.Right-wa.Left-a.scale(40)) // lines short enough to read
+	w := min(a.scale(1000), wa.Right-wa.Left-a.scale(40)) // most commands on one line
 	h := min(a.scale(900), wa.Bottom-wa.Top-a.scale(40))
 	var mr rect
 	pGetWindowRect.Call(a.detailsOwner(), uintptr(unsafe.Pointer(&mr)))
