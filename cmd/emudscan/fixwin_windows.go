@@ -295,7 +295,7 @@ func (d *fixDlg) rowsAgain(a *ui) {
 	}
 	d.updating = false
 	if d.results { // the results of the fixes stay; what is left to fix follows the rows
-		pEnableWindow.Call(d.bFix, boolArg(len(d.selected(a)) > 0))
+		pEnableWindow.Call(d.bFix, boolArg(d.canRun(len(d.selected(a)))))
 		d.showCount()
 		return
 	}
@@ -823,9 +823,13 @@ func (d *fixDlg) preview(a *ui) {
 		d.show(l)
 	}
 	d.console.scrollTo(0)
-	pEnableWindow.Call(d.bFix, boolArg(len(items) > 0))
+	pEnableWindow.Call(d.bFix, boolArg(d.canRun(len(items))))
 	d.showCount()
 }
+
+// canRun tells whether the Fix button can run n software: not without a PowerShell
+// to run them (the title above the console says so).
+func (d *fixDlg) canRun(n int) bool { return n > 0 && d.shell.exe != "" }
 
 // clear empties the console.
 func (d *fixDlg) clear() {
@@ -1287,7 +1291,7 @@ func (a *ui) fixEvent(e uiEvent) {
 		if d.bStop != 0 {
 			pEnableWindow.Call(d.bStop, 0)
 		}
-		pEnableWindow.Call(d.bFix, boolArg(len(d.selected(a)) > 0)) // what is left to fix
+		pEnableWindow.Call(d.bFix, boolArg(d.canRun(len(d.selected(a))))) // what is left to fix
 		pSetFocus.Call(d.bClose)
 		if d.list != 0 {
 			a.saveFixReport(d)

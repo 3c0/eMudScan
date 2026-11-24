@@ -272,15 +272,16 @@ Once you accept:
    updates did not fix. In each stage, commands that require administrator
    rights run last, together, so Windows asks for permission at most once per
    stage.
-2. The commands run in Windows PowerShell 5.1, which is part of Windows. On a
-   PC where it was removed, they run in PowerShell 7 or later, installed in
-   Program Files (`C:\Program Files\PowerShell\7\pwsh.exe`); never in a
-   `pwsh.exe` found elsewhere, such as in the PATH, since some commands run as
-   administrator. The window names it above the commands and above their
-   results, and the report names it too. When there is neither, the window says
-   so, and nothing runs. The commands that need administrator rights run in a
-   PowerShell for which Windows asks your permission, in a window that shows
-   Microsoft as the verified publisher. eMudScan itself does not need them.
+2. The commands run in Windows PowerShell 5.1, which is part of Windows. On a PC
+   where it was removed, they run in PowerShell 7 or later, installed in Program
+   Files (`C:\Program Files\PowerShell\7\pwsh.exe`); never in a `pwsh.exe` found
+   elsewhere, such as in the PATH, since some commands run as administrator. The
+   window names it above the commands and above their results, and the report
+   names it too. When there is neither, the window says so, and its button that
+   runs the fixes stays disabled. The commands that need administrator rights
+   run in a PowerShell for which Windows asks your permission, in a window that
+   shows Microsoft as the verified publisher. eMudScan itself does not need
+   them.
 3. The console shows each command in the colors of PowerShell 7, with its
    result in the column on its left: “…” while it runs, then a green ✔ or a red
    ✘. Below come what it showed, its warnings in yellow, its errors in red, then
