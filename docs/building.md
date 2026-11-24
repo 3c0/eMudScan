@@ -97,6 +97,18 @@ the release, as the GPL requires. Publish only a draft that is right: releases
 are immutable in this repository, so the tag of a published release can never be
 reused, even after the release is deleted.
 
+Once published, the release is offered to the users of the earlier versions:
+eMudScan updates itself from the latest release of GitHub, only if it is
+immutable and if the SHA-256 of its `eMudScan.exe` in its notes, as the build
+writes it (`.github/release-notes.md`), is the one that GitHub computed. Keep
+that line of the notes, and the setting of the repository that makes releases
+immutable.
+
+The version that the user runs installs the update: a copy of it, in Temp,
+replaces `eMudScan.exe` and starts the new version with `--update-done`, which
+deletes the files of the update (`update_windows.go`). Keep that option as it is
+in every version.
+
 If the GitHub build fails, no draft is created. Fix the problem in a new
 commit and push it, then move the tag to it: the **Version tags** ruleset
 protects tags, so set it to **Disabled** meanwhile, run
@@ -200,7 +212,9 @@ PowerShell that the **PowerShell** workflow runs the scripts in (“in PowerShel
 5.1, 7.6 or 7.7”): a test compares the two, so that one cannot change without
 the other. On Windows, another test checks that the fixes would run in Windows
 PowerShell 5.1, and that the PowerShell 7 of Program Files, when it is there, is
-named with its version.
+named with its version. The tests of the update of eMudScan that need Windows
+(the folder of the update, the locks, the replacement in one step, the
+deletion after the update) run there too, and in the **PowerShell** workflow.
 
 To test the Fix function without changing anything, `.\scripts\build.ps1 -Simulate`
 (or `./scripts/build.sh --simulate`) writes only `dist/eMudScan-simulation.exe`

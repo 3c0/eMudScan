@@ -1,6 +1,7 @@
 # Runs for real, on Windows, the fixes that are scripts, in Windows PowerShell 5.1 and
 # in PowerShell 7.6 and 7.7: the tests of cmd/emudscan/fixps_test.go and fixps2_test.go,
-# which the build, on Linux, skips. See docs/building.md.
+# which the build, on Linux, skips. Then the tests of the update of eMudScan that need
+# Windows (update_windows_test.go). See docs/building.md.
 #
 # Windows PowerShell 5.1 is the one of Windows. PowerShell 7.6 and 7.7 are the
 # releases named below, from PowerShell's releases on GitHub, each checked against its
@@ -54,3 +55,7 @@ jobs:
         env:
           EMUDSCAN_TEST_POWERSHELL_WANT: 5.1,7.6,7.7
         run: go test -count=1 -v -run 'InPowerShell|ScriptStopsAlone' ./cmd/emudscan
+
+      - name: Run the tests of the update of eMudScan
+        shell: pwsh
+        run: go test -count=1 -v -run 'OnWindows' ./cmd/emudscan

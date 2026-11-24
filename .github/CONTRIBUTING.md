@@ -36,9 +36,10 @@ them is not merged:
 - **eMudScan itself needs no administrator rights.** The commands of a fix that
   need them run in a Windows PowerShell for which Windows asks the user’s
   permission (User Account Control).
-- **No connection** other than the online test, and none at all when the online
-  test is not allowed (`docs/privacy.md`). The commands of a fix connect only to
-  the sources of the package managers and to curl.se.
+- **No connection** other than those that **Online checks and updates** allows
+  (the online test, the latest releases of what a fix downloads, the updates of
+  eMudScan), and none at all when that box is cleared (`docs/privacy.md`). The
+  commands of a fix connect only to the sources of what they download.
 - **Nothing runs or is sent without a click**: links open on click, and commands
   run only from the Fix window, once the user accepts its warning.
 - **Windows DLLs and Windows PowerShell come from System32 only** (`sysDLL`,

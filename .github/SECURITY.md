@@ -8,7 +8,8 @@ For example:
 
 - a check that reports software as OK while it still trusts the compromised certificates;
 - eMudScan changing anything on the PC before the user accepts the warning of a fix, or a fix running commands other than those it shows;
-- a connection made by eMudScan other than the online test, or one made while the online test is not allowed;
+- a connection made by eMudScan other than those that **Online checks and updates** allows, or one made while that box is cleared;
+- an update that installs anything other than the `eMudScan.exe` of an immutable release, checked against its SHA-256;
 - a release file that does not match its SHA-256 or its build attestation.
 
 Report problems with the data or test sites of we-have-a-problem.com to [its repository](https://github.com/galadran/we-have-a-problem.com).

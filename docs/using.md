@@ -471,6 +471,40 @@ The ⓘ icon next to the version opens it: what eMudScan does, who made it, its
 license, what fixes change and connect to, the online test and what it sends
 (including your Windows edition and version), the reference data and the
 disclaimer. **Licenses and notices** shows the full license texts.
+**Check for updates** closes the box and looks for a new version of eMudScan
+(see [Updates](#updates)); it is greyed out when **Online checks and updates**
+is cleared, and while a scan runs.
+
+## Updates
+
+With **Online checks and updates** checked, eMudScan looks for a new version of
+itself when a scan starts, once in a session, before the scan runs, and each
+time you click **Check for updates** in the About box. Meanwhile, the summary
+says so. A newer version is offered in a dialog that shows the release notes of
+the new versions, the newest first, up to 10, in a frame that scrolls:
+**Update now** or **Not now**. Those of the latest version show at once; those
+of the other new versions come right after. With **Not now**, you are back in
+the main window, and the scan starts as usual when you clicked **Scan**. With
+**Update now**, it does not start: the new version opens, ready to scan. So an
+update never stops a scan.
+
+When there is no new version, **Check for updates** says so in a message; when
+GitHub cannot be reached, it says why.
+
+**Update now** downloads the new `eMudScan.exe` from GitHub, with a progress
+bar, and checks it: its release must be immutable, and its SHA-256 checksum must
+be the one that GitHub computed and the one written in its release notes.
+**Cancel** stops the download and closes the dialog. When the download or a
+check fails, the dialog says why, and **Try again** downloads it again.
+
+Then eMudScan closes, and a copy of it, from a folder of its own in Temp,
+replaces `eMudScan.exe` with the new version in one step, so that it is never
+half written, and starts it. The new version deletes that folder. If the folder
+of `eMudScan.exe` needs administrator rights, such as Program Files, Windows
+asks for them, for the copy only. No backup of the old version is kept. If the
+update fails, the old version starts again, and a message says why and gives the
+release page. `eMudScan-cli.exe` never updates itself. See
+[Privacy](privacy.md#the-updates-of-emudscan).
 
 ## Command line
 

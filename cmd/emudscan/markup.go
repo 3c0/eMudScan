@@ -401,13 +401,14 @@ func commandsIn(s string) []string {
 type docKind int
 
 const (
-	dkPara   docKind = iota // a paragraph of inline runs
-	dkBullet                // a bulleted paragraph
-	dkFields                // label/value rows shown in two aligned columns
-	dkCmds                  // consecutive command lines, shown in a block with a copy button
-	dkSpace                 // space between paragraphs
-	dkTitle                 // the title of the window
-	dkStatus                // the status line (icon, status, summary)
+	dkPara    docKind = iota // a paragraph of inline runs
+	dkBullet                 // a bulleted paragraph
+	dkFields                 // label/value rows shown in two aligned columns
+	dkCmds                   // consecutive command lines, shown in a block with a copy button
+	dkSpace                  // space between paragraphs
+	dkTitle                  // the title of the window
+	dkStatus                 // the status line (icon, status, summary)
+	dkHeading                // a heading with a line under it: a version, in the update dialog
 )
 
 type docRow struct {
@@ -553,6 +554,11 @@ func blocksText(bs []docBlock) string {
 	}
 	for _, bl := range bs {
 		switch bl.kind {
+		case dkHeading:
+			if b.Len() > 0 {
+				b.WriteString("\n")
+			}
+			b.WriteString(runsText(bl.runs) + "\n")
 		case dkTitle, dkPara:
 			b.WriteString(runsText(bl.runs) + "\n")
 		case dkBullet:

@@ -62,6 +62,7 @@ type docView struct {
 	blockRcs  []rect
 	btns      []*docBtn
 	marks     []docIcon
+	rules     []rect // the lines under the headings
 	text      []uint16
 	height    int32
 	scroll    int32
@@ -81,6 +82,7 @@ type docView struct {
 	nav       docNav
 	onNav     func(to int) // a button of the navigation block was clicked: show item to
 	margin    int32        // around the text, when not the default one
+	lines     float64      // the lines of paragraphs and items, in times the font's height, when not 0.94
 	bar       bool         // it has a scroll bar
 	glider    glider       // the smooth scrolling
 }
@@ -159,6 +161,7 @@ func (a *ui) makeDocView(parent uintptr, blocks []docBlock, bodyPt int, bar bool
 	mk("bold", bodyPt, 600, false, "Segoe UI")
 	mk("link", bodyPt, 400, true, "Segoe UI")
 	mk("title", 17, 600, false, "Segoe UI")
+	mk("heading", 12, 400, false, "Segoe UI")
 	mk("status", 11, 700, false, "Segoe UI")
 	mk("summary", 11, 400, false, "Segoe UI")
 	mk("mono", 10, 400, false, "Consolas")
@@ -507,12 +510,16 @@ func (v *docView) layout() {
 	dc, _, _ := pCreateCompatibleDC.Call(0)
 	defer pDeleteDC.Call(dc)
 	L := &docLayouter{v: v, dc: dc}
-	v.frags, v.signs, v.blockRcs, v.btns, v.marks, v.text = nil, nil, nil, nil, nil, nil
+	v.frags, v.signs, v.blockRcs, v.btns, v.marks, v.rules, v.text = nil, nil, nil, nil, nil, nil, nil
 	m := s(24)
 	if v.margin > 0 {
 		m = v.margin
 	}
 	x0, xMax := m, rc.Right-m
+	lines := 0.94
+	if v.lines > 0 {
+		lines = v.lines
+	}
 	if xMax < x0+s(240) {
 		xMax = x0 + s(240)
 	}
@@ -539,6 +546,15 @@ func (v *docView) layout() {
 		case dkTitle:
 			y = L.flow(v.runsStyled(b.runs, v.fonts["title"], rgb(16, 58, 120)), x0, x0, beside(y), y, 1.1)
 			L.newline()
+		case dkHeading: // in the color of the title, with a line under it
+			if len(v.frags) > 0 {
+				y += s(14)
+			}
+			color := rgb(16, 58, 120)
+			y = L.flow(v.runsStyled(b.runs, v.fonts["heading"], color), x0, x0, xMax, y, 1.2)
+			L.newline()
+			v.rules = append(v.rules, rect{x0, y + s(1), xMax, y + s(1) + max(s(1), 1)})
+			y += s(8)
 		case dkStatus:
 			isz := s(20)
 			lh := int32(float64(v.fonts["status"].height) * 1.3)
@@ -557,15 +573,15 @@ func (v *docView) layout() {
 			}
 		case dkPara: // justified, its lines a little closer than usual, a space after it
 			L.justify = true
-			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0, x0, xMax, y, 0.94) + s(6)
+			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0, x0, xMax, y, lines) + s(6)
 			L.justify = false
 			L.newline()
 		case dkBullet: // a square bullet; the item as a paragraph, 1 pixel after it
 			ind := s(18)
-			L.flow([]styled{{"▪", v.fonts["body"], text, ""}}, x0+s(4), x0+s(4), x0+ind, y, 0.94)
+			L.flow([]styled{{"▪", v.fonts["body"], text, ""}}, x0+s(4), x0+s(4), x0+ind, y, lines)
 			v.text = append(v.text, ' ')
 			L.justify = true
-			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0+ind, x0+ind, xMax, y, 0.94) + s(1)
+			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0+ind, x0+ind, xMax, y, lines) + s(1)
 			L.justify = false
 			L.newline()
 		case dkSpace:
@@ -974,6 +990,16 @@ func (v *docView) paint() {
 	}
 	pSelectObject.Call(dc, oldBrush)
 	pSelectObject.Call(dc, oldPen)
+
+	// the lines under the headings
+	rule, _, _ := pCreateSolidBrush.Call(uintptr(rgb(16, 58, 120)))
+	for _, r := range v.rules {
+		if visible(r.Top, r.Bottom) {
+			r.Top, r.Bottom = r.Top+oy, r.Bottom+oy
+			pFillRect.Call(dc, uintptr(unsafe.Pointer(&r)), rule)
+		}
+	}
+	pDeleteObject.Call(rule)
 
 	// status icons
 	isz := s(20)

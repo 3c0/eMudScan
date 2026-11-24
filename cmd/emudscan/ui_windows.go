@@ -33,7 +33,8 @@ type uiEvent struct {
 	st    Status
 	text  string
 	item  Item
-	fl    fixLine // a line of the Fix window's console
+	fl    fixLine     // a line of the Fix window's console
+	upd   *updateNews // what a lookup or download of an update found
 }
 
 // listCtl is a list of the results, with its "Hide OK items" box: one of the two
@@ -106,6 +107,12 @@ type ui struct {
 	cancel                  atomic.Bool
 	langSel                 int   // language list: 0 automatic, 1 English, 2 French
 	rowH                    int32 // height of a list row
+
+	// the update of eMudScan (update_ui_windows.go)
+	updateLooked  bool   // looked for once in the session, for a scan
+	updateBusy    bool   // looking
+	summaryBefore string // the summary, shown again after the lookup
+	updatedFrom   string // this eMudScan was just updated, from this version
 
 	logPending bool
 	logText    strings.Builder
@@ -327,7 +334,11 @@ func (a *ui) createControls() {
 	a.net.hide = a.child(0, "BUTTON", T("chk.hideOK"), 3|wsTabStop, idHideNet)
 	a.app.h = a.child(wsExClientEdge, "SysListView32", "", 0x1|0x8|0x40|wsTabStop, idListApp)
 	a.app.hide = a.child(0, "BUTTON", T("chk.hideOK"), 3|wsTabStop, idHideApp)
-	a.hSummary = a.child(0, "STATIC", T("hint.start"), 0x80|0x4000, 0)
+	summary := T("hint.start")
+	if a.updatedFrom != "" {
+		summary = Tf("update.done", a.updatedFrom, appVersion)
+	}
+	a.hSummary = a.child(0, "STATIC", summary, 0x80|0x4000, 0)
 	pEnableWindow.Call(a.hCopy, 0)
 	pEnableWindow.Call(a.hSave, 0)
 
@@ -1631,6 +1642,9 @@ func (a *ui) start() {
 		a.setButton(a.hCheck, T("btn.stop"), glyphStop, false) // greyed until the scan stops
 		return
 	}
+	if a.lookForUpdate(false) {
+		return // the scan starts once eMudScan has looked for a new version
+	}
 	drives := a.selectedDrives()
 	if a.hSearch != 0 && len(a.query) > 0 {
 		setText(a.hSearch, "") // a new scan shows everything
@@ -1695,6 +1709,9 @@ func (a *ui) finish() {
 	a.redrawSpinner()
 	a.setButton(a.hCheck, T("btn.again"), glyphRefresh, true)
 	a.setRunning(false)
+	if aboutDlg != nil { // "Check for updates", greyed out during the scan
+		aboutDlg.scanEnded()
+	}
 	if d := a.fix; d != nil && d.list != 0 && !d.running { // Scan again from its list: the rows as they are now
 		d.rowsAgain(a)
 	}
@@ -1759,6 +1776,9 @@ func (a *ui) drainEvents() {
 		case evRestorePrompt, evRestoreDone:
 			flush()
 			a.restoreEvent(e)
+		case evUpdateLooked, evUpdateNotes, evUpdateProgress, evUpdateGot:
+			flush()
+			a.updateEvent(e)
 		}
 	}
 	flush()
@@ -2663,7 +2683,12 @@ func guiMain() {
 	runtime.LockOSThread()
 	// language: Windows display language, unless --lang is given (nothing is saved)
 	setLangFromCode(userUILanguage())
-	o, _ := parseArgs(os.Args[1:])
+	if updateCommand(os.Args[1:]) { // a stage of an update: no window
+		return
+	}
+	from, args := updateDoneArgs(os.Args[1:])
+	g.updatedFrom = from
+	o, _ := parseArgs(args)
 	switch o.lang {
 	case 0:
 		Lang, g.langSel = 0, 1

@@ -48,18 +48,18 @@ func modalBox(owner uintptr, caption string, resizable bool, proc uintptr) bool 
 	return int(r) != -1
 }
 
-// placeBox gives a dialog the window size for a client size, centred on another
-// window and kept on the screen.
+// placeBox gives a dialog the window size for a client size, at most the screen's,
+// centred on another window and kept on the screen.
 func (a *ui) placeBox(hwnd, over uintptr, w, h int32) {
 	style, _, _ := pGetWindowLongPtrW.Call(hwnd, ^uintptr(15) /* GWL_STYLE */)
 	exStyle, _, _ := pGetWindowLongPtrW.Call(hwnd, ^uintptr(19) /* GWL_EXSTYLE */)
 	wr := rect{0, 0, w, h}
 	pAdjustWindowRectExForDp.Call(uintptr(unsafe.Pointer(&wr)), style, 0, exStyle, uintptr(a.dpi))
-	ww, wh := wr.Right-wr.Left, wr.Bottom-wr.Top
+	wa := a.workArea()
+	ww, wh := min(wr.Right-wr.Left, wa.Right-wa.Left), min(wr.Bottom-wr.Top, wa.Bottom-wa.Top)
 	var or rect
 	pGetWindowRect.Call(over, uintptr(unsafe.Pointer(&or)))
 	x, y := (or.Left+or.Right-ww)/2, (or.Top+or.Bottom-wh)/2
-	wa := a.workArea()
 	x = max(wa.Left, min(x, wa.Right-ww))
 	y = max(wa.Top, min(y, wa.Bottom-wh))
 	pSetWindowPos.Call(hwnd, 0, uintptr(x), uintptr(y), uintptr(ww), uintptr(wh), 0x0004|0x0010)
@@ -115,6 +115,8 @@ type aboutBox struct {
 	textFont        uintptr  // the links' own font: a link control may delete its font when it is destroyed
 	doc             *docView // the text, justified, with its links
 	footLink        uintptr  // "Licenses and notices", on the button bar
+	updateBtn       uintptr  // "Check for updates", on the button bar
+	check           bool     // "Check for updates" was clicked: eMudScan looks once the box has closed
 	title           string
 	textX, titleY   int32
 	iconX, iconY    int32
@@ -131,7 +133,22 @@ func (a *ui) about() {
 	if f := aboutDlg.textFont; f != 0 {
 		pDeleteObject.Call(f) // fails harmlessly if a link control already did it
 	}
+	check := aboutDlg.check
 	aboutDlg = nil
+	if check {
+		a.lookForUpdate(true)
+	}
+}
+
+// idAboutUpdate is the button "Check for updates" of the About box.
+const idAboutUpdate = 3
+
+// scanEnded makes the button "Check for updates" clickable again, once a scan has
+// ended: only with "Online checks and updates" checked.
+func (b *aboutBox) scanEnded() {
+	if b.updateBtn != 0 {
+		pEnableWindow.Call(b.updateBtn, boolArg(!g.onlineOff && !g.running))
+	}
 }
 
 func aboutProc(hwnd, msg, wParam, lParam uintptr) uintptr {
@@ -146,6 +163,12 @@ func aboutProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 	case wmCommand:
 		if id := loword(wParam); id == 1 || id == 2 { // IDOK, IDCANCEL (Esc, ×)
 			pEndDialog.Call(hwnd, uintptr(id))
+			return 1
+		} else if id == idAboutUpdate { // the box closes, then eMudScan looks (about)
+			if !a.onlineOff && !a.running && !a.updateBusy {
+				b.check = true
+				pEndDialog.Call(hwnd, idAboutUpdate)
+			}
 			return 1
 		}
 	case wmNotify:
@@ -199,7 +222,7 @@ func (b *aboutBox) build(hwnd uintptr) {
 	b.titleFont = createFont(12, a.dpi, 400, false, "Segoe UI")
 	b.textFont = createFont(9, a.dpi, 400, false, "Segoe UI")
 	b.textX = left + isz + s(9)
-	textW, right := s(460), left+inset+s(4) // text looks closer to an edge than the solid shield
+	textW, right := s(525), left+inset+s(4) // text looks closer to an edge than the solid shield
 	textM, titleM := a.fontMetrics(b.textFont), a.fontMetrics(b.titleFont)
 	lineH, titleH := textM.Height, titleM.Height
 	b.titleY = top + (isz-titleH)/2
@@ -246,6 +269,13 @@ func (b *aboutBox) build(hwnd uintptr) {
 	ok, _, _ := pCreateWindowExW.Call(0, up("BUTTON"), up("OK"), uintptr(wsChild|wsVisible|wsTabStop|0x1 /* BS_DEFPUSHBUTTON */),
 		uintptr(w-right-btnW), uintptr(y+pad), uintptr(btnW), uintptr(btnH), hwnd, 1 /* IDOK */, 0, 0)
 	send(ok, wmSetFont, a.fontUI, 0)
+	// "Check for updates", left of OK: only with "Online checks and updates" checked
+	updW := a.textWidth(a.fontUI, T("about.update")) + s(24)
+	b.updateBtn, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up(T("about.update")), uintptr(wsChild|wsVisible|wsTabStop),
+		uintptr(w-right-btnW-s(8)-updW), uintptr(y+pad), uintptr(updW), uintptr(btnH), hwnd, idAboutUpdate, 0, 0)
+	send(b.updateBtn, wmSetFont, a.fontUI, 0)
+	pEnableWindow.Call(b.updateBtn, boolArg(!a.onlineOff && !a.running && !a.updateBusy))
+	addTool(tip, hwnd, b.updateBtn, nil, T("tip.update"))
 	b.iconX, b.iconY = left, top
 	a.placeBox(hwnd, a.hwnd, w, y+pad+btnH+pad)
 	pSetFocus.Call(ok)

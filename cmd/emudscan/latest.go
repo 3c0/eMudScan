@@ -36,6 +36,10 @@ import (
 // where there is none.
 var httpsGet func(host, path string, max int) ([]byte, bool)
 
+// httpsGetWatched is httpsGet, which tells watch how many bytes have come, as they
+// come; when watch gives false, it stops, and fails.
+var httpsGetWatched func(host, path string, max int, watch func(got int) bool) ([]byte, bool)
+
 const (
 	pbsListHost   = "github.com"
 	pbsListPath   = "/astral-sh/python-build-standalone/releases/latest/download/SHA256SUMS"

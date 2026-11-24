@@ -732,6 +732,7 @@ type httpsResult struct {
 	Body        string
 	Err         uint32 // Win32 error code
 	SecureFlags uint32 // WINHTTP_CALLBACK_STATUS_FLAG_* from the secure failure callback
+	Stopped     bool   // watch stopped the download
 }
 
 var (
@@ -755,14 +756,16 @@ func winhttpStatusCallback(h, context, status, info, infoLen uintptr) uintptr {
 // winhttpGet asks host for its home page, for the online test: the answer must come
 // from host itself, so no redirection is followed, and at most 4096 bytes are read.
 func winhttpGet(host string, timeoutMs int) httpsResult {
-	return winhttpFetch(host, "/?client="+strings.ToLower(appName) /* "/?client=emudscan" */, timeoutMs, false, 4096)
+	return winhttpFetch(host, "/?client="+strings.ToLower(appName) /* "/?client=emudscan" */, timeoutMs, false, 4096, nil)
 }
 
 // winhttpFetch gets https://host/path with Windows' own HTTPS (WinHTTP), which checks
 // the certificate of the server as Windows does, and reads at most max bytes of the
 // answer. With redirects, it follows the redirections (to HTTPS only, WinHTTP's
-// default): the list of a release on GitHub is served by another host.
-func winhttpFetch(host, path string, timeoutMs int, redirects bool, max int) httpsResult {
+// default): the list of a release on GitHub is served by another host. watch, when
+// not nil, is told how many bytes have come, as they come; when it gives false, the
+// reading stops (Stopped).
+func winhttpFetch(host, path string, timeoutMs int, redirects bool, max int, watch func(got int) bool) httpsResult {
 	var res httpsResult
 	if err := procWinHttpOpen.Find(); err != nil {
 		res.Err = 127
@@ -836,6 +839,10 @@ func winhttpFetch(host, path string, timeoutMs int, redirects bool, max int) htt
 			break
 		}
 		total += int(n)
+		if watch != nil && !watch(total) {
+			res.Stopped = true
+			break
+		}
 	}
 	res.Body = string(buf[:total])
 	return res

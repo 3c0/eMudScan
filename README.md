@@ -92,7 +92,7 @@ See [What eMudScan checks](docs/checks.md) for details.
 
 ## 🔒 Privacy
 
-A scan connects to the internet only when **Online checks and updates** is checked (`--online` for `eMudScan-cli.exe`): 3 connections to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version. Nothing else is sent. A fix connects once you accept it: package managers download their updates from their own sources, and Mozilla’s certificate bundle comes from curl.se. See [Privacy](docs/privacy.md).
+A scan connects to the internet only when **Online checks and updates** is checked (`--online` for `eMudScan-cli.exe`): 3 connections to emudhra.we-have-a-problem.com, which sees your IP address and your Windows version, and, once in a session, GitHub, to look for a new version of eMudScan, which is installed only if you accept it. Nothing else is sent. A fix connects once you accept it: package managers download their updates from their own sources, and Mozilla’s certificate bundle comes from curl.se. See [Privacy](docs/privacy.md).
 
 ## 📖 Documentation
 

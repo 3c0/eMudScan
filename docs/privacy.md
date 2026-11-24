@@ -95,7 +95,7 @@ Windows. These sites see your IP address and that User-Agent. When
 **Online checks and updates** is cleared, eMudScan does not look: the commands
 name the release written in eMudScan, and the window says so.
 
-## The online test is the only connection of a scan
+## The online test
 
 When **Online checks and updates** is checked (it is by default), each scan
 makes up to 3 HTTPS requests through Windows (WinHTTP) to the test sites at
@@ -130,22 +130,48 @@ things. Your Windows credentials are not sent to the test sites: WinHTTP’s
 default policy sends them to intranet servers only, and eMudScan does not change
 it.
 
+## The updates of eMudScan
+
+When **Online checks and updates** is checked, eMudScan looks for a new version
+of itself: when a scan starts, once in a session, and each time you click
+**Check for updates** in the About box. It makes one HTTPS request through
+Windows (WinHTTP), as for the online test, with the same User-Agent and without
+cookies: `GET https://api.github.com/repos/3c0/eMudScan/releases/latest`. When a
+new version is out, and other versions may have come out since yours, a second
+request gets their release notes:
+`GET https://api.github.com/repos/3c0/eMudScan/releases?per_page=30`. GitHub
+sees your IP address and that User-Agent.
+
+A newer version is offered in a dialog, with its release notes. Nothing is
+downloaded until you accept it. Then eMudScan downloads its `eMudScan.exe` from
+github.com, which redirects to the host that serves the files of GitHub
+releases. eMudScan installs it only if its release is immutable and if three
+SHA-256 checksums are the same: the one that GitHub computed when the file was
+uploaded, the one written in the release notes, and the one of the downloaded
+file. The download, and a copy of eMudScan that installs it, are written into a
+folder of their own in your Temp folder, which is deleted after the update. If
+the folder of `eMudScan.exe` needs administrator rights, Windows asks for them,
+for the copy only.
+
 ## Opting out
 
 Clear **Online checks and updates**, or start `eMudScan.exe --offline`: a scan
 then makes no internet connection at all, not even for proxy detection. The
 online test is skipped; every other check works the same. eMudScan does not look
-for the latest release when a Fix window opens either. The choice is not saved.
-The fixes that you run still connect, as described above.
+for the latest release when a Fix window opens, nor for a new version of itself,
+either. The choice is not saved. The fixes that you run still connect, as
+described above.
 
 `eMudScan-cli.exe`, which scans without the window, is the other way round:
 nobody is there to clear a box, so it runs the online test only with `--online`.
+It never looks for a new version of itself.
 
 ## Everything else stays on your PC
 
 The Windows certificate checks run without network access and without updating
 the Windows certificate lists. Apart from the online test, the search for the
-latest release and the fixes, nothing is sent anywhere. The only files read over your network are those on the drives
+latest releases, the updates of eMudScan and the fixes, nothing is sent
+anywhere. The only files read over your network are those on the drives
 you select to scan, and a certificate bundle on a network share that one of your
 certificate settings names, as the software that uses that setting reads it.
 Links in the detailed information windows (homepages, web searches, test pages)
