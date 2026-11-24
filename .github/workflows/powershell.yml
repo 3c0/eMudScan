@@ -1,6 +1,6 @@
 # Runs for real, on Windows, the fixes that are scripts, in Windows PowerShell 5.1 and
-# in PowerShell 7.6 and 7.7: the tests of cmd/emudscan/fixps_test.go, which the build,
-# on Linux, skips. See docs/building.md.
+# in PowerShell 7.6 and 7.7: the tests of cmd/emudscan/fixps_test.go and fixps2_test.go,
+# which the build, on Linux, skips. See docs/building.md.
 #
 # Windows PowerShell 5.1 is the one of Windows. PowerShell 7.6 and 7.7 are the
 # releases named below, from PowerShell's releases on GitHub, each checked against its

@@ -175,20 +175,32 @@ a command prompt waits only for a console program, gives it its outputs and gets
 its exit code. The tag selects its entry point (`main_cli_windows.go` instead of
 `main_gui_windows.go`) and its resources.
 
-On Windows, the tests also run for real the fixes that are scripts (the
-replacement of the ssl files of a Python): the script that the Fix function
-runs, started as it starts it, and the script of the detailed information,
-which runs alone. They run in Windows PowerShell 5.1, and in PowerShell 7 when
-`pwsh` is in the PATH, on a stand-in Python made in the folder of the test, with
-its download already there: nothing is downloaded, and nothing is written
-elsewhere. The cases are those where all goes well and those where a command
-fails (the test before, another download, a missing file, a file in use, the
-test after): the test checks the result of each command and the files left.
-`EMUDSCAN_TEST_POWERSHELL` names other PowerShells to run them in (paths,
-separated by `;`). On Linux or macOS these tests are skipped. The script of the
-Fix function runs with the environment of the build, as it runs with the one of
-eMudScan: started from a PowerShell 7 window, Windows PowerShell gets the module
-path of PowerShell 7, which the fixes must not depend on.
+On Windows, the tests also run for real the fixes that are scripts: the
+replacement of the ssl files of a Python and of the node.exe of a program, the
+certificate bundle, the Java block list and the restore of backups. Each runs
+as the Fix function runs it, started as it starts it, and the scripts of the
+detailed information that run alone run too. They run in Windows PowerShell
+5.1, and in PowerShell 7 when `pwsh` is in the PATH, on stand-ins made in the
+folder of the test (a Python, a node.exe), with their downloads already there
+or served by the test: nothing is downloaded from the internet, and nothing is
+written elsewhere. Only Windows checks signatures: for node.exe, the test gives
+the signature, except in one case, where the stand-in, which is not signed, is
+checked for real. The cases are those where all goes well and those where a
+command fails (another download, a wrong signature or version, a missing file,
+a file in use, a failed test of the Python before or after): the test checks
+the result of each command and the files left. `EMUDSCAN_TEST_POWERSHELL` names
+other PowerShells to run them in (paths, separated by `;`). On Linux or macOS
+these tests are skipped. The script of the Fix function runs with the
+environment of the build, as it runs with the one of eMudScan: started from a
+PowerShell 7 window, Windows PowerShell gets the module path of PowerShell 7,
+which the fixes must not depend on.
+
+The sentence above a script in the detailed information names the versions of
+PowerShell that the **PowerShell** workflow runs the scripts in (“in PowerShell
+5.1, 7.6 or 7.7”): a test compares the two, so that one cannot change without
+the other. On Windows, another test checks that the fixes would run in Windows
+PowerShell 5.1, and that the PowerShell 7 of Program Files, when it is there, is
+named with its version.
 
 To test the Fix function without changing anything, `.\scripts\build.ps1 -Simulate`
 (or `./scripts/build.sh --simulate`) writes only `dist/eMudScan-simulation.exe`
