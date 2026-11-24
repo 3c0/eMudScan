@@ -107,7 +107,7 @@ A scan connects to the internet only when **Online checks and updates** is check
 
 ## 🤖 Made with AI
 
-eMudScan was developed by [3c0](https://github.com/3c0) with the help of [Claude](https://claude.com/), Anthropic’s AI.
+eMudScan was developed by [3c0](https://github.com/3c0) with the help of AI.
 
 ## 📜 License
 

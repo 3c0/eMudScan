@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The box “Allow the online test” is now named “Online checks and updates”: it allows the online test and the other connections of eMudScan itself, such as the search for the latest release of what a fix downloads. The About box now names the node.exe of a program among them.
 - The window of the detailed information opens wider, so that most commands fit on one line: 1000 pixels at 100 % scaling instead of 850. The Fix window of one software opens a little wider too: 900 pixels instead of 860.
 - The web search for a certificate bundle of a software that eMudScan does not know searches for the software alone, such as “example-app”, instead of the software with the name of the file, such as “example-app cacert.pem”. This applies to the link of the detailed information and to **Search on Google** in the right-click menu.
+- The About box and the README say that eMudScan was made by 3c0 with the help of AI.
 
 ### Fixed
 
