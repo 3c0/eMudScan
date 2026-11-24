@@ -1,8 +1,9 @@
 package main
 
-// Line breaking for the About box: paragraphs are cut into lines by eMudScan
-// itself, at spaces only, so that a link (a web address) is never cut, nor
-// separated from the punctuation that follows it.
+// The text of the About box, in blocks for its text view (aboutBlocks); and line
+// breaking for the box of a saved report: paragraphs are cut into lines by eMudScan
+// itself, at spaces only, so that a link (a web address) is never cut, nor separated
+// from the punctuation that follows it.
 
 import (
 	"regexp"
@@ -14,19 +15,33 @@ var (
 	linkRe    = regexp.MustCompile(`<a href="([^"]*)">(.*?)</a>`)
 )
 
-// lineLink is a link of a line of the About box: its address, and where its text is
-// drawn (from the left of the line).
-type lineLink struct {
-	url    string
-	x0, x1 int32
-}
-
-// lineLinks finds the links of a line of markup, for their tooltips.
-func lineLinks(line string, measure func(string) int32) []lineLink {
-	var out []lineLink
-	for _, m := range linkRe.FindAllStringSubmatchIndex(line, -1) {
-		x0 := measure(linkTagRe.ReplaceAllString(line[:m[0]], ""))
-		out = append(out, lineLink{url: line[m[2]:m[3]], x0: x0, x1: x0 + measure(line[m[4]:m[5]])})
+// aboutBlocks reads the text of the About box: paragraphs, cut by empty lines; in a
+// paragraph, a line that starts with "• " is an item of a list, another line a
+// paragraph of its own, without space before it; <a href="…">…</a>, a link.
+func aboutBlocks(text string) []docBlock {
+	var out []docBlock
+	for i, para := range strings.Split(text, "\n\n") {
+		if i > 0 {
+			out = append(out, docBlock{kind: dkSpace})
+		}
+		for _, l := range strings.Split(para, "\n") {
+			kind := dkPara
+			if item, ok := strings.CutPrefix(l, "• "); ok {
+				kind, l = dkBullet, item
+			}
+			var runs []mrun
+			for m := linkRe.FindStringSubmatchIndex(l); m != nil; m = linkRe.FindStringSubmatchIndex(l) {
+				if m[0] > 0 {
+					runs = append(runs, mrun{kind: runText, text: l[:m[0]]})
+				}
+				runs = append(runs, mrun{kind: runLink, text: l[m[4]:m[5]], target: l[m[2]:m[3]]})
+				l = l[m[1]:]
+			}
+			if l != "" {
+				runs = append(runs, mrun{kind: runText, text: l})
+			}
+			out = append(out, docBlock{kind: kind, runs: runs})
+		}
 	}
 	return out
 }

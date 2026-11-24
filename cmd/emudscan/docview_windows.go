@@ -10,6 +10,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"syscall"
 	"time"
@@ -79,6 +80,9 @@ type docView struct {
 	onCopyAll func()
 	nav       docNav
 	onNav     func(to int) // a button of the navigation block was clicked: show item to
+	margin    int32        // around the text, when not the default one
+	bar       bool         // it has a scroll bar
+	glider    glider       // the smooth scrolling
 }
 
 // docNav is the navigation block, shown for several items (n ≥ 2).
@@ -119,6 +123,18 @@ var (
 )
 
 func (a *ui) newDocView(parent uintptr, blocks []docBlock) *docView {
+	return a.makeDocView(parent, blocks, 10, true)
+}
+
+// newTextView is a docView for a short text, which is as high as its text, without a
+// scroll bar or margins, its letters of bodyPt points: the text of the About box.
+func (a *ui) newTextView(parent uintptr, blocks []docBlock, bodyPt int) *docView {
+	v := a.makeDocView(parent, blocks, bodyPt, false)
+	v.margin = 1
+	return v
+}
+
+func (a *ui) makeDocView(parent uintptr, blocks []docBlock, bodyPt int, bar bool) *docView {
 	if !docClassOK {
 		inst, _, _ := pGetModuleHandleW.Call(0)
 		wc := wndClassEx{Style: 0x8 /* CS_DBLCLKS */, WndProc: docProc, Instance: inst, Cursor: a.curArrow, ClassName: u16("eMudScanDoc")}
@@ -126,7 +142,7 @@ func (a *ui) newDocView(parent uintptr, blocks []docBlock) *docView {
 		pRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 		docClassOK = true
 	}
-	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1, nav: docNav{hover: -1, down: -1}}
+	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1, nav: docNav{hover: -1, down: -1}, bar: bar}
 	v.fonts = map[string]*docFont{}
 	mk := func(name string, pt, weight int, underline bool, face string) {
 		f := &docFont{h: createFont(pt, a.dpi, weight, underline, face)}
@@ -139,9 +155,9 @@ func (a *ui) newDocView(parent uintptr, blocks []docBlock) *docView {
 		f.height, f.ascent = tm.Height, tm.Ascent
 		v.fonts[name] = f
 	}
-	mk("body", 10, 400, false, "Segoe UI")
-	mk("bold", 10, 600, false, "Segoe UI")
-	mk("link", 10, 400, true, "Segoe UI")
+	mk("body", bodyPt, 400, false, "Segoe UI")
+	mk("bold", bodyPt, 600, false, "Segoe UI")
+	mk("link", bodyPt, 400, true, "Segoe UI")
 	mk("title", 17, 600, false, "Segoe UI")
 	mk("status", 11, 700, false, "Segoe UI")
 	mk("summary", 11, 400, false, "Segoe UI")
@@ -152,7 +168,11 @@ func (a *ui) newDocView(parent uintptr, blocks []docBlock) *docView {
 	for _, st := range []Status{StOK, StInfo, StCaution, StWarn, StError} {
 		v.icons[st] = iconFromRGBA(renderStatus(st, isz), isz)
 	}
-	h, _, _ := pCreateWindowExW.Call(0, up("eMudScanDoc"), 0, uintptr(wsChild|wsVisible|wsVScroll|wsTabStop),
+	style := uint32(wsChild | wsVisible | wsTabStop)
+	if bar {
+		style |= wsVScroll
+	}
+	h, _, _ := pCreateWindowExW.Call(0, up("eMudScanDoc"), 0, uintptr(style),
 		0, 0, 10, 10, parent, uintptr(idDlgRich), 0, 0)
 	v.hwnd = h
 	docViews[h] = v
@@ -185,9 +205,46 @@ func (v *docView) destroy() {
 // Layout
 
 type docLayouter struct {
-	v     *docView
-	dc    uintptr
-	signs bool // the lines are those of a script: their cut rows show the wrap signs
+	v       *docView
+	dc      uintptr
+	signs   bool // the lines are those of a script: their cut rows show the wrap signs
+	justify bool // the lines of a paragraph fill their width, but its last one
+}
+
+// stretch spreads the room left at the end of a line between its words (frags that
+// end with a space), so that the line fills its width: justified. A line followed by
+// a long word, such as a web address, whose spaces would grow to more than four
+// times their width, stays as it is, rather than full of holes.
+func (L *docLayouter) stretch(line []docFrag, xMax int32) {
+	n := len(line)
+	if n < 2 {
+		return
+	}
+	endsWord := func(f docFrag) bool { return len(f.text) > 0 && f.text[len(f.text)-1] == ' ' }
+	last := line[n-1]
+	k := len(last.text)
+	for k > 0 && last.text[k-1] == ' ' {
+		k--
+	}
+	room, gaps := xMax-last.x-L.measure(last.font, last.text[:k]), int32(0)
+	for _, f := range line[:n-1] {
+		if endsWord(f) {
+			gaps++
+		}
+	}
+	if room <= 0 || gaps == 0 || room > gaps*3*L.measure(line[0].font, []uint16{' '}) {
+		return
+	}
+	done, moved := int32(0), int32(0)
+	for i := 1; i < n; i++ {
+		if endsWord(line[i-1]) {
+			done++
+		}
+		shift := room * done / gaps
+		line[i-1].w += shift - moved // its space, wider: a click there selects it
+		line[i].x += shift
+		moved = shift
+	}
 }
 
 func (L *docLayouter) measure(f *docFont, s []uint16) int32 {
@@ -282,6 +339,9 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 				sign(l.x+L.measure(l.font, l.text[:k])+spaceW/2, wrapDrop(lineH), wrapEnd)
 			}
 		}
+		if L.justify && cut && !L.signs {
+			L.stretch(line, xMax)
+		}
 		for _, f := range line {
 			f.y, f.h = y, lineH
 			f.ty = y + (lineH-lh)/2 + base - f.font.ascent
@@ -297,7 +357,8 @@ func (L *docLayouter) flow(parts []styled, xFirst, xIndent, xMax, y int32, spaci
 	add := func(p styled, u []uint16, w int32) {
 		if n := len(line); n > 0 {
 			l := &line[n-1]
-			if l.font == p.font && l.color == p.color && l.link == p.link && l.x+l.w == x {
+			endsWord := len(l.text) > 0 && l.text[len(l.text)-1] == ' '
+			if l.font == p.font && l.color == p.color && l.link == p.link && l.x+l.w == x && !(L.justify && endsWord) {
 				l.text = append(l.text, u...)
 				l.w += w
 				x += w
@@ -447,7 +508,11 @@ func (v *docView) layout() {
 	defer pDeleteDC.Call(dc)
 	L := &docLayouter{v: v, dc: dc}
 	v.frags, v.signs, v.blockRcs, v.btns, v.marks, v.text = nil, nil, nil, nil, nil, nil
-	x0, xMax := s(24), rc.Right-s(24)
+	m := s(24)
+	if v.margin > 0 {
+		m = v.margin
+	}
+	x0, xMax := m, rc.Right-m
 	if xMax < x0+s(240) {
 		xMax = x0 + s(240)
 	}
@@ -460,7 +525,7 @@ func (v *docView) layout() {
 	}
 	labelW = min(labelW, (xMax-x0)*2/5)
 	gap := s(20)
-	y := s(16)
+	y := m * 2 / 3
 	v.placeNav(L, rc)
 	// the lines beside the navigation block, at the top, end before it
 	beside := func(y int32) int32 {
@@ -490,14 +555,18 @@ func (v *docView) layout() {
 				L.newline()
 				y = max(yl, yv)
 			}
-		case dkPara:
-			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0, x0, xMax, y, 1.35) + s(2)
+		case dkPara: // justified, its lines a little closer than usual, a space after it
+			L.justify = true
+			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0, x0, xMax, y, 0.94) + s(6)
+			L.justify = false
 			L.newline()
-		case dkBullet:
+		case dkBullet: // a square bullet; the item as a paragraph, 1 pixel after it
 			ind := s(18)
-			L.flow([]styled{{"•", v.fonts["body"], text, ""}}, x0+s(4), x0+s(4), x0+ind, y, 1.35)
+			L.flow([]styled{{"▪", v.fonts["body"], text, ""}}, x0+s(4), x0+s(4), x0+ind, y, 0.94)
 			v.text = append(v.text, ' ')
-			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0+ind, x0+ind, xMax, y, 1.35) + s(2)
+			L.justify = true
+			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0+ind, x0+ind, xMax, y, 0.94) + s(1)
+			L.justify = false
 			L.newline()
 		case dkSpace:
 			y += s(12)
@@ -518,7 +587,7 @@ func (v *docView) layout() {
 			y += s(8)
 		}
 	}
-	v.height = y + s(16)
+	v.height = y + m*2/3
 	v.setScroll(v.scroll)
 	v.navTips()
 }
@@ -618,12 +687,65 @@ func (v *docView) setScroll(pos int32) {
 	h := v.clientH()
 	pos = max(0, min(pos, v.height-h))
 	v.scroll = pos
-	si := scrollInfo{Mask: 0x1 | 0x2 | 0x4 | 0x8 /* RANGE|PAGE|POS|DISABLENOSCROLL */, Min: 0, Max: max(v.height-1, 0), Page: uint32(max(h, 0)), Pos: pos}
-	si.Size = uint32(unsafe.Sizeof(si))
-	pSetScrollInfo.Call(v.hwnd, 1 /* SB_VERT */, uintptr(unsafe.Pointer(&si)), 1)
+	if v.bar {
+		si := scrollInfo{Mask: 0x1 | 0x2 | 0x4 | 0x8 /* RANGE|PAGE|POS|DISABLENOSCROLL */, Min: 0, Max: max(v.height-1, 0), Page: uint32(max(h, 0)), Pos: pos}
+		si.Size = uint32(unsafe.Sizeof(si))
+		pSetScrollInfo.Call(v.hwnd, 1 /* SB_VERT */, uintptr(unsafe.Pointer(&si)), 1)
+	}
 	pInvalidateRect.Call(v.hwnd, 0, 0)
 	v.updateTips()
 	v.linkTipAt(-1) // placed again at the next mouse move
+}
+
+// glider scrolls a docView smoothly: a critically damped spring pulls the view to its
+// aim. It starts gently and never overshoots; a new aim (the wheel turned again, an
+// arrow held down) keeps the speed it has. A timer moves it about 60 times a second.
+type glider struct {
+	on       bool
+	aim, pos float64 // where the view goes, where it is, in pixels
+	speed    float64 // in pixels a second
+	last     time.Time
+	set      int32 // the scroll it gave: another one (the scroll bar dragged) stops it
+}
+
+const (
+	timerGlide = 2  // timer 1 is the one of the copy buttons
+	glideRate  = 28 // the spring's angular frequency: 95 % of the way in 170 ms
+)
+
+// glide scrolls the view by d, smoothly.
+func (v *docView) glide(d int32) {
+	gl := &v.glider
+	if !gl.on || v.scroll != gl.set {
+		*gl = glider{on: true, aim: float64(v.scroll), pos: float64(v.scroll), last: time.Now(), set: v.scroll}
+		pSetTimer.Call(v.hwnd, timerGlide, 15, 0)
+	}
+	gl.aim = max(0, min(gl.aim+float64(d), float64(v.height-v.clientH())))
+}
+
+// glideStep moves the view toward its aim, for the time since the last step. It
+// stops there, or when the view was scrolled otherwise, or cannot move.
+func (v *docView) glideStep() {
+	gl := &v.glider
+	now := time.Now()
+	dt := min(now.Sub(gl.last).Seconds(), 0.05)
+	gl.last = now
+	if gl.on && v.scroll == gl.set {
+		e, k := gl.pos-gl.aim, math.Exp(-glideRate*dt)
+		t := gl.speed + glideRate*e
+		e, gl.speed = (e+t*dt)*k, (gl.speed-glideRate*t*dt)*k
+		if gl.pos = gl.aim + e; math.Abs(e) < 0.5 && math.Abs(gl.speed) < 20 {
+			gl.pos, gl.on = gl.aim, false // there
+		}
+		v.setScroll(int32(math.Round(gl.pos)))
+		pUpdateWindow.Call(v.hwnd) // drawn at once, not once the other messages are done
+		gl.set = v.scroll
+		if gl.on && v.scroll == int32(math.Round(gl.pos)) {
+			return
+		}
+	}
+	gl.on = false
+	pKillTimer.Call(v.hwnd, timerGlide)
 }
 
 // linkTipAt places the tooltip of the links on fragment i, the one under the mouse
@@ -1095,56 +1217,56 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		case wmSize:
 			v.layout()
 			return 0
-		case wmVScroll:
-			step := a.scale(40)
+		case wmVScroll: // smoothly (glide), but the thumb, which follows the mouse
+			step := a.scale(30)
 			page := max(v.clientH()-step, step)
 			switch loword(wParam) {
 			case 0:
-				v.setScroll(v.scroll - step)
+				v.glide(-step)
 			case 1:
-				v.setScroll(v.scroll + step)
+				v.glide(step)
 			case 2:
-				v.setScroll(v.scroll - page)
+				v.glide(-page)
 			case 3:
-				v.setScroll(v.scroll + page)
+				v.glide(page)
 			case 5, 4:
 				si := scrollInfo{Mask: 0x10 /* SIF_TRACKPOS */}
 				si.Size = uint32(unsafe.Sizeof(si))
 				pGetScrollInfo.Call(hwnd, 1, uintptr(unsafe.Pointer(&si)))
 				v.setScroll(si.TrackPos)
 			case 6:
-				v.setScroll(0)
+				v.glide(-v.height)
 			case 7:
-				v.setScroll(v.height)
+				v.glide(v.height)
 			}
 			return 0
 		case wmMouseWheel:
 			delta := int32(int16(hiword(wParam)))
-			v.setScroll(v.scroll - delta*a.scale(54)/120)
+			v.glide(-delta * a.scale(40) / 120)
 			return 0
 		case wmGetDlgCode:
 			return viewDlgCode(lParam)
 		case wmKeyDown:
 			ctrl := ctrlDown()
-			step := a.scale(40)
+			step := a.scale(30)
 			switch {
 			case ctrl && wParam == 'C':
 				v.copySelection()
 			case ctrl && wParam == 'A':
 				v.selA, v.selB = 0, len(v.text)
 				pInvalidateRect.Call(hwnd, 0, 0)
-			case wParam == 0x26: // up
-				v.setScroll(v.scroll - step)
+			case wParam == 0x26: // up, smoothly as the others
+				v.glide(-step)
 			case wParam == 0x28: // down
-				v.setScroll(v.scroll + step)
+				v.glide(step)
 			case wParam == 0x21: // page up
-				v.setScroll(v.scroll - max(v.clientH()-step, step))
+				v.glide(-max(v.clientH()-step, step))
 			case wParam == 0x22: // page down
-				v.setScroll(v.scroll + max(v.clientH()-step, step))
+				v.glide(max(v.clientH()-step, step))
 			case wParam == 0x24: // home
-				v.setScroll(0)
+				v.glide(-v.height)
 			case wParam == 0x23: // end
-				v.setScroll(v.height)
+				v.glide(v.height)
 			}
 			return 0
 		case wmSetCursor:
@@ -1332,6 +1454,10 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			}
 			return 0
 		case wmTimer:
+			if wParam == timerGlide {
+				v.glideStep()
+				return 0
+			}
 			pKillTimer.Call(hwnd, wParam)
 			pInvalidateRect.Call(hwnd, 0, 0)
 			return 0

@@ -109,19 +109,6 @@ func TestLinkTip(t *testing.T) {
 	}
 }
 
-// The tooltips of the About box's links cover the link's text only.
-func TestLineLinks(t *testing.T) {
-	measure := func(s string) int32 { return int32(len(s)) * 7 }
-	line := `Source code: <a href="https://github.com/3c0/eMudScan">https://github.com/3c0/eMudScan</a>.`
-	got := lineLinks(line, measure)
-	if len(got) != 1 || got[0].url != "https://github.com/3c0/eMudScan" || got[0].x0 != 13*7 || got[0].x1 != (13+31)*7 {
-		t.Errorf("lineLinks: %+v", got)
-	}
-	if got := lineLinks("no link here", measure); len(got) != 0 {
-		t.Errorf("no link: %+v", got)
-	}
-}
-
 // The software's age is in amber in the details, as in the lists, after a warning sign.
 func TestDetailsStaleAge(t *testing.T) {
 	Lang = 0

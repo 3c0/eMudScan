@@ -112,8 +112,9 @@ func linkURL(lParam uintptr) string {
 
 type aboutBox struct {
 	icon, titleFont uintptr
-	textFont        uintptr // the links' own font: a link control may delete its font when it is destroyed
-	footLink        uintptr // "Licenses and notices", on the button bar
+	textFont        uintptr  // the links' own font: a link control may delete its font when it is destroyed
+	doc             *docView // the text, justified, with its links
+	footLink        uintptr  // "Licenses and notices", on the button bar
 	title           string
 	textX, titleY   int32
 	iconX, iconY    int32
@@ -176,14 +177,16 @@ func aboutProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 		b.paint(hwnd, wParam, rc)
 		return 1
 	case wmDestroy:
+		if b.doc != nil {
+			b.doc.destroy()
+		}
 		pDestroyIcon.Call(b.icon)
 		pDeleteObject.Call(b.titleFont)
 	}
 	return 0
 }
 
-// build makes the lines of text, the links and the OK button, then sizes and
-// places the box.
+// build makes the text, the links and the buttons, then sizes and places the box.
 func (b *aboutBox) build(hwnd uintptr) {
 	a := g
 	s := a.scale
@@ -216,43 +219,22 @@ func (b *aboutBox) build(hwnd uintptr) {
 		send(h, wmSetFont, b.textFont, 0)
 		return h
 	}
-	// the lines, cut to textW; the box is as wide as the longest one, so that the
-	// margin on its right is the one on the left of the shield
-	var paras [][]string
-	used := int32(0)
-	for _, para := range strings.Split(Tf("about.text", userAgent()), "\n\n") {
-		var lines []string
-		for _, l := range strings.Split(para, "\n") { // a line break within a paragraph: a list
-			lines = append(lines, wrapMarkup(l, textW, measure)...)
-		}
-		for _, l := range lines {
-			used = max(used, measure(linkTagRe.ReplaceAllString(l, "")))
-		}
-		paras = append(paras, lines)
-	}
+	// the text, justified to textW, in a text view, as high as it; its links have
+	// tooltips that say where they lead
+	b.doc = a.newTextView(hwnd, aboutBlocks(Tf("about.text", userAgent())), 9)
+	pSetWindowPos.Call(b.doc.hwnd, 0, uintptr(b.textX-1), uintptr(y), uintptr(textW+2), uintptr(lineH), 0x0004|0x0010) // laid out
+	textH := b.doc.height
+	pSetWindowPos.Call(b.doc.hwnd, 0, 0, 0, uintptr(textW+2), uintptr(textH), 0x0002|0x0004|0x0010) // NOMOVE
 	// on the title's line, on the right: the link to the source code and new versions
 	pSelectObject.Call(dc, b.titleFont)
 	titleW := measure(b.title)
 	pSelectObject.Call(dc, b.textFont)
 	repoW := measure(appURL)
-	w := max(b.textX+used, b.textX+titleW+s(24)+repoW) + right
-	// one control per line (up to the right side, so that it never cuts the line
-	// again), an empty line after each paragraph, the last one included; each link
-	// has a tooltip saying where it leads
+	w := max(b.textX+textW, b.textX+titleW+s(24)+repoW) + right
 	tip := a.newTooltip(hwnd)
 	repo := link(`<a href="`+appURL+`">`+appURL+`</a>`, w-right-repoW, b.titleY+titleM.Ascent-textM.Ascent, repoW+s(8)) // on the title's baseline
 	addTool(tip, repo, 1, &rect{0, 0, repoW, lineH}, linkTip(appURL))
-	for _, lines := range paras {
-		for _, line := range lines {
-			h := link(line, b.textX, y, w-b.textX)
-			for i, l := range lineLinks(line, measure) {
-				addTool(tip, h, uintptr(i+1), &rect{l.x0, 0, l.x1, lineH}, linkTip(l.url))
-			}
-			y += lineH
-		}
-		y += lineH
-	}
-	y += s(4) // under the last line, as much air as above the title
+	y += textH + lineH + s(4) // under the text, as much air as above the title
 	// the button bar: "Licenses and notices" on the left, OK on the right
 	btnW, btnH, pad := s(88), s(30), s(13)
 	b.barTop = y

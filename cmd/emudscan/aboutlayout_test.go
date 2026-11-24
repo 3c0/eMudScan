@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -35,5 +36,29 @@ func TestWrapMarkup(t *testing.T) {
 				t.Fatalf("width %d: line too wide: %q", w, text)
 			}
 		}
+	}
+}
+
+// The text of the About box: its paragraphs, the items of its list, its links.
+func TestAboutBlocks(t *testing.T) {
+	got := aboutBlocks("One <a href=\"https://a.example.invalid/\">a</a>, two.\nFixes:\n• first;\n• <a href=\"https://b.example.invalid\">b</a>\n\nLast.")
+	var lines []string
+	for _, b := range got {
+		l := fmt.Sprint(b.kind)
+		for _, r := range b.runs {
+			l += fmt.Sprintf(" %d:%s>%s", r.kind, r.text, r.target)
+		}
+		lines = append(lines, l)
+	}
+	want := []string{
+		fmt.Sprintf("%d %d:One >|%d:a>https://a.example.invalid/|%d:, two.>", dkPara, runText, runLink, runText),
+		fmt.Sprintf("%d %d:Fixes:>", dkPara, runText),
+		fmt.Sprintf("%d %d:first;>", dkBullet, runText),
+		fmt.Sprintf("%d %d:b>https://b.example.invalid", dkBullet, runLink),
+		fmt.Sprint(dkSpace),
+		fmt.Sprintf("%d %d:Last.>", dkPara, runText),
+	}
+	if strings.Join(lines, "\n") != strings.ReplaceAll(strings.Join(want, "\n"), "|", " ") {
+		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(lines, "\n"), strings.Join(want, "\n"))
 	}
 }
