@@ -42,7 +42,7 @@ Then:
 ## What a fix connects to
 
 Fixes connect to the internet once you accept the warning, whether or not
-**Allow the online test** is checked:
+**Online checks and updates** is checked:
 
 - an update through a package manager (Scoop, WinGet, Chocolatey, the Python
   Install Manager, uv, pipx, pip or conda) connects to that package manager’s
@@ -75,9 +75,9 @@ Adding the compromised certificates to a Java block list connects to nothing.
 
 The commands that replace the ssl files of a Python, or a node.exe, name one
 release. During the scan, they name the release written in eMudScan. When a Fix
-window opens for such a fix, and **Allow the online test** is checked, eMudScan
-itself looks for the latest release, before you accept anything, so that the
-window shows the commands that will run:
+window opens for such a fix, and **Online checks and updates** is checked,
+eMudScan itself looks for the latest release, before you accept anything, so
+that the window shows the commands that will run:
 
 - for python-build-standalone, one request to github.com for the list of
   SHA-256 checksums of its latest release, which GitHub redirects to the host
@@ -91,14 +91,14 @@ window shows the commands that will run:
 
 These requests go through Windows (WinHTTP), as those of the online test, with
 the same User-Agent, without cookies, and through the proxy configured in
-Windows. These sites see your IP address and that User-Agent. When **Allow the
-online test** is cleared, eMudScan does not look: the commands name the release
-written in eMudScan, and the window says so.
+Windows. These sites see your IP address and that User-Agent. When
+**Online checks and updates** is cleared, eMudScan does not look: the commands
+name the release written in eMudScan, and the window says so.
 
 ## The online test is the only connection of a scan
 
-When **Allow the online test** is checked (it is by default), each scan makes up
-to 3 HTTPS requests through Windows (WinHTTP) to the test sites at
+When **Online checks and updates** is checked (it is by default), each scan
+makes up to 3 HTTPS requests through Windows (WinHTTP) to the test sites at
 [emudhra.we-have-a-problem.com](https://emudhra.we-have-a-problem.com), to check
 that Windows rejects the compromised certificates on a real connection:
 
@@ -132,11 +132,11 @@ it.
 
 ## Opting out
 
-Clear **Allow the online test**, or start `eMudScan.exe --offline`: a scan then
-makes no internet connection at all, not even for proxy detection. The online
-test is skipped; every other check works the same. eMudScan does not look for
-the latest release when a Fix window opens either. The choice is not saved. The
-fixes that you run still connect, as described above.
+Clear **Online checks and updates**, or start `eMudScan.exe --offline`: a scan
+then makes no internet connection at all, not even for proxy detection. The
+online test is skipped; every other check works the same. eMudScan does not look
+for the latest release when a Fix window opens either. The choice is not saved.
+The fixes that you run still connect, as described above.
 
 `eMudScan-cli.exe`, which scans without the window, is the other way round:
 nobody is there to clear a box, so it runs the online test only with `--online`.

@@ -88,13 +88,13 @@ out as python.org’s, they come from python.org’s embeddable package; else fr
 python-build-standalone’s build (on GitHub), with `_hashlib.pyd` too for
 python.org’s 3.11 to 3.13, whose fixed releases python.org does not publish for
 Windows. The commands name one release, by its URL, and PowerShell checks the
-download against the SHA-256 written in them. eMudScan itself finds that
-release when a Fix window opens: on GitHub, in the list of SHA-256 of the
-latest release of python-build-standalone, whose releases are immutable; on
-python.org, in its list of releases, where it takes the latest one of the line
-that has Windows files. When it finds none, or when **Allow the online test**
-is cleared, the commands name the release written in eMudScan (Python 3.14.10
-or 3.15.2; python-build-standalone 20261110), and the window says so.
+download against the SHA-256 written in them. eMudScan itself finds that release
+when a Fix window opens: on GitHub, in the list of SHA-256 of the latest release
+of python-build-standalone, whose releases are immutable; on python.org, in its
+list of releases, where it takes the latest one of the line that has Windows
+files. When it finds none, or when **Online checks and updates** is cleared, the
+commands name the release written in eMudScan (Python 3.14.10 or 3.15.2;
+python-build-standalone 20261110), and the window says so.
 The fix is a script that stops at its first command that fails.
 PowerShell backs up each file it replaces. It has two versions. The detailed
 information gives the one that runs without eMudScan, also when it is pasted
@@ -126,7 +126,7 @@ the SHA-256 written in them, then its signature by the OpenJS Foundation and the
 version it gives. Only then does it back up the original and replace it.
 eMudScan itself finds that release when a Fix window opens: in nodejs.org’s list
 of releases (`index.json`), then in the list of SHA-256 of that release
-(`SHASUMS256.txt`). When it finds none, or when **Allow the online test** is
+(`SHASUMS256.txt`). When it finds none, or when **Online checks and updates** is
 cleared, the commands name the release written in eMudScan (Node.js 22.23.5,
 24.22.3 or 26.13.1), and the window says so. The SHA-256 checksums of these
 releases come from their `SHASUMS256.txt`, signed by a releaser of Node.js. The

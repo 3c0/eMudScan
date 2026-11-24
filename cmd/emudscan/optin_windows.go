@@ -2,7 +2,7 @@
 
 package main
 
-// "I accept the online test": the label of the box that allows the live test. It is
+// "Online checks and updates": the label of the box that allows the online test. It is
 // drawn here, in amber with a dashed underline, so that it catches the eye without
 // looking like a link (blue, solid underline): hovering it shows the tooltip that
 // explains what the test sends, clicking it ticks or unticks the box, as a label.

@@ -181,7 +181,7 @@ func (a *ui) openFix(owner uintptr, it Item) {
 // again for them (checker.useLatest): the window then shows, and runs, the commands
 // of these releases. These are eMudScan's own connections, made only when a fix that
 // downloads a release is to be shown; they take a few seconds at most, under the wait
-// cursor. Without "Allow the online test", eMudScan does not connect: the commands
+// cursor. Without "Online checks and updates", eMudScan does not connect: the commands
 // stay those of the releases written in it, with a note. The simulation connects to
 // nothing.
 func (a *ui) lookLatest(ids []int) {

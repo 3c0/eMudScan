@@ -12,8 +12,9 @@ From top to bottom:
   test, privacy, credits, licenses and disclaimer. **Language** (top right):
   Automatic (Windows), English or Français. Changing it resets the window; the
   choice is not saved.
-- **Allow the online test**: checked by default. Hover over it to see what is
-  sent; clear it to scan without any internet connection (see [Privacy](privacy.md)).
+- **Online checks and updates**: checked by default. Hover over it to see what
+  is sent; clear it to scan without any internet connection (see
+  [Privacy](privacy.md)).
 - **Drives to scan**: local drives are selected by default; DVD, removable and
   network drives are not. Nothing on an unselected drive is read or reported.
 - **Scan** starts the scan (it never starts on its own). It becomes **Stop**
@@ -476,7 +477,7 @@ disclaimer. **Licenses and notices** shows the full license texts.
 `eMudScan.exe` opens the window. It has two options:
 
 - `--lang en`, `--lang fr`: the language for this session.
-- `--offline`: start with **Allow the online test** cleared.
+- `--offline`: start with **Online checks and updates** cleared.
 
 ### Scanning without the window
 

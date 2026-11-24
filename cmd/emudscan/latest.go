@@ -19,8 +19,8 @@ package main
 // A release that is found is used when it is at least the one written in eMudScan.
 // When none is found (no connection, a list that changed), the commands stay those
 // of the release written in eMudScan, and the window says so. These are connections
-// of eMudScan itself, as the online test: when "Allow the online test" is cleared, it
-// does not look, and the window says so too.
+// of eMudScan itself, as the online test: when "Online checks and updates" is
+// cleared, it does not look, and the window says so too.
 
 import (
 	"encoding/json"
@@ -215,7 +215,7 @@ type latestLook struct {
 }
 
 // notLooking is the latestLook of a Fix window that does not look for the latest
-// releases ("Allow the online test" cleared): it finds none.
+// releases ("Online checks and updates" cleared): it finds none.
 var notLooking = latestLook{
 	py:   func(pySSLSource) (pySSLSource, bool) { return pySSLSource{}, false },
 	node: func(nodeSource) (nodeSource, bool) { return nodeSource{}, false },
