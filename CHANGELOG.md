@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-11-25
+
 ### Added
 
 - eMudScan updates itself. With **Online checks and updates** checked, it asks GitHub for its latest release when a scan starts, once in a session, before the scan runs (the log says so, with the answer, and **Scan** is greyed out meanwhile), and each time you click **Check for updates** in the About box, which closes it; that button is greyed out when **Online checks and updates** is cleared or a scan runs. A newer version is offered in a dialog that opens at once and shows the release notes of the new versions, up to 10, in a frame that scrolls: **Update now**, or **Not now**, which goes back to the main window and starts the scan that waited, if any. **Update now** downloads its `eMudScan.exe`, with a progress bar, and checks it: its release must be immutable, and its SHA-256 must be the same for GitHub, in the release notes and for the download. When the download or a check fails, the dialog says why, and **Try again** downloads it again. Then eMudScan closes, and a copy of it, from a folder of its own in Temp that only you, SYSTEM and the administrators can open, replaces `eMudScan.exe` in one step, so that it is never half written, and starts the new version, which deletes that folder. If the folder of `eMudScan.exe` needs administrator rights, Windows asks for them once, for the copy only. When the update fails, the old version starts again, and a message says why and gives the release page. `eMudScan-cli.exe` never updates itself.
@@ -176,7 +178,8 @@ First public version.
 - A report to copy or save. English and French.
 - Changes nothing on your PC until you confirm a fix. Clear the online test, and a scan makes no internet connection at all.
 
-[unreleased]: https://github.com/3c0/eMudScan/compare/3.1.2...HEAD
+[unreleased]: https://github.com/3c0/eMudScan/compare/4.0.0...HEAD
+[4.0.0]: https://github.com/3c0/eMudScan/compare/3.1.2...4.0.0
 [3.1.2]: https://github.com/3c0/eMudScan/compare/3.1.1...3.1.2
 [3.1.1]: https://github.com/3c0/eMudScan/compare/3.1.0...3.1.1
 [3.1.0]: https://github.com/3c0/eMudScan/compare/3.0.1...3.1.0
