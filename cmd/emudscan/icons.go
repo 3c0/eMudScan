@@ -338,6 +338,7 @@ const (
 	glyphSearch
 	glyphFirstAid
 	glyphUndo
+	glyphCheck
 )
 
 func rectOutline(w, x0, y0, x1, y1 float64) shapeFn {
@@ -403,6 +404,8 @@ func glyphLayers(k glyph, c rgba) []layer {
 		cross := union(stroke(w, [2]float64{.5, .44}, [2]float64{.5, .7}), stroke(w, [2]float64{.37, .57}, [2]float64{.63, .57}))
 		handle := stroke(w*.8, [2]float64{.38, .3}, [2]float64{.38, .18}, [2]float64{.62, .18}, [2]float64{.62, .3})
 		return []layer{{union(handle, func(x, y float64) bool { return box(x, y) && !cross(x, y) }), col}}
+	case glyphCheck: // a check mark: "done"
+		return []layer{{stroke(w*1.2, [2]float64{.18, .52}, [2]float64{.4, .74}, [2]float64{.82, .28}), col}}
 	}
 	return nil
 }

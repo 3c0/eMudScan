@@ -21,7 +21,8 @@ From top to bottom:
   during the scan, then **Scan again**. Meanwhile, the mouse pointer shows that
   eMudScan is busy, except over **Stop**. **Fix**, beside it, fixes the software
   that eMudScan can fix (see [Fixing software](#fixing-software)).
-  **Copy report** and **Save report** are on the right.
+  **Copy report** and **Save report** are on the right; once the report is in
+  the clipboard, **Copy report** says **Copied** for 2 seconds.
 - **Log**: one line per step. You can select and copy its text. The shield
   before its title is animated while the scan runs, then shows the worst status
   that the scan found. The right end of its top line shows what the scan is

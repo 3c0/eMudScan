@@ -50,7 +50,7 @@ func glyphColor(gl glyph, enabled bool) uint32 {
 		return 0xC42B1C
 	case glyphRefresh, glyphUndo:
 		return 0x0F6CBD
-	case glyphFirstAid:
+	case glyphFirstAid, glyphCheck:
 		return 0x1B8A3A
 	}
 	return 0x404040

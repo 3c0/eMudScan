@@ -290,8 +290,9 @@ const (
 	menuSelectAll
 	menuFix
 
-	timerSpin = 1
-	timerLang = 2
+	timerSpin   = 1
+	timerLang   = 2
+	timerCopied = 3 // Copy report says Copied
 )
 
 type wndClassEx struct {

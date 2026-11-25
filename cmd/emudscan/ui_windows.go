@@ -620,7 +620,7 @@ func (a *ui) layout() {
 		return max(s(least), w+s(20)+s(30)) // the icon with its gap, and 15 on each side
 	}
 	// the four buttons are as wide as the widest text that any of them shows
-	bw := btnW(140, "btn.check", "btn.again", "btn.stop", "btn.fix", "btn.save", "btn.copy")
+	bw := btnW(140, "btn.check", "btn.again", "btn.stop", "btn.fix", "btn.save", "btn.copy", "btn.copied")
 	chw, fw, sw, cw := bw, bw, bw, bw
 	a.move(a.hCheck, m, y, chw, bh)
 	a.move(a.hFix, m+chw+s(8), y, fw, bh)
@@ -2054,8 +2054,10 @@ func (a *ui) copyReport() {
 	if a.current == nil {
 		return
 	}
+	// the button says so for 2 seconds, rather than a message to close
 	if setClipboard(a.hwnd, buildReport(a.current, a.logText.String())) {
-		msgBox(a.hwnd, T("copied"), 0x40)
+		a.setButton(a.hCopy, T("btn.copied"), glyphCheck, pEnabled(a.hCopy))
+		pSetTimer.Call(a.hwnd, timerCopied, 2000, 0)
 	}
 }
 
@@ -2723,6 +2725,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 				pKillTimer.Call(hwnd, timerLang)
 				a.changeLanguage()
 			}
+		case timerCopied:
+			pKillTimer.Call(hwnd, timerCopied)
+			a.setButton(a.hCopy, T("btn.copy"), glyphCopy, pEnabled(a.hCopy))
 		}
 		return 0
 	case wmCommand:

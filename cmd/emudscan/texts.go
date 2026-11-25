@@ -10,6 +10,7 @@ var tr = map[string][2]string{
 	"btn.stop":      {"Stop", "Arrêter"},
 	"btn.fix":       {"Fix", "Corriger"},
 	"btn.copy":      {"Copy report", "Copier le rapport"},
+	"btn.copied":    {"Copied", "Copié"}, // for 2 seconds, once the report is in the clipboard
 	"btn.about":     {"About", "À propos"},
 	"chk.hideOK":    {"Hide OK items", "Masquer les éléments OK"},
 	"grp.progress":  {"Log", "Journal"},
