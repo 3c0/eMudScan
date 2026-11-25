@@ -965,6 +965,9 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		}
 		return 0
 	case wmSetCursor:
+		if a.busyCursor(hwnd, uintptr(loword(lParam))) {
+			return 1
+		}
 		if loword(lParam) == 1 { // HTCLIENT
 			if p := cursorIn(hwnd); v.onCopy(p) || v.linkAt(p) != 0 {
 				pSetCursor.Call(a.curHand)

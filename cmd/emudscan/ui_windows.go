@@ -80,7 +80,7 @@ type ui struct {
 	infoIcon, logoIcon                    uintptr
 	titleIcons                            [StCaution + 1]uintptr // the shields before the titles of the sections and the log, by status (StPending: grey)
 	brushWindow                           uintptr
-	curArrow, curHand, curSizeNS          uintptr
+	curArrow, curHand, curSizeNS, curWait uintptr
 
 	sep          rect        // between the online test and the drives (drawn by the main window)
 	frames       [4]frameBox // log, Windows, Internet and third-party frames (drawn by the main window)
@@ -1016,7 +1016,9 @@ func infoWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		pEndPaint.Call(hwnd, uintptr(unsafe.Pointer(&ps)))
 		return 0
 	case wmSetCursor:
-		pSetCursor.Call(a.curHand)
+		if !a.busyCursor(hwnd, uintptr(loword(lParam))) {
+			pSetCursor.Call(a.curHand)
+		}
 		return 1
 	case wmLButtonUp:
 		a.about()
@@ -1315,6 +1317,65 @@ func cursorIn(h uintptr) point {
 	return pt
 }
 
+// busy tells whether eMudScan works under the busy cursor: during a scan, of all or
+// of some software (Scan again in the right-click menu), and while it looks for a new
+// version of itself.
+func (a *ui) busy() bool { return a.running || a.updateBusy }
+
+// busyWindow is the window under the busy cursor that w is, or is in: the main
+// window, or a Fix window, whose list can scan some software again; 0 for another one.
+func (a *ui) busyWindow(w uintptr) uintptr {
+	tops := []uintptr{a.hwnd}
+	for _, d := range []*fixDlg{a.fix, a.fixUnder} {
+		if d != nil {
+			tops = append(tops, d.hwnd)
+		}
+	}
+	for _, top := range tops {
+		if child, _, _ := pIsChild.Call(top, w); w == top || child != 0 {
+			return top
+		}
+	}
+	return 0
+}
+
+// busyCursor sets the cursor over w, a window under the busy cursor (busyWindow) or
+// one of its controls, while eMudScan is busy: the busy cursor, but the arrow over the
+// Stop button, which can be clicked. hit is where the cursor is (WM_NCHITTEST): the
+// frame of the window keeps its own cursors, so that the window can still be moved
+// and resized. It tells whether it set the cursor.
+func (a *ui) busyCursor(w, hit uintptr) bool {
+	if !a.busy() {
+		return false
+	}
+	if top := a.busyWindow(w); top == 0 || w == top && hit != 1 /* HTCLIENT */ && hit != 0xFFFE /* HTERROR: the window is disabled */ {
+		return false
+	}
+	c := a.curWait
+	if w == a.hCheck && pEnabled(a.hCheck) {
+		c = a.curArrow
+	}
+	pSetCursor.Call(c)
+	return true
+}
+
+// cursorAgain sets the cursor at once when eMudScan becomes busy or stops being
+// busy, without waiting for the mouse to move: as Windows does when it moves, it asks
+// the window under the mouse, when it is under the busy cursor (busyWindow).
+func (a *ui) cursorAgain() {
+	var pt point
+	pGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
+	w, _, _ := pWindowFromPoint.Call(uintptr(uint32(pt.X)) | uintptr(uint32(pt.Y))<<32) // a POINT, by value
+	if w == 0 || a.busyWindow(w) == 0 {
+		return
+	}
+	hit := send(w, wmNcHitTest, 0, uintptr(uint16(pt.X))|uintptr(uint16(pt.Y))<<16)
+	if !pEnabled(w) {
+		hit = 0xFFFE // HTERROR, as Windows gives it
+	}
+	send(w, wmSetCursor, w, hit&0xFFFF|uintptr(wmMouseMove)<<16)
+}
+
 func keyDown(vk uintptr) bool {
 	r, _, _ := pGetKeyState.Call(vk)
 	return r&0x8000 != 0
@@ -1333,6 +1394,9 @@ func listSubclass(hwnd uintptr, msg uint32, wParam, lParam, id, ref uintptr) uin
 	if l := a.listOf(hwnd); l != nil {
 		switch msg {
 		case wmSetCursor:
+			if a.busyCursor(hwnd, uintptr(loword(lParam))) {
+				return 1
+			}
 			if loword(lParam) == 1 /* HTCLIENT */ {
 				if _, ok := a.linkAt(l, cursorIn(hwnd)); ok {
 					pSetCursor.Call(a.curHand)
@@ -1625,6 +1689,7 @@ func (a *ui) beginRun() {
 	a.setButton(a.hCheck, T("btn.stop"), glyphStop, true)
 	a.setRunning(true)
 	setText(a.hSummary, "")
+	a.cursorAgain()
 }
 
 func (a *ui) selectedDrives() []string {
@@ -1642,6 +1707,7 @@ func (a *ui) start() {
 		a.stopping = true
 		a.cancel.Store(true)
 		a.setButton(a.hCheck, T("btn.stop"), glyphStop, false) // greyed until the scan stops
+		a.cursorAgain()
 		return
 	}
 	if a.lookForUpdate(false) {
@@ -1719,6 +1785,7 @@ func (a *ui) finish() {
 	a.redrawSpinner()
 	a.setButton(a.hCheck, T("btn.again"), glyphRefresh, true)
 	a.setRunning(false)
+	a.cursorAgain()
 	if aboutDlg != nil { // "Check for updates", greyed out during the scan
 		aboutDlg.scanEnded()
 	}
@@ -2432,6 +2499,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			a.fitToScreen()
 		}
 	case wmSetCursor:
+		if a.busyCursor(wParam, uintptr(loword(lParam))) {
+			return 1
+		}
 		if wParam == hwnd && loword(lParam) == 1 {
 			pt := cursorIn(hwnd)
 			if a.splitAt(pt.X, pt.Y) >= 0 {
@@ -2734,6 +2804,7 @@ func guiMain() {
 	a.curArrow, _, _ = pLoadCursorW.Call(0, 32512)
 	a.curHand, _, _ = pLoadCursorW.Call(0, 32649)
 	a.curSizeNS, _, _ = pLoadCursorW.Call(0, 32645)
+	a.curWait, _, _ = pLoadCursorW.Call(0, 32514 /* IDC_WAIT */)
 	big, _, _ := pLoadImageW.Call(inst, 1, 1, uintptr(a.scale(32)), uintptr(a.scale(32)), 0)
 	small, _, _ := pLoadImageW.Call(inst, 1, 1, uintptr(a.scale(16)), uintptr(a.scale(16)), 0)
 	if big == 0 {

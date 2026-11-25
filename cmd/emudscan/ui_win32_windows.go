@@ -73,6 +73,7 @@ var (
 	pSetCapture                = moduser32.NewProc("SetCapture")
 	pReleaseCapture            = moduser32.NewProc("ReleaseCapture")
 	pGetCursorPos              = moduser32.NewProc("GetCursorPos")
+	pWindowFromPoint           = moduser32.NewProc("WindowFromPoint")
 	pScreenToClient            = moduser32.NewProc("ScreenToClient")
 	pClientToScreen            = moduser32.NewProc("ClientToScreen")
 	pCreatePopupMenu           = moduser32.NewProc("CreatePopupMenu")

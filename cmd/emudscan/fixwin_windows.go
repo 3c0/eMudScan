@@ -181,9 +181,9 @@ func (a *ui) openFix(owner uintptr, it Item) {
 // again for them (checker.useLatest): the window then shows, and runs, the commands
 // of these releases. These are eMudScan's own connections, made only when a fix that
 // downloads a release is to be shown; they take a few seconds at most, under the wait
-// cursor. Without "Online checks and updates", eMudScan does not connect: the commands
-// stay those of the releases written in it, with a note. The simulation connects to
-// nothing.
+// cursor, with the controls greyed out (fixWaits). Without "Online checks and
+// updates", eMudScan does not connect: the commands stay those of the releases
+// written in it, with a note. The simulation connects to nothing.
 func (a *ui) lookLatest(ids []int) {
 	if fixSimulation || a.current == nil {
 		return
@@ -207,10 +207,16 @@ func (a *ui) lookLatest(ids []int) {
 	if a.onlineOff {
 		changed = a.current.useLatest(ids, notLooking, T("fix.latestOffline"))
 	} else {
+		focus, _, _ := pGetFocus.Call() // a greyed-out button loses it
+		done := a.fixWaits()
 		wait, _, _ := pLoadCursorW.Call(0, 32514 /* IDC_WAIT */)
 		before, _, _ := pSetCursor.Call(wait)
 		changed = a.current.useLatest(ids, latestLooker(), T("fix.latestNotFound"))
 		pSetCursor.Call(before)
+		done()
+		if focus != 0 {
+			pSetFocus.Call(focus)
+		}
 	}
 	for _, it := range changed { // now, for the window that opens; the lists follow (Upsert)
 		a.items[it.ID] = it
@@ -218,6 +224,35 @@ func (a *ui) lookLatest(ids []int) {
 	if len(changed) > 0 {
 		a.refreshDetails()
 	}
+}
+
+// fixWaits greys out the controls while lookLatest waits, so that the click shows
+// and nothing else can be asked meanwhile: those of the main window that a scan greys
+// out, with Scan and Fix, and the buttons of the details it is asked from. They are
+// drawn at once, since the windows do not draw themselves while it waits. It gives
+// back what enables again those that were enabled.
+func (a *ui) fixWaits() (done func()) {
+	hs := []uintptr{a.hCheck, a.hFix, a.hCopy, a.hSave, a.hLang, a.hOnline, a.hOnlineLbl}
+	for _, d := range a.drives {
+		hs = append(hs, d.h)
+	}
+	if d := a.dlg; d != nil {
+		hs = append(hs, d.bCopy, d.bCmds, d.bFolder, d.bFix, d.bClose)
+	}
+	var greyed []uintptr
+	enable := func(on uintptr) {
+		for _, h := range greyed {
+			pEnableWindow.Call(h, on) // a button with an icon sets its color (btnSubclass)
+			pRedrawWindow.Call(h, 0, 0, rdwInvalidate|rdwErase|rdwFrame|rdwAllChildren|rdwUpdateNow)
+		}
+	}
+	for _, h := range hs {
+		if h != 0 && pEnabled(h) {
+			greyed = append(greyed, h)
+		}
+	}
+	enable(0)
+	return func() { enable(1) }
 }
 
 // fixBusy: a Fix window is open, other than the Fix software window under the details
@@ -538,6 +573,9 @@ func fixListSubclass(hwnd uintptr, msg uint32, wParam, lParam, id, ref uintptr) 
 		case wmMouseLeave, wmMouseWheel, wmVScroll, wmHScroll:
 			resetCellTip(hwnd)
 		case wmSetCursor:
+			if a.busyCursor(hwnd, uintptr(loword(lParam))) {
+				return 1
+			}
 			if loword(lParam) == 1 /* HTCLIENT */ {
 				if _, ok := a.fixLinkAt(d, cursorIn(hwnd)); ok {
 					pSetCursor.Call(a.curHand)
@@ -1485,6 +1523,9 @@ func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			d.paint(a, hwnd)
 			return 0
 		case wmSetCursor: // over the bar below the list: the cursor that resizes it
+			if a.busyCursor(wParam, uintptr(loword(lParam))) {
+				return 1
+			}
 			if d.list != 0 && loword(lParam) == 1 /* HTCLIENT */ {
 				var pt point
 				pGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))

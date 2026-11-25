@@ -18,7 +18,8 @@ From top to bottom:
 - **Drives to scan**: local drives are selected by default; DVD, removable and
   network drives are not. Nothing on an unselected drive is read or reported.
 - **Scan** starts the scan (it never starts on its own). It becomes **Stop**
-  during the scan, then **Scan again**. **Fix**, beside it, fixes the software
+  during the scan, then **Scan again**. Meanwhile, the mouse pointer shows that
+  eMudScan is busy, except over **Stop**. **Fix**, beside it, fixes the software
   that eMudScan can fix (see [Fixing software](#fixing-software)).
   **Copy report** and **Save report** are on the right.
 - **Log**: one line per step. You can select and copy its text. The shield
@@ -87,7 +88,8 @@ Right-click one or more items for: **Detailed information**, **Fix**,
 **Select all**. **Fix** opens the **Fix software** window for the selected items
 that can be fixed (see [Fixing software](#fixing-software)). **Scan again**
 first reads the installed software again, so a program you have just updated
-shows its new version.
+shows its new version. Meanwhile, as during a scan, the mouse pointer shows that
+eMudScan is busy, except over **Stop**.
 
 With several items selected, each entry says how many things it acts on, and
 counts once what the items share: for three items in two folders,
@@ -200,8 +202,10 @@ listed: its detailed information says what to do.
 
 **Fix**, beside **Scan**, is enabled once a scan has found software that
 eMudScan can fix. It opens the **Fix software** window; **Fix** in the
-right-click menu of the lists opens it for the selected items only. The window
-has, from top to bottom:
+right-click menu of the lists opens it for the selected items only. When a fix
+downloads the latest release of a Python or a Node.js, eMudScan first looks for
+it: meanwhile, **Fix** and the other controls are greyed out, as during a scan.
+The window has, from top to bottom:
 
 - **Select All**, **Select None**, how many software are selected, and a
   reminder of what the list can do.
@@ -484,15 +488,16 @@ is cleared, and while a scan runs.
 With **Online checks and updates** checked, eMudScan looks for a new version of
 itself when a scan starts, once in a session, before the scan runs, and each
 time you click **Check for updates** in the About box. Meanwhile, **Scan** is
-greyed out, and the log says so in a section of its own, **eMudScan Update**,
-then gives the answer: the new version, or that yours is the latest one. The
-scan keeps that section at the top of its log. A newer version is offered in a
-dialog that shows the release notes of the new versions, the newest first, up to
-10, in a frame that scrolls: **Update now** or **Not now**. Those of the latest
-version show at once; those of the other new versions come right after. With
-**Not now**, you are back in the main window, and the scan starts as usual when
-you clicked **Scan**. With **Update now**, it does not start: the new version
-opens, ready to scan. So an update never stops a scan.
+greyed out, the mouse pointer shows that eMudScan is busy, and the log says so
+in a section of its own, **eMudScan Update**, then gives the answer: the new
+version, or that yours is the latest one. The scan keeps that section at the top
+of its log. A newer version is offered in a dialog that shows the release notes
+of the new versions, the newest first, up to 10, in a frame that scrolls:
+**Update now** or **Not now**. Those of the latest version show at once; those
+of the other new versions come right after. With **Not now**, you are back in
+the main window, and the scan starts as usual when you clicked **Scan**. With
+**Update now**, it does not start: the new version opens, ready to scan. So an
+update never stops a scan.
 
 When there is no new version, **Check for updates** says so in a message; when
 GitHub cannot be reached, it says why.

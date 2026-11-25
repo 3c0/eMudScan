@@ -43,10 +43,11 @@ type updateNews struct {
 // each time, or for a scan, once in a session; never during a scan, nor when "Online
 // checks and updates" is cleared. It reports whether it looks: a scan then starts
 // once it has (updateEvent). Meanwhile, the window is disabled, and at once, so that
-// the click shows: the Scan button is greyed out, the log and the summary say that
-// eMudScan looks, the log in a section of its own, "eMudScan Update". For a scan, the
-// log starts anew with its first line (scanHeader), then this section, which the
-// scan keeps. When the user asks, the section comes after the log.
+// the click shows: the Scan button is greyed out, the cursor is busy, the log and the
+// summary say that eMudScan looks, the log in a section of its own, "eMudScan
+// Update". For a scan, the log starts anew with its first line (scanHeader), then
+// this section, which the scan keeps. When the user asks, the section comes after
+// the log.
 func (a *ui) lookForUpdate(asked bool) bool {
 	if a.updateBusy || a.onlineOff || a.running || !asked && a.updateLooked {
 		return false
@@ -67,6 +68,7 @@ func (a *ui) lookForUpdate(asked bool) bool {
 	a.summaryBefore = getText(a.hSummary)
 	setText(a.hSummary, T("update.looking"))
 	pEnableWindow.Call(a.hwnd, 0)
+	a.cursorAgain()
 	go func() {
 		n := &updateNews{asked: asked}
 		n.rel, n.found, n.err = updateLookup()
@@ -97,6 +99,7 @@ func (a *ui) updateEvent(e uiEvent) {
 	a.setButton(a.hCheck, getText(a.hCheck), btnGlyphs[a.hCheck], true)
 	setText(a.hSummary, a.summaryBefore)
 	pEnableWindow.Call(a.hwnd, 1)
+	a.cursorAgain() // before the dialog or the message, or the scan, which sets it again
 	switch {
 	case n.found:
 		if a.offerUpdate(n.rel) {
