@@ -59,9 +59,76 @@ function Run([string]$stage, [scriptblock]$command) {
     & $command 2>&1 | ForEach-Object { Say "$_" }
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
+# Test runs the tests (go test -json), and shows where they are: the test that runs,
+# on a line written over and over; each test that takes 1 second or more, with its
+# time, its cases that run at once included; each one that fails, with what it
+# wrote; the result of each package. It stops the script if a test fails.
+# The events of go are read by patterns: most are lines that the tests write, and
+# ConvertFrom-Json, slow in Windows PowerShell 5.1, would lag behind the tests. Their
+# times are those that go gives, when they happened.
+function Test {
+    Say 'Running the tests (go test)...'
+    $ErrorActionPreference = 'Continue'
+    $inv = [Globalization.CultureInfo]::InvariantCulture
+    $width = 79
+    try { $width = [Math]::Max(20, $Host.UI.RawUI.WindowSize.Width - 1) } catch {}
+    $script:shown = $false
+    function Show([string]$text) { # the line written over: '' clears it
+        if ($text -or $script:shown) {
+            $t = $text.PadRight($width).Substring(0, $width)
+            Write-Host -NoNewline ("`r" + $t + "`r")
+            $script:shown = [bool]$text
+        }
+    }
+    function Field([string]$line, [string]$name) {
+        [regex]::Match($line, '"' + $name + '":"((?:[^"\\]|\\.)*)"').Groups[1].Value
+    }
+    $wrote = @{}   # the events of what each test wrote, read if it fails
+    $started = @{} # when each test started
+    go test -json @tagArgs ./... 2>&1 | ForEach-Object {
+        $line = "$_"
+        if (-not $line.StartsWith('{')) { Show ''; Say $line; return } # from go itself
+        $action, $test = (Field $line 'Action'), (Field $line 'Test')
+        if (-not $test) { # a package: its result, or why it does not build
+            if ($action -match 'output$') {
+                $text = "$(($line | ConvertFrom-Json).Output)".TrimEnd()
+                if ($text -and $text -ne 'PASS') { Show ''; Say $text }
+            }
+            return
+        }
+        $key = (Field $line 'Package') + ' ' + $test
+        switch ($action) {
+            'run' {
+                if (-not $test.Contains('/')) {
+                    $started[$key] = [DateTimeOffset]::Parse((Field $line 'Time'), $inv)
+                    Show ('    ' + $test + '...')
+                }
+            }
+            'output' { $wrote[$key] += , $line }
+            'pass' {
+                if ($started.ContainsKey($key)) {
+                    $took = ([DateTimeOffset]::Parse((Field $line 'Time'), $inv) - $started[$key]).TotalSeconds
+                    if ($took -ge 1) {
+                        Show ''
+                        Say ('    ' + $test + ': ' + $took.ToString('0.00', $inv) + ' s')
+                    }
+                }
+            }
+            'fail' {
+                Show ''
+                Say ('FAIL: ' + $test)
+                $text = ($wrote[$key] | ForEach-Object { ($_ | ConvertFrom-Json).Output }) -join ''
+                $text.TrimEnd() -split "`n" | ForEach-Object { Say ('    ' + $_.TrimEnd()) }
+            }
+        }
+    }
+    $code = $LASTEXITCODE
+    Show ''
+    if ($code -ne 0) { exit $code }
+}
 Run 'Checking the code (go vet)...' { go vet @tagArgs ./... }
 if ($cli) { Run 'Checking the code of the console program (go vet)...' { go vet -tags cli ./... } }
-Run 'Running the tests (go test)...' { go test @tagArgs ./... }
+Test
 Run 'Regenerating the Windows resources...' { go run ./cmd/emudscan --make-syso cmd\emudscan\winres\gui\rsrc_windows_amd64.syso }
 Run 'Regenerating the Windows resources of the console program...' { go run ./cmd/emudscan --make-syso-cli cmd\emudscan\winres\cli\rsrc_windows_amd64.syso }
 # the window program: -H windowsgui; the console program: the tag cli, without it

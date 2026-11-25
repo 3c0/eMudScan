@@ -65,9 +65,10 @@ func TestBundleFixInPowerShell(t *testing.T) {
 	shells := testPowerShells(t)
 	bundle := "-----BEGIN CERTIFICATE-----\nnew\n-----END CERTIFICATE-----\n"
 	sum := sha256.Sum256([]byte(bundle))
-	wrong := false
+	// curl.se, and under /wrong/ the same with another SHA-256: the cases run at once
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
+		path, wrong := strings.CutPrefix(r.URL.Path, "/wrong")
+		switch path {
 		case "/ca/cacert.pem":
 			w.Write([]byte(bundle))
 		case "/ca/cacert.pem.sha256":
@@ -80,11 +81,15 @@ func TestBundleFixInPowerShell(t *testing.T) {
 			http.NotFound(w, r)
 		}
 	}))
-	defer srv.Close()
-	local := func(lines []string) []string {
+	t.Cleanup(srv.Close) // once the cases, which run after this function, have run
+	local := func(lines []string, wrong bool) []string {
+		to := srv.URL + "/"
+		if wrong {
+			to = srv.URL + "/wrong/"
+		}
 		out := make([]string, len(lines))
 		for i, l := range lines {
-			out[i] = strings.ReplaceAll(l, "https://curl.se/", srv.URL+"/")
+			out[i] = strings.ReplaceAll(l, "https://curl.se/", to)
 		}
 		return out
 	}
@@ -103,6 +108,7 @@ func TestBundleFixInPowerShell(t *testing.T) {
 			{name: "no server", backup: true, offline: true},
 		} {
 			t.Run("PowerShell "+version+"/"+c.name, func(t *testing.T) {
+				t.Parallel() // each case in its own folder
 				dir := t.TempDir()
 				files := []string{filepath.Join(dir, "a", "cacert.pem"), filepath.Join(dir, "b c", "ca-bundle.crt")}
 				for _, f := range files {
@@ -114,8 +120,7 @@ func TestBundleFixInPowerShell(t *testing.T) {
 					t.Fatalf("fixes: %+v", fixes)
 				}
 				f := fixes[0]
-				f.Cmds, f.Plain, f.Alone = local(f.Cmds), local(f.Plain), local(f.Alone)
-				wrong = c.wrong
+				f.Cmds, f.Plain, f.Alone = local(f.Cmds, c.wrong), local(f.Plain, c.wrong), local(f.Alone, c.wrong)
 				url := srv.URL
 				if c.offline {
 					f.Cmds = (strings.Split(strings.ReplaceAll(strings.Join(f.Cmds, "\n"), url, "http://127.0.0.1:9"), "\n"))
@@ -171,6 +176,7 @@ func TestJavaAndRestoreInPowerShell(t *testing.T) {
 				name = "PowerShell " + version + "/alone"
 			}
 			t.Run(name, func(t *testing.T) {
+				t.Parallel() // each case in its own folder
 				list := filepath.Join(t.TempDir(), "jre", "lib", "security", "blocked.certs")
 				os.MkdirAll(filepath.Dir(list), 0o755)
 				os.WriteFile(list, []byte("Algorithm=SHA-256\nAAAA"), 0o644) // no line break at its end

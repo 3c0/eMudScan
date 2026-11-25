@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The About box is wider.
 - The web search for a certificate bundle of a software that eMudScan does not know searches for the software alone, such as “example-app”, instead of the software with the name of the file, such as “example-app cacert.pem”. This applies to the link of the detailed information and to **Search on Google** in the right-click menu.
 - The About box and the README say that eMudScan was made by 3c0 with the help of AI.
+- `scripts/build.ps1` shows the test that runs, and each test that takes 1 second or more, with its time. The tests that run the fixes in PowerShell look for the PowerShells once, instead of once each, and run their cases at once: the build is faster.
 
 ### Fixed
 

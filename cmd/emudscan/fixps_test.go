@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -52,6 +53,30 @@ func testPowerShells(t *testing.T) map[string]string {
 	if fixSimulation {
 		t.Skip("the simulation replaces the commands")
 	}
+	shellsOnce.Do(func() { shellsFound = findPowerShells() })
+	found := shellsFound
+	for _, want := range strings.Split(os.Getenv("EMUDSCAN_TEST_POWERSHELL_WANT"), ",") {
+		if want = strings.TrimSpace(want); want != "" && !hasVersion(found, want) {
+			t.Fatalf("no PowerShell %s to run the fixes with: found %v", want, found)
+		}
+	}
+	if len(found) == 0 {
+		t.Skip("no PowerShell to run the fixes with")
+	}
+	return found
+}
+
+// shellsFound are the PowerShells of the tests, looked for once: each one takes a
+// second or so to start and say its version.
+var (
+	shellsOnce  sync.Once
+	shellsFound map[string]string
+)
+
+// findPowerShells looks for the PowerShells of the tests: on Windows, its own and
+// PowerShell 7; and those that EMUDSCAN_TEST_POWERSHELL names. It gives each one by
+// its version, the first one found for a version.
+func findPowerShells() map[string]string {
 	var paths []string
 	if runtime.GOOS == "windows" {
 		paths = append(paths, filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe"))
@@ -61,22 +86,18 @@ func testPowerShells(t *testing.T) map[string]string {
 		paths = append(paths, filepath.Join(os.Getenv("ProgramFiles"), "PowerShell", "7", "pwsh.exe")) // where its installer puts it
 	}
 	paths = append(paths, filepath.SplitList(os.Getenv("EMUDSCAN_TEST_POWERSHELL"))...)
-	found := map[string]string{}
+	found, tried := map[string]string{}, map[string]bool{}
 	for _, p := range paths {
+		if tried[strings.ToLower(p)] { // pwsh found in PATH where its installer puts it
+			continue
+		}
+		tried[strings.ToLower(p)] = true
 		out, err := exec.Command(p, "-NoProfile", "-NonInteractive", "-Command", "$PSVersionTable.PSVersion.ToString()").Output()
 		if v := strings.TrimSpace(string(out)); err == nil && v != "" {
 			if _, seen := found[v]; !seen {
 				found[v] = p
 			}
 		}
-	}
-	for _, want := range strings.Split(os.Getenv("EMUDSCAN_TEST_POWERSHELL_WANT"), ",") {
-		if want = strings.TrimSpace(want); want != "" && !hasVersion(found, want) {
-			t.Fatalf("no PowerShell %s to run the fixes with: found %v", want, found)
-		}
-	}
-	if len(found) == 0 {
-		t.Skip("no PowerShell to run the fixes with")
 	}
 	return found
 }
@@ -537,17 +558,20 @@ func folderState(dir string) map[string]string {
 func TestScriptStopsAlone(t *testing.T) {
 	Lang = 0
 	for version, ps := range testPowerShells(t) {
-		first := fixAction{Kind: fixPySSL, Script: true, Cmds: []string{"# a fix", "$a = 1", "", "throw 'stop'", "$a = 2"}}
-		second := fixAction{Kind: fixBundle, Cmds: []string{"if ($a -ne 1) { throw 'the fix before did not stop' }", "$b = 1"}}
-		units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, fix: first, cmds: first.Cmds}, {ids: []int{2}, titles: []string{"B"}, fix: second, cmds: second.Cmds}}
-		lines, res := psRun(t, ps, t.TempDir(), units)
-		if len(res) != 2 || !res[0].ran || res[0].ok || !res[1].ran || !res[1].ok {
-			t.Errorf("PowerShell %s: %+v\n%s", version, res, strings.Join(reportLines(lines), "\n"))
-		}
-		want := []string{"    # a fix", "  ✓ $a = 1", "", "  ✗ throw 'stop'", "      stop", "    $a = 2", "", "  ✓ if ($a -ne 1) { throw 'the fix before did not stop' }", "  ✓ $b = 1"} // an empty line between two fixes
-		if got := reportLines(lines); strings.Join(got, "\n") != strings.Join(want, "\n") {
-			t.Errorf("PowerShell %s:\n%s\nwant:\n%s", version, strings.Join(got, "\n"), strings.Join(want, "\n"))
-		}
+		t.Run("PowerShell "+version, func(t *testing.T) {
+			t.Parallel()
+			first := fixAction{Kind: fixPySSL, Script: true, Cmds: []string{"# a fix", "$a = 1", "", "throw 'stop'", "$a = 2"}}
+			second := fixAction{Kind: fixBundle, Cmds: []string{"if ($a -ne 1) { throw 'the fix before did not stop' }", "$b = 1"}}
+			units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, fix: first, cmds: first.Cmds}, {ids: []int{2}, titles: []string{"B"}, fix: second, cmds: second.Cmds}}
+			lines, res := psRun(t, ps, t.TempDir(), units)
+			if len(res) != 2 || !res[0].ran || res[0].ok || !res[1].ran || !res[1].ok {
+				t.Errorf("PowerShell %s: %+v\n%s", version, res, strings.Join(reportLines(lines), "\n"))
+			}
+			want := []string{"    # a fix", "  ✓ $a = 1", "", "  ✗ throw 'stop'", "      stop", "    $a = 2", "", "  ✓ if ($a -ne 1) { throw 'the fix before did not stop' }", "  ✓ $b = 1"} // an empty line between two fixes
+			if got := reportLines(lines); strings.Join(got, "\n") != strings.Join(want, "\n") {
+				t.Errorf("PowerShell %s:\n%s\nwant:\n%s", version, strings.Join(got, "\n"), strings.Join(want, "\n"))
+			}
+		})
 	}
 }
 
@@ -557,38 +581,41 @@ func TestChangedFileInPowerShell(t *testing.T) {
 	Lang = 0
 	for version, ps := range testPowerShells(t) {
 		for _, how := range []string{"changed", "missing", "as written"} {
-			run := t.TempDir()
-			f := fixAction{Kind: fixPySSL, Script: true, Needs: "pycheck", Cmds: []string{"$a = 1"}}
-			units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, fix: f, cmds: f.Cmds}}
-			files, err := fixFiles(units, time.Now())
-			if err != nil || len(files) == 0 {
-				t.Fatal(err)
-			}
-			logPath, scriptPath := filepath.Join(run, "fix.log"), filepath.Join(run, "fix.ps1")
-			for n, b := range files {
-				os.WriteFile(filepath.Join(run, n), b, 0o600)
-			}
-			script := []byte(fixScript(units, logPath, "##m", files))
-			os.WriteFile(scriptPath, script, 0o600)
-			os.WriteFile(logPath, nil, 0o600)
-			switch how {
-			case "changed":
-				os.WriteFile(filepath.Join(run, pyCheckName), append([]byte("import os\n"), files[pyCheckName]...), 0o600)
-			case "missing":
-				os.Remove(filepath.Join(run, pyCheckName))
-			}
-			out, err := exec.Command(ps, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encodedCommand(fixBootstrap(scriptPath, script))).CombinedOutput()
-			code := 0
-			if e, ok := err.(*exec.ExitError); ok {
-				code = e.ExitCode()
-			} else if err != nil {
-				t.Fatal(err)
-			}
-			log, _ := os.ReadFile(logPath)
-			ran := strings.Contains(string(log), "##m cmd 0 0")
-			if want := how == "as written"; ran != want || (code == fixTampered) == want {
-				t.Errorf("PowerShell %s, %s: exit code %d, ran %v\n%s", version, how, code, ran, out)
-			}
+			t.Run("PowerShell "+version+"/"+how, func(t *testing.T) {
+				t.Parallel()
+				run := t.TempDir()
+				f := fixAction{Kind: fixPySSL, Script: true, Needs: "pycheck", Cmds: []string{"$a = 1"}}
+				units := []fixUnit{{ids: []int{1}, titles: []string{"A"}, fix: f, cmds: f.Cmds}}
+				files, err := fixFiles(units, time.Now())
+				if err != nil || len(files) == 0 {
+					t.Fatal(err)
+				}
+				logPath, scriptPath := filepath.Join(run, "fix.log"), filepath.Join(run, "fix.ps1")
+				for n, b := range files {
+					os.WriteFile(filepath.Join(run, n), b, 0o600)
+				}
+				script := []byte(fixScript(units, logPath, "##m", files))
+				os.WriteFile(scriptPath, script, 0o600)
+				os.WriteFile(logPath, nil, 0o600)
+				switch how {
+				case "changed":
+					os.WriteFile(filepath.Join(run, pyCheckName), append([]byte("import os\n"), files[pyCheckName]...), 0o600)
+				case "missing":
+					os.Remove(filepath.Join(run, pyCheckName))
+				}
+				out, err := exec.Command(ps, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encodedCommand(fixBootstrap(scriptPath, script))).CombinedOutput()
+				code := 0
+				if e, ok := err.(*exec.ExitError); ok {
+					code = e.ExitCode()
+				} else if err != nil {
+					t.Fatal(err)
+				}
+				log, _ := os.ReadFile(logPath)
+				ran := strings.Contains(string(log), "##m cmd 0 0")
+				if want := how == "as written"; ran != want || (code == fixTampered) == want {
+					t.Errorf("PowerShell %s, %s: exit code %d, ran %v\n%s", version, how, code, ran, out)
+				}
+			})
 		}
 	}
 }

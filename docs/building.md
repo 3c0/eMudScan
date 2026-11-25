@@ -179,6 +179,10 @@ You need Go 1.24 or later, and nothing else. From the root of the repository:
 Both run the checks and the tests, regenerate the Windows resources, then write
 `dist/eMudScan.exe` and `dist/eMudScan-cli.exe`. Each line they show starts with
 the time since the line before it and since the start, such as `[+02.40 06.90]`.
+While the tests run, `build.ps1` shows the one that runs, on a line written
+over, and each one that took 1 second or more, with its time: the tests that run
+the fixes in PowerShell take the longest. They look for the PowerShells once,
+and run their cases at once.
 
 The two exes are the same code. `eMudScan.exe` is built as a window program
 (`-H windowsgui`). `eMudScan-cli.exe` is built with the `cli` build tag and
