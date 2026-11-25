@@ -171,6 +171,7 @@ func (a *ui) makeDocView(parent uintptr, blocks []docBlock, bodyPt int, bar bool
 	mk("body", bodyPt, 400, false, "Segoe UI")
 	mk("bold", bodyPt, 600, false, "Segoe UI")
 	mk("link", bodyPt, 400, true, "Segoe UI")
+	mk("small", bodyPt-1, 400, false, "Segoe UI")
 	mk("title", 17, 600, false, "Segoe UI")
 	mk("heading", 12, 400, false, "Segoe UI")
 	mk("status", 11, 700, false, "Segoe UI")
@@ -586,6 +587,9 @@ func (v *docView) layout() {
 			L.justify = true
 			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0, x0, xMax, y, lines) + s(6)
 			L.justify = false
+			L.newline()
+		case dkSmall: // as a paragraph, in smaller letters, each line as long as its words
+			y = L.flow(v.runsStyled(b.runs, v.fonts["small"], text), x0, x0, xMax, y, lines) + s(6)
 			L.newline()
 		case dkBullet: // a square bullet; the item as a paragraph, 1 pixel after it
 			ind := s(18)

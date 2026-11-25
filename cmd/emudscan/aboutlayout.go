@@ -11,13 +11,14 @@ import (
 )
 
 var (
-	linkTagRe = regexp.MustCompile(`<a href="[^"]*">|</a>`)
+	linkTagRe = regexp.MustCompile(`<a href="[^"]*">|</a>|</?small>`)
 	linkRe    = regexp.MustCompile(`<a href="([^"]*)">(.*?)</a>`)
 )
 
 // aboutBlocks reads the text of the About box: paragraphs, cut by empty lines; in a
 // paragraph, a line that starts with "• " is an item of a list, another line a
-// paragraph of its own, without space before it; <a href="…">…</a>, a link.
+// paragraph of its own, without space before it, in smaller letters when it is all
+// in <small>…</small>; <a href="…">…</a>, a link.
 func aboutBlocks(text string) []docBlock {
 	var out []docBlock
 	for i, para := range strings.Split(text, "\n\n") {
@@ -28,6 +29,8 @@ func aboutBlocks(text string) []docBlock {
 			kind := dkPara
 			if item, ok := strings.CutPrefix(l, "• "); ok {
 				kind, l = dkBullet, item
+			} else if in, ok := strings.CutPrefix(l, "<small>"); ok && strings.HasSuffix(in, "</small>") {
+				kind, l = dkSmall, strings.TrimSuffix(in, "</small>")
 			}
 			var runs []mrun
 			for m := linkRe.FindStringSubmatchIndex(l); m != nil; m = linkRe.FindStringSubmatchIndex(l) {

@@ -409,6 +409,7 @@ const (
 	dkTitle                  // the title of the window
 	dkStatus                 // the status line (icon, status, summary)
 	dkHeading                // a heading with a line under it: a version, in the update dialog
+	dkSmall                  // a paragraph in smaller letters, not justified: a value given as it is
 )
 
 type docRow struct {
@@ -559,7 +560,7 @@ func blocksText(bs []docBlock) string {
 				b.WriteString("\n")
 			}
 			b.WriteString(runsText(bl.runs) + "\n")
-		case dkTitle, dkPara:
+		case dkTitle, dkPara, dkSmall:
 			b.WriteString(runsText(bl.runs) + "\n")
 		case dkBullet:
 			b.WriteString("• " + runsText(bl.runs) + "\n")

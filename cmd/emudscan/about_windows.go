@@ -223,7 +223,8 @@ func (b *aboutBox) build(hwnd uintptr) {
 	b.titleFont = createFont(12, a.dpi, 400, false, "Segoe UI")
 	b.textFont = createFont(9, a.dpi, 400, false, "Segoe UI")
 	b.textX = left + isz + s(9)
-	textW, right := s(525), left+inset+s(4) // text looks closer to an edge than the solid shield
+	right := left + inset + s(4)      // text looks closer to an edge than the solid shield
+	textW := s(720) - b.textX - right // the box is 720 wide
 	textM, titleM := a.fontMetrics(b.textFont), a.fontMetrics(b.titleFont)
 	lineH, titleH := textM.Height, titleM.Height
 	b.titleY = top + (isz-titleH)/2
