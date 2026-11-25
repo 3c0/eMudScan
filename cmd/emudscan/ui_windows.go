@@ -1500,6 +1500,31 @@ func keyDown(vk uintptr) bool {
 	return r&0x8000 != 0
 }
 
+// listWheel scrolls list l by one row for each notch of the mouse wheel, rather than
+// by the three of Windows, which skip too much in a list of a few rows. A list scrolls
+// by whole rows only; a fine wheel gives less than a notch at a time, which adds up.
+func listWheel(l, wParam uintptr) {
+	if l != wheelList {
+		wheelList, wheelRest = l, 0
+	}
+	wheelRest += int32(int16(hiword(wParam)))
+	n := wheelRest / 120 // WHEEL_DELTA: a notch
+	if n == 0 {
+		return
+	}
+	wheelRest -= n * 120
+	var rc rect
+	if send(l, lvmGetItemRect, send(l, lvmGetTopIndex, 0, 0), uintptr(unsafe.Pointer(&rc))) != 0 {
+		send(l, lvmScroll, 0, uintptr(int(-n*(rc.Bottom-rc.Top)))) // up for a turn away from you
+	}
+}
+
+// the list the wheel turned over last, and what is left of its turn
+var (
+	wheelList uintptr
+	wheelRest int32
+)
+
 func listSubclass(hwnd uintptr, msg uint32, wParam, lParam, id, ref uintptr) uintptr {
 	a := g
 	switch msg {
@@ -1507,7 +1532,11 @@ func listSubclass(hwnd uintptr, msg uint32, wParam, lParam, id, ref uintptr) uin
 		pPostMessageW.Call(a.hwnd, wmApp+3, hwnd, 0)
 	case wmMouseMove:
 		a.updateCellTip(hwnd, point{xParam(lParam), yParam(lParam)})
-	case wmMouseLeave, wmMouseWheel, wmVScroll, wmHScroll, wmLButtonDown:
+	case wmMouseWheel:
+		resetCellTip(hwnd)
+		listWheel(hwnd, wParam)
+		return 0
+	case wmMouseLeave, wmVScroll, wmHScroll, wmLButtonDown:
 		resetCellTip(hwnd)
 	}
 	if l := a.listOf(hwnd); l != nil {

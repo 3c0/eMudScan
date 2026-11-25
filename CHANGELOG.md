@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The window of the detailed information opens wider, so that most commands fit on one line: 1000 pixels at 100 % scaling instead of 850. The Fix window of one software opens a little wider too: 900 pixels instead of 860.
 - The text of the detailed information and of the About box is justified, its lines are closer together, and its lists have square bullets. The detailed information scrolls smoothly, with the mouse wheel, the scroll bar and the keys. The text of the About box can now be selected and copied.
 - The About box is wider.
+- In the lists of the main window and of the Fix software window, the mouse wheel scrolls one row a notch, instead of three, which skipped too much in a list of a few rows.
 - The search box has the focus as soon as a scan starts, not only once it is finished: a search can be typed while the scan runs.
 - During a scan, also of some software (**Scan again** in the right-click menu), and while eMudScan looks for a new version of itself, the mouse pointer shows that eMudScan is busy, except over **Stop**, which can still be clicked.
 - The web search for a certificate bundle of a software that eMudScan does not know searches for the software alone, such as “example-app”, instead of the software with the name of the file, such as “example-app cacert.pem”. This applies to the link of the detailed information and to **Search on Google** in the right-click menu.

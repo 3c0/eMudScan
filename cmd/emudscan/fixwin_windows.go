@@ -571,7 +571,11 @@ func fixListSubclass(hwnd uintptr, msg uint32, wParam, lParam, id, ref uintptr) 
 		switch msg {
 		case wmMouseMove:
 			a.updateCellTip(hwnd, point{xParam(lParam), yParam(lParam)})
-		case wmMouseLeave, wmMouseWheel, wmVScroll, wmHScroll:
+		case wmMouseWheel: // a row a notch, as the lists of the main window
+			resetCellTip(hwnd)
+			listWheel(hwnd, wParam)
+			return 0
+		case wmMouseLeave, wmVScroll, wmHScroll:
 			resetCellTip(hwnd)
 		case wmSetCursor:
 			if a.busyCursor(hwnd, uintptr(loword(lParam))) {
