@@ -158,8 +158,19 @@ func aboutProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 	}
 	switch msg {
 	case wmInitDialog:
+		a.follows(hwnd, true)
 		b.build(hwnd)
 		return 0 // the focus is set on OK
+	case wmDpiChanged:
+		a.scaleGiven(hwnd, int(loword(wParam)))
+		return 1
+	case wmRescale: // made again, for the scale of the display
+		b.free(hwnd)
+		destroyControls(hwnd)
+		pDeleteObject.Call(b.textFont) // fails harmlessly if a link control already did it
+		b.build(hwnd)
+		pRedrawWindow.Call(hwnd, 0, 0, rdwInvalidate|rdwErase|rdwAllChildren)
+		return 1
 	case wmCommand:
 		if id := loword(wParam); id == 1 || id == 2 { // IDOK, IDCANCEL (Esc, ×)
 			pEndDialog.Call(hwnd, uintptr(id))
@@ -200,14 +211,20 @@ func aboutProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 		b.paint(hwnd, wParam, rc)
 		return 1
 	case wmDestroy:
-		delete(disabledTools, hwnd)
-		if b.doc != nil {
-			b.doc.destroy()
-		}
-		pDestroyIcon.Call(b.icon)
-		pDeleteObject.Call(b.titleFont)
+		b.free(hwnd)
 	}
 	return 0
+}
+
+// free frees what build made, but the controls and the font of the links.
+func (b *aboutBox) free(hwnd uintptr) {
+	delete(disabledTools, hwnd)
+	if b.doc != nil {
+		b.doc.destroy()
+		b.doc = nil
+	}
+	pDestroyIcon.Call(b.icon)
+	pDeleteObject.Call(b.titleFont)
 }
 
 // build makes the text, the links and the buttons, then sizes and places the box.
@@ -363,7 +380,32 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 	}
 	s := a.scale
 	switch msg {
+	case wmSizing:
+		a.userSized(hwnd)
+	case wmDpiChanged:
+		a.scaleGiven(hwnd, int(loword(wParam)))
+		return 1
+	case wmRescale: // its letters at the scale of the display, and its size with them
+		w, h := a.scaledClient(hwnd, int(wParam))
+		if b.script != nil {
+			b.script.setFonts(a.dpi)
+		} else {
+			old := b.font
+			b.font = createFont(9, a.dpi, 400, false, "Consolas")
+			send(b.edit, wmSetFont, b.font, 1)
+			m := uintptr(s(14))
+			send(b.edit, 0x00D3 /* EM_SETMARGINS */, 0x1|0x2, m|m<<16)
+			pDeleteObject.Call(old)
+		}
+		b.barH = s(13) + s(30) + s(13)
+		a.placeBox(hwnd, b.over, w, h)
+		var rc rect
+		pGetClientRect.Call(hwnd, uintptr(unsafe.Pointer(&rc)))
+		licProc(hwnd, wmSize, 0, uintptr(rc.Right)|uintptr(rc.Bottom)<<16) // also when its size is the same
+		pRedrawWindow.Call(hwnd, 0, 0, rdwInvalidate|rdwErase|rdwFrame|rdwAllChildren)
+		return 1
 	case wmInitDialog:
+		a.follows(hwnd, true)
 		if b.python {
 			b.script = a.newPythonView(hwnd, 100)
 			b.edit = b.script.hwnd

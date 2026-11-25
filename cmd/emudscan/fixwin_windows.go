@@ -790,6 +790,7 @@ func (a *ui) newFixWindow(d *fixDlg, w, h int) bool {
 		a.fix = nil
 		return false
 	}
+	a.follows(d.hwnd, false)
 	d.font = createFont(9, a.dpi, 600, false, "Segoe UI")
 	d.title, _, _ = pCreateWindowExW.Call(0, up("STATIC"), 0, uintptr(wsChild|wsVisible|0x80|0x4000 /* SS_NOPREFIX|SS_ENDELLIPSIS */),
 		0, 0, 10, 10, d.hwnd, 0, 0, 0)
@@ -1521,6 +1522,21 @@ func fixWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	a := g
 	if d := a.fixDlgOf(hwnd); d != nil {
 		switch msg {
+		case wmSizing:
+			a.userSized(hwnd)
+		case wmDpiChanged:
+			a.scaleGiven(hwnd, int(loword(wParam)))
+			return 0
+		case wmRescale: // its letters at the scale of the display, and its size with them
+			old := d.font
+			d.font = createFont(9, a.dpi, 600, false, "Segoe UI")
+			replaceFontsIn(hwnd, []uintptr{old}, []uintptr{d.font})
+			pDeleteObject.Call(old)
+			d.console.setFonts(a.dpi)
+			a.resizeScaled(hwnd, int(wParam))
+			d.layout(a) // also when its size is the same
+			pRedrawWindow.Call(hwnd, 0, 0, rdwInvalidate|rdwErase|rdwAllChildren)
+			return 0
 		case wmSize:
 			d.layout(a)
 			return 0

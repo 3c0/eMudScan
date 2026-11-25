@@ -224,8 +224,17 @@ func updateProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 	}
 	switch msg {
 	case wmInitDialog:
+		a.follows(hwnd, true)
 		b.build(hwnd)
 		return 0 // the focus is set on "Update now"
+	case wmSizing:
+		a.userSized(hwnd)
+	case wmDpiChanged:
+		a.scaleGiven(hwnd, int(loword(wParam)))
+		return 1
+	case wmRescale:
+		b.rescale(int(wParam))
+		return 1
 	case wmSize:
 		if b.doc != nil { // made by WM_INITDIALOG, which may come after a first WM_SIZE
 			b.layout()
@@ -324,6 +333,33 @@ func (b *updateBox) build(hwnd uintptr) {
 	b.barH = s(13) + s(30) + s(13)
 	a.placeBox(hwnd, a.hwnd, s(700), s(720))
 	pSetFocus.Call(b.yes)
+}
+
+// rescale shows the dialog at the scale of the display, which was another (the DPI
+// was): its letters, its icon and its size, with what it shows and does left as it
+// is.
+func (b *updateBox) rescale(was int) {
+	a := g
+	s := a.scale
+	w, h := a.scaledClient(b.hwnd, was)
+	pDestroyIcon.Call(b.icon)
+	b.icon = iconFromRGBA(renderIcon(iconApp, int(s(32))), int(s(32)))
+	old := []uintptr{b.titleFont, b.textFont}
+	b.titleFont = createFont(12, a.dpi, 400, false, "Segoe UI")
+	b.textFont = createFont(9, a.dpi, 400, false, "Segoe UI")
+	for _, c := range []uintptr{b.how, b.status, b.link} {
+		send(c, wmSetFont, b.textFont, 1)
+	}
+	for _, f := range old {
+		pDeleteObject.Call(f)
+	}
+	pSetWindowPos.Call(b.link, 0, 0, 0, uintptr(a.textWidth(b.textFont, T("update.page"))+s(8)), uintptr(a.fontMetrics(b.textFont).Height), 0x0002|0x0004|0x0010) // NOMOVE|NOZORDER|NOACTIVATE
+	b.doc.margin = s(14)
+	b.doc.rescale(a, was)
+	b.barH = s(13) + s(30) + s(13)
+	a.placeBox(b.hwnd, a.hwnd, w, h)
+	b.layout() // also when its size is the same
+	pRedrawWindow.Call(b.hwnd, 0, 0, rdwInvalidate|rdwErase|rdwAllChildren)
 }
 
 // layout places the controls in the dialog, for its size.

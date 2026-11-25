@@ -42,8 +42,20 @@ func savedProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 	}
 	switch msg {
 	case wmInitDialog:
+		a.follows(hwnd, true)
 		b.build(hwnd)
 		return 0 // the focus is set on OK
+	case wmDpiChanged:
+		a.scaleGiven(hwnd, int(loword(wParam)))
+		return 1
+	case wmRescale: // made again, for the scale of the display
+		pDestroyIcon.Call(b.icon)
+		pDeleteObject.Call(b.titleFont)
+		destroyControls(hwnd)
+		pDeleteObject.Call(b.textFont) // fails harmlessly if a link control already did it
+		b.build(hwnd)
+		pRedrawWindow.Call(hwnd, 0, 0, rdwInvalidate|rdwErase|rdwAllChildren)
+		return 1
 	case wmCommand:
 		if id := loword(wParam); id == 1 || id == 2 { // IDOK, IDCANCEL (Esc, ×)
 			pEndDialog.Call(hwnd, uintptr(id))

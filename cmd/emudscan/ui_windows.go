@@ -74,6 +74,7 @@ type ui struct {
 	onlineOff                                               bool      // the user turned the online test off (not saved)
 
 	dpi                                   int
+	base                                  baseSize // of the main window (see rescale_windows.go)
 	fontUI, fontTitle, fontMono, fontLink uintptr
 	imgStatus                             uintptr // status icons of the lists
 	spin                                  *spinner
@@ -177,15 +178,18 @@ func (a *ui) listOf(h uintptr) *listCtl {
 // Resources
 
 func (a *ui) createResources() {
-	for _, f := range []uintptr{a.fontUI, a.fontTitle, a.fontMono, a.fontLink} {
-		if f != 0 {
-			pDeleteObject.Call(f)
-		}
-	}
+	fonts := []uintptr{a.fontUI, a.fontTitle, a.fontMono, a.fontLink}
 	a.fontUI = createFont(9, a.dpi, 400, false, "Segoe UI")
 	a.fontTitle = createFont(14, a.dpi, 600, false, "Segoe UI")
 	a.fontMono = createFont(9, a.dpi, 400, false, "Consolas")
 	a.fontLink = createFont(9, a.dpi, 400, true, "Segoe UI")
+	// the windows above the main one use them too
+	a.replaceFonts(fonts, []uintptr{a.fontUI, a.fontTitle, a.fontMono, a.fontLink})
+	for _, f := range fonts {
+		if f != 0 {
+			pDeleteObject.Call(f)
+		}
+	}
 	for _, ic := range glyphIcons {
 		pDestroyIcon.Call(ic)
 	}
@@ -209,6 +213,11 @@ func (a *ui) createResources() {
 	if a.hListWin != 0 {
 		for _, h := range []uintptr{a.hListWin, a.net.h, a.app.h} {
 			send(h, lvmSetImageList, 1, a.imgStatus)
+		}
+	}
+	for _, d := range []*fixDlg{a.fix, a.fixUnder} { // the list of a Fix software window has them too
+		if d != nil && d.list != 0 {
+			send(d.list, lvmSetImageList, 1, a.imgStatus)
 		}
 	}
 	if old != 0 {
@@ -2337,6 +2346,7 @@ func (a *ui) openDetails(it Item, pos int) {
 		a.dlg = nil
 		return
 	}
+	a.follows(d.hwnd, false)
 	mk := func(class, text string, style uint32, id int) uintptr {
 		hh, _, _ := pCreateWindowExW.Call(0, up(class), up(text), uintptr(wsChild|wsVisible|style), 0, 0, 10, 10, d.hwnd, uintptr(id), 0, 0)
 		send(hh, wmSetFont, a.fontUI, 1)
@@ -2567,6 +2577,17 @@ func detailsWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	d := a.dlg
 	if d != nil && d.hwnd == hwnd {
 		switch msg {
+		case wmSizing:
+			a.userSized(hwnd)
+		case wmDpiChanged:
+			a.scaleGiven(hwnd, int(loword(wParam)))
+			return 0
+		case wmRescale: // its text at the scale of the display, and its size with it
+			d.view.rescale(a, int(wParam))
+			a.resizeScaled(hwnd, int(wParam))
+			d.fitButtons(a)
+			d.layout(a) // also when its size is the same
+			return 0
 		case wmSize:
 			d.layout(a)
 			return 0
@@ -2889,9 +2910,15 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			}
 		}
 		return 0
+	case wmSizing:
+		a.userSized(hwnd)
 	case wmDpiChanged:
+		was := a.dpi
 		a.dpi = int(loword(wParam))
-		r := (*rect)(ptr(lParam))
+		r := *(*rect)(ptr(lParam))
+		if z, _, _ := pIsZoomed.Call(hwnd); z == 0 { // a maximized window goes where Windows says
+			r = a.mainRect(r, was)
+		}
 		a.createResources()
 		a.applyFonts()
 		a.measureRow()
@@ -2900,6 +2927,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		}
 		pSetWindowPos.Call(hwnd, 0, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right-r.Left), uintptr(r.Bottom-r.Top), 0x0004|0x0010)
 		a.layout()
+		a.rescaleAll() // the windows above it, to which Windows already gave this scale
 		return 0
 	case wmClose:
 		if a.fix != nil && a.fix.running { // not while fixes run: they would be left half done

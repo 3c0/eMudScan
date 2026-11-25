@@ -86,6 +86,7 @@ type docView struct {
 	pad       int32        // more room around the text, on each side: for the frame of the focus
 	lines     float64      // the lines of paragraphs and items, in times the font's height, when not 0.94
 	bar       bool         // it has a scroll bar
+	bodyPt    int          // the size of its letters, in points
 	glider    glider       // the smooth scrolling
 	targets   []docTarget  // what Tab goes through inside the text, in reading order
 	focusAt   int          // the target with the focus, or -1: the view itself
@@ -155,34 +156,8 @@ func (a *ui) makeDocView(parent uintptr, blocks []docBlock, bodyPt int, bar bool
 		pRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 		docClassOK = true
 	}
-	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1, nav: docNav{hover: -1, down: -1}, bar: bar, focusAt: -1}
-	v.fonts = map[string]*docFont{}
-	mk := func(name string, pt, weight int, underline bool, face string) {
-		f := &docFont{h: createFont(pt, a.dpi, weight, underline, face)}
-		dc, _, _ := pCreateCompatibleDC.Call(0)
-		old, _, _ := pSelectObject.Call(dc, f.h)
-		var tm textMetric
-		pGetTextMetricsW.Call(dc, uintptr(unsafe.Pointer(&tm)))
-		pSelectObject.Call(dc, old)
-		pDeleteDC.Call(dc)
-		f.height, f.ascent = tm.Height, tm.Ascent
-		v.fonts[name] = f
-	}
-	mk("body", bodyPt, 400, false, "Segoe UI")
-	mk("bold", bodyPt, 600, false, "Segoe UI")
-	mk("link", bodyPt, 400, true, "Segoe UI")
-	mk("small", bodyPt-1, 400, false, "Segoe UI")
-	mk("title", 17, 600, false, "Segoe UI")
-	mk("heading", 12, 400, false, "Segoe UI")
-	mk("status", 11, 700, false, "Segoe UI")
-	mk("summary", 11, 400, false, "Segoe UI")
-	mk("mono", 10, 400, false, "Consolas")
-	mk("symbol", 10, 400, false, "Segoe UI Symbol") // ⚠, as in the log
-	v.icons = map[Status]uintptr{}
-	isz := int(a.scale(20))
-	for _, st := range []Status{StOK, StInfo, StCaution, StWarn, StError} {
-		v.icons[st] = iconFromRGBA(renderStatus(st, isz), isz)
-	}
+	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1, nav: docNav{hover: -1, down: -1}, bar: bar, bodyPt: bodyPt, focusAt: -1}
+	v.makeFonts(a)
 	style := uint32(wsChild | wsVisible | wsTabStop)
 	if bar {
 		style |= wsVScroll
@@ -200,18 +175,71 @@ func (a *ui) makeDocView(parent uintptr, blocks []docBlock, bodyPt int, bar bool
 	return v
 }
 
-func (v *docView) destroy() {
+// makeFonts makes the fonts and the status icons of the view, for the scale of the
+// display, in place of those it has.
+func (v *docView) makeFonts(a *ui) {
+	v.freeFonts()
+	v.fonts = map[string]*docFont{}
+	mk := func(name string, pt, weight int, underline bool, face string) {
+		f := &docFont{h: createFont(pt, a.dpi, weight, underline, face)}
+		dc, _, _ := pCreateCompatibleDC.Call(0)
+		old, _, _ := pSelectObject.Call(dc, f.h)
+		var tm textMetric
+		pGetTextMetricsW.Call(dc, uintptr(unsafe.Pointer(&tm)))
+		pSelectObject.Call(dc, old)
+		pDeleteDC.Call(dc)
+		f.height, f.ascent = tm.Height, tm.Ascent
+		v.fonts[name] = f
+	}
+	mk("body", v.bodyPt, 400, false, "Segoe UI")
+	mk("bold", v.bodyPt, 600, false, "Segoe UI")
+	mk("link", v.bodyPt, 400, true, "Segoe UI")
+	mk("small", v.bodyPt-1, 400, false, "Segoe UI")
+	mk("title", 17, 600, false, "Segoe UI")
+	mk("heading", 12, 400, false, "Segoe UI")
+	mk("status", 11, 700, false, "Segoe UI")
+	mk("summary", 11, 400, false, "Segoe UI")
+	mk("mono", 10, 400, false, "Consolas")
+	mk("symbol", 10, 400, false, "Segoe UI Symbol") // ⚠, as in the log
+	v.icons = map[Status]uintptr{}
+	isz := int(a.scale(20))
+	for _, st := range []Status{StOK, StInfo, StCaution, StWarn, StError} {
+		v.icons[st] = iconFromRGBA(renderStatus(st, isz), isz)
+	}
+}
+
+func (v *docView) freeFonts() {
 	for _, f := range v.fonts {
 		pDeleteObject.Call(f.h)
 	}
 	for _, ic := range v.icons {
 		pDestroyIcon.Call(ic)
 	}
+	if v.nav.shadow != 0 { // made again, for its new size, when it is drawn
+		pDeleteObject.Call(v.nav.shadow)
+		v.nav.shadow = 0
+	}
+	v.fonts, v.icons = nil, nil
+}
+
+// rescale shows the view at the scale of the display, which was another (the DPI
+// was): its letters and its icons at their new size, the text cut again for them,
+// scrolled to where it was. The window that has the view gives it its new margins
+// first, and its new size after.
+func (v *docView) rescale(a *ui, was int) {
+	v.makeFonts(a)
+	if v.tip != 0 {
+		send(v.tip, ttmSetMaxTipWidth, 0, uintptr(a.scale(560)))
+	}
+	v.scroll = int32(int(v.scroll) * a.dpi / was)
+	v.layout()
+	pInvalidateRect.Call(v.hwnd, 0, 1)
+}
+
+func (v *docView) destroy() {
+	v.freeFonts()
 	if v.tip != 0 {
 		pDestroyWindow.Call(v.tip)
-	}
-	if v.nav.shadow != 0 {
-		pDeleteObject.Call(v.nav.shadow)
 	}
 	delete(docViews, v.hwnd)
 }
