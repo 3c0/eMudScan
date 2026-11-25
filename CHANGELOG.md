@@ -10,101 +10,114 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- eMudScan updates itself. With **Online checks and updates** checked, it asks GitHub for its latest release when a scan starts, once in a session, before the scan runs (the log says so, with the answer, and **Scan** is greyed out meanwhile), and each time you click **Check for updates** in the About box, which closes it; that button is greyed out when **Online checks and updates** is cleared or a scan runs. A newer version is offered in a dialog that opens at once and shows the release notes of the new versions, up to 10, in a frame that scrolls: **Update now**, or **Not now**, which goes back to the main window and starts the scan that waited, if any. **Update now** downloads its `eMudScan.exe`, with a progress bar, and checks it: its release must be immutable, and its SHA-256 must be the same for GitHub, in the release notes and for the download. When the download or a check fails, the dialog says why, and **Try again** downloads it again. Then eMudScan closes, and a copy of it, from a folder of its own in Temp that only you, SYSTEM and the administrators can open, replaces `eMudScan.exe` in one step, so that it is never half written, and starts the new version, which deletes that folder. If the folder of `eMudScan.exe` needs administrator rights, Windows asks for them once, for the copy only. When the update fails, the old version starts again, and a message says why and gives the release page. `eMudScan-cli.exe` never updates itself.
-- In the Fix window, the name `check_ssl.py`, in the commands that replace the ssl files of a Python, is a link that shows this file, in colors of its own on a very dark blue: the tests that the fix runs in that Python, which you can read before you run anything, and copy with the button in its top right corner, as the commands. Its docstrings and comments say what each test checks and why. These commands first say what `$emudscanFiles` is, the folder that eMudScan makes for the fix, with this file and its test certificates, and show it when the fix runs. The file is also in the source code as it is (`cmd/emudscan/check_ssl.py`). The box of the licenses and notices has a new button, **Copy all**.
-- The Fix window names the PowerShell that runs the fixes, such as Windows PowerShell 5.1, above the commands and above their results; the report names it too, in the line that says when the fixes ran. On a PC without Windows PowerShell, the fixes now run in PowerShell 7 or later, installed in Program Files; never in a `pwsh.exe` found elsewhere, such as in the PATH, since some fixes run as administrator. When there is neither, the window says so, and its button that runs the fixes stays disabled. The messages that named Windows PowerShell now name the PowerShell that runs the fixes.
-- In the commands of the detailed information and in the console of the Fix window, a line too long for its box ends with ↩, and its rest starts with ↪ on the next row, at the indent of the line, so that it is not taken for another command. These signs are drawn in gray, and are not selected or copied.
+- Self-update: eMudScan asks GitHub for its latest release at the first scan of a session and from **Check for updates** in the About box, with **Online checks and updates** checked.
+- The update dialog shows the release notes of up to 10 new versions, then downloads `eMudScan.exe` with a progress bar: **Update now**, **Not now**, **Cancel**, **Try again**.
+- An update is installed only from an immutable release whose `eMudScan.exe` has the SHA-256 that the GitHub API and the release notes give.
+- A copy of eMudScan, in a folder of its own in Temp, replaces `eMudScan.exe` in one step and starts it; it asks for administrator rights once when the folder of the exe needs them.
+- When an update fails, the old version starts again, says why and gives the release page. `eMudScan-cli.exe` never updates itself.
+- Fix window: `check_ssl.py`, in the fix of a Python, is a link that shows this file with syntax highlighting and a copy button. The file is in the source as it is (`cmd/emudscan/check_ssl.py`).
+- The fix of a Python says what `$emudscanFiles` is, the folder that eMudScan makes for it in Temp, and shows it when it runs.
+- **Copy all** button in the box of the licenses and notices.
+- The Fix window and the report name the PowerShell that runs the fixes.
+- On a PC without Windows PowerShell, the fixes run in PowerShell 7 or later from Program Files, never in a `pwsh.exe` of the PATH; with neither, the fixes are disabled.
+- A command line too long for its box wraps with ↩ and ↪, at the indent of the line, in the detailed information and the console of the Fix window; the signs are not copied.
 
 ### Changed
 
-- The fixes that replace a certificate bundle, add certificates to a Java block list or restore backups are now scripts written to be read, as the fix of a Python: comments that say what each part does, one command on each line, and empty lines between the parts. They stop at their first command that fails, which replaces the warning “The download failed or is incomplete: no file was changed.” The detailed information gives them as one block that runs alone, also pasted into a PowerShell window. A certificate bundle is now downloaded with Windows PowerShell set to TLS 1.2, instead of TLS 1.2 added to its list.
-- In the Fix window, a line drawn across the console separates two software. Each one starts with its name and its location (`# Location: …`), and each of its fixes with a line that says which fix it is: `# Fix: Replace the ssl files of Python…`, or `# Fix 1: Update with Scoop` and `# Fix 2, if the update does not fix it: Replace the certificate bundle…`. They replace the line that only said what the commands do, and “Then, if the update does not fix it:”. The console shows the same while the fixes run. When copied, the line between two software is a comment, which PowerShell skips.
-- Above the commands of a fix, the detailed information says what to do with them, in place of “In PowerShell:”: “To fix this vulnerability, click **Fix this software**, or run this script yourself in PowerShell:” (or “this command”, “these commands”); “To do so, …” when the fix is only good practice; “To undo the fix, click **Restore the backups**, …” for a restore; and “Run this command in PowerShell:” for the commands that the button does not run. Above a script, the sentence names the versions of PowerShell that the tests run the scripts in, on GitHub: “in PowerShell 5.1, 7.6 or 7.7”. When the commands need administrator rights, the sentence ends with “in PowerShell (Run as administrator):”, with “(Run as administrator)” in bold, bright red. The advice that leads to commands of a fix now ends with a period, the sentence “To undo these changes, run the following command…” and, for a Python inside a program, “If you manage this Python yourself:” are gone, replaced by the new sentence.
-- The errors of the scripts that replace the ssl files of a Python say what happened, what it means and what to do, such as “The replacement failed. The original files are back: this Python works as before, and is still not fixed. Update the software it belongs to when it has a fixed version.” The script that runs alone also shows why a replacement failed, before it puts the original files back.
-- The reports no longer contain the commands of the fixes. The text and JSON reports give the detailed information without its commands, without the lines that announce or explain them, and without what eMudScan offers to do itself (“Until then, eMudScan can replace…”), which is for who runs eMudScan; a sentence that led to commands, such as “update it with uv:”, stays, and ends with a period. In the JSON report, `fixes` no longer has `commands`, and `format_version` is now 2. In the detailed information of a Python installed with uv, “The last command removes this copy…” is now on its own line, and a conda environment whose conda is not found gets the same recommended action as the others.
-- After fixes, the Fixes section of the reports (`fixes_run` in the JSON report) says what came of them: the result of each software and, for a command that failed, that command and what it showed. It no longer lists the commands that succeeded or did not run.
-- The detailed information of a Python inside a program now gives a script that you can copy and run without eMudScan to replace its ssl files, also pasted into a PowerShell window: one block that stops at its first error, tests before and after that this Python loads its ssl module, and downloads into a folder of its own in the Temp folder, which it deletes at its end. Until now it gave commands that only eMudScan could run, since they use its own tests. The Fix window shows, and runs, the version with these tests.
-- The fix that replaces the ssl files of a Python inside a program is now a script written to be read: one command on each line, with comments that say what each part does. It stops at its first command that fails, and its `try` block puts the original files back when the replacement or the tests after it fail. In the Fix window and in the report, each command that ran has its result (✔ or ✘); a comment, a line of a block and a command that did not run have none. When a file is in use, the message is now the one of Windows; the warning “No file was changed” is gone, since the result of each command says where the fix stopped.
-- The fix that replaces the ssl files of a Python inside a program uses the latest release of its line. When a Fix window opens, eMudScan itself looks for it: on GitHub for python-build-standalone, whose releases are immutable, and on python.org, where it takes the latest release of the line that has Windows files; meanwhile, **Fix** and the other controls of its window are greyed out, as during a scan. The commands stay simple: one URL and its SHA-256. When no release is found, or when **Online checks and updates** is cleared, the commands use the release written in eMudScan, now 20261124 for python-build-standalone, and the window says so.
-- The fix that replaces the node.exe inside a program is now a script written to be read, as the fix of a Python. It downloads one release, by its URL, and checks it before it changes anything: its SHA-256, written in the commands, its signature by the OpenJS Foundation and the version it gives. When a Fix window opens, eMudScan itself looks for the latest release of its line on nodejs.org. When no release is found, or when **Online checks and updates** is cleared, the commands use the release written in eMudScan, Node.js 22.23.5, 24.22.3 or 26.13.1, and the window says so. The detailed information gives a version that runs alone, also pasted into a PowerShell window: it downloads into a folder of its own in the Temp folder, and deletes it at its end. A 32-bit node.exe of Node.js 24 or later gets no fix, since nodejs.org builds none: the detailed information says so.
-- The box “Allow the online test” is now named “Online checks and updates”: it allows the online test and the other connections of eMudScan itself, such as the search for the latest release of what a fix downloads. The About box now names the node.exe of a program among them.
-- The window of the detailed information opens wider, so that most commands fit on one line: 1000 pixels at 100 % scaling instead of 850. The Fix window of one software opens a little wider too: 900 pixels instead of 860.
-- The text of the detailed information and of the About box is justified, its lines are closer together, and its lists have square bullets. The detailed information scrolls smoothly, with the mouse wheel, the scroll bar and the keys. The text of the About box can now be selected and copied.
-- The About box is wider.
-- In the About box, the User-Agent that eMudScan sends is on a line of its own, in smaller letters. The text now says that all the sites eMudScan connects to see it, with your IP address, and may record both and use them in statistics, like any site you visit: it named the test site only.
-- In the lists of the main window and of the Fix software window, the mouse wheel scrolls one row a notch, instead of three, which skipped too much in a list of a few rows.
-- **Copy report** says **Copied**, with a check mark, for 2 seconds once the report is in the clipboard, instead of a message to close.
-- The search box has the focus as soon as a scan starts, not only once it is finished: a search can be typed while the scan runs.
-- During a scan, also of some software (**Scan again** in the right-click menu), and while eMudScan looks for a new version of itself, the mouse pointer shows that eMudScan is busy, except over **Stop**, which can still be clicked.
-- The web search for a certificate bundle of a software that eMudScan does not know searches for the software alone, such as “example-app”, instead of the software with the name of the file, such as “example-app cacert.pem”. This applies to the link of the detailed information and to **Search on Google** in the right-click menu.
+- Every fix that changes files (certificate bundle, Java block list, node.exe, ssl files of a Python, restore of backups) is a commented script, one command per line, that stops at its first error.
+- A certificate bundle is downloaded with Windows PowerShell set to TLS 1.2, instead of TLS 1.2 added to its protocols.
+- Fix console: a rule separates two software; each starts with its name and `# Location:`, and each of its fixes with `# Fix:`, or `# Fix 1:` and `# Fix 2, if the update does not fix it:`.
+- Detailed information: the sentence above the commands of a fix says to click **Fix this software** or to run them in PowerShell, and replaces “In PowerShell:”.
+- Above a script, that sentence names the PowerShell versions that the tests run it in (5.1, 7.6, 7.7), and ends with **(Run as administrator)**, in bold red, when the commands need it.
+- The fix of a Python: its errors say what happened, what it means and what to do, and `catch` puts the original files back when the replacement or a test after it fails.
+- The fix of a Python: each command that ran has its result (✔ or ✘) in the Fix window and the report; the warning “No file was changed” is gone.
+- The detailed information of a Python inside a program gives a script that replaces its ssl files without eMudScan; the Fix window runs the version with eMudScan’s tests.
+- The fixes of a Python and of a node.exe download the latest release of their line, which eMudScan looks for when a Fix window opens (python.org, python-build-standalone, nodejs.org).
+- Without a release found, or with **Online checks and updates** cleared, these fixes use the pinned releases: python-build-standalone 20261124, Node.js 22.23.5, 24.22.3 and 26.13.1.
+- The fix of a node.exe checks the SHA-256, the OpenJS Foundation signature and the version of its download before it changes anything; the detailed information gives a script that runs alone.
+- A 32-bit node.exe of Node.js 24 or later gets no fix: nodejs.org builds none.
+- The reports no longer contain the commands of the fixes. In the JSON report, `fixes` has no `commands`, and `format_version` is 2.
+- The Fixes section of the reports (`fixes_run` in JSON) gives the result of each software and, for a command that failed, the command and its output.
+- A conda environment whose conda is not found gets the same recommended action as the others.
+- “Allow the online test” is renamed “Online checks and updates”: it covers every connection of eMudScan itself.
+- Wider windows at 100 % scaling: the detailed information is 1000 pixels (was 850), the Fix window of one software 900 (was 860), the About box 720 (was 525).
+- Detailed information and About box: justified text, tighter lines, square bullets. The detailed information scrolls smoothly; the text of the About box can be selected and copied.
+- About box: the User-Agent is on a line of its own, in a smaller font, and the privacy text covers every site that eMudScan connects to, not only the test site.
+- About box and licenses: python-build-standalone is named (Mozilla Public License 2.0, no file included); the disclaimer names the publishers of the files that the fixes download.
 - The About box and the README say that eMudScan was made by 3c0 with the help of AI.
-- The About box names Astral’s python-build-standalone, from which the fix of a Python downloads. The box of the licenses and notices gives its license, the Mozilla Public License 2.0: eMudScan includes none of its files. The disclaimer, in the About box and the README, also names the publishers of the files that the fixes download: the Python Software Foundation, Astral, the OpenJS Foundation and the curl project.
-- `scripts/build.ps1` shows the test that runs, and each test that takes 1 second or more, with its time. The tests that run the fixes in PowerShell look for the PowerShells once, instead of once each, and run their cases at once: the build is faster.
+- The mouse wheel scrolls the lists one row a notch, instead of three.
+- **Copy report** says **Copied** for 2 seconds, instead of a message box.
+- The search box gets the focus when a scan starts, not when it ends.
+- Wait cursor during a scan, **Scan again** and the lookup of a new version, except over **Stop**; the controls are greyed out while a Fix window looks for the latest releases.
+- The web search for a certificate bundle of an unknown software searches for the software alone, without the name of the file.
+- `scripts/build.ps1` shows the test that runs and those of 1 second or more. The PowerShell tests look for the PowerShells once and run in parallel.
 
 ### Fixed
 
-- Copying text with Ctrl+C, or selecting it all with Ctrl+A, in the log, the console of the Fix window or the detailed information no longer plays the default sound of Windows. The dialog manager took the character of these keys for the shortcut of a button, found none, and beeped.
-- When eMudScan was started from a PowerShell 7 window, Windows PowerShell, which runs the fixes, got the module path of PowerShell 7 and took its modules for its own: `Get-FileHash` was then not found. A fix that checks a SHA-256 (a certificate bundle, Node.js, the ssl files of a Python) failed without changing anything, and the check of eMudScan’s own files, before a fix that needs some, was not made. The fixes now put the modules of the PowerShell that runs them first. The check of eMudScan’s own files no longer uses a command of a module, and stops the fixes when it cannot be made.
-- In a narrow Fix window, the line drawn across the console at the end of the fixes no longer leaves empty rows under it: like the new line between two software, it takes a single row, whatever the width of the window.
-- In the detailed information, the Fix windows and the log, a word too long for its line, such as a URL or a path, is cut after a slash, a backslash or a hyphen, instead of in the middle of a name such as x86_64.
-- In the Fix software window, a click on a row scrolls the console so that the head of its software is at its top. A click on a copy of a software, such as one of two copies of Python inside the same program, did not scroll it at all.
-- `scripts/build.ps1` now works in Windows PowerShell 5.1, where it stopped with “no Go files”: it no longer gives go an empty `-tags` option, which Windows PowerShell 5.1 does not pass.
-- A button that is greyed out, such as **Fix** before a scan, or **Check for updates** during a scan, now shows its tooltip, which says when it can be used. A greyed-out button gets no mouse messages, so its tooltip never showed.
-- After each drive of **Drives to scan:**, there is as much room before the next one as after **Drives to scan:**, for any number of drives: there was much more.
-- The separator between **Online checks and updates** and the drives has as much room on its left as on its right, measured to the ink of the letters: it had a little more on its left.
-- Tab goes through the controls in the order they are read, top to bottom and left to right. In the main window, **Online checks and updates** comes before the drives, and each **Hide OK items** before its list; in the Fix software window, **Select All**, **Select None** and the list come before the buttons at the bottom; in the About box, the link to GitHub comes first and **OK** last; in the box of the licenses, **Copy all** comes before **OK**. Back in the main window, after the About box, a Fix window or a message, the focus is where it was, so that Tab goes on from there. Every control can now be reached with Tab: the ⓘ button, which Enter or Space then opens, and the consoles of the Fix windows. Inside the log, the consoles, the detailed information, the text of the About box and the release notes, Tab goes from link to link and to the copy buttons, as in a web page, before the next control (Shift+Tab goes back); Enter or Space opens the link, or copies. Once the keyboard is used, a dotted frame shows the focus where it did not show: along the edges of these texts, around their links and copy buttons, around the ⓘ button, and around **Online checks and updates** for its box, which no longer draws a small empty frame of its own. The detailed information opens with the focus on its text, which shows it at once.
-- When the scale of the display changes, or eMudScan moves to a screen of another scale, the windows open above the main one follow it, as the main window does: the About box, the licenses and notices, the saved report, the update, the detailed information and the Fix windows. Until now they kept their letters at the old scale in a window that Windows resized, so that their text was cut or left empty room, and their buttons lost their font. Back at a scale, each window, the main one included, is back at the size it had there: a window that the screen cut at a larger scale stayed that small.
+- Ctrl+C and Ctrl+A in the log, the Fix console and the detailed information no longer beep: the dialog manager took them for the mnemonic of a button.
+- Started from PowerShell 7, eMudScan gave its `PSModulePath` to Windows PowerShell, which no longer found `Get-FileHash`: the fixes put the modules of their own PowerShell first.
+- The check of eMudScan’s own files before a fix no longer uses a module command, and stops the fixes when it cannot be made.
+- Fix console: the rule at the end of the fixes takes one row at any width of the window.
+- A word too long for its line, such as a URL or a path, is cut after a slash, a backslash or a hyphen.
+- Fix software window: a click on a copy of a software scrolls the console to its commands.
+- `scripts/build.ps1` works in Windows PowerShell 5.1: it no longer gives go an empty `-tags` option.
+- A greyed-out button shows its tooltip, which says when it can be used.
+- Main window: the same room after each drive of **Drives to scan:**, and on both sides of the separator before them.
+- Tab follows the reading order and reaches every control, the ⓘ button and the consoles included; inside a text, it goes through the links and the copy buttons.
+- A focus rectangle shows where the keyboard focus is, and the focus is back where it was when a box or a Fix window closes.
+- Display scale (DPI) change: the windows open above the main one follow it, fonts and layout, and every window gets back the size it had at a scale.
 
 ## [3.1.2] - 2026-11-12
 
 ### Changed
 
-- The detailed information of “Software copying the Windows root store” gives the result on this PC first, then says in a few words what such software is. It no longer reads as a check of Python only, and leaves the fixed versions of Python to the item of each Python found.
+- The detailed information of “Software copying the Windows root store” gives the result on this PC first, and no longer reads as a check of Python only.
 
 ### Fixed
 
-- The detailed information about the Windows roots, and about software that uses them and is not affected, now says only what is found on this PC. It no longer explains how such software works, names a version of Flutter, or advises not to delete the roots: that advice was outdated, since Microsoft removed the eMudhra roots from Windows.
+- The detailed information about the Windows roots says only what is found on this PC; the outdated advice not to delete the roots is gone.
 
 ## [3.1.1] - 2026-11-11
 
 ### Added
 
-- When a certificate bundle is, byte for byte, a copy of the root store built into a program of its folder or of the folder above, the detailed information of both says so. The fix replaces the file, but the program still carries its outdated list and can write it again when the file is missing, for example after its update.
-- When a report is saved, a note at the end of the log gives its path, as a link that shows the file in File Explorer, to find the reports again. The notes are shown in the window only: the reports do not have them.
+- A certificate bundle that is a byte-for-byte copy of the root store built into a program nearby is flagged in the detailed information of both: the program can write it again.
+- When a report is saved, a note at the end of the log links to its file in File Explorer.
 
 ### Changed
 
-- In the log, the line of a certificate bundle gives the file itself instead of its folder (“Certificate bundle — file”), and the line of a program says “in” before its folder (“Java in folder”) instead of a dash.
-- The name of a saved report has the name of the PC, such as `eMudScan-report-MY-PC-20261201-101548.txt`, so that the reports of several PCs can be kept in one folder.
+- Log: the line of a certificate bundle gives the file instead of its folder, and the line of a program says “in” before its folder.
+- The name of a saved report has the name of the PC: `eMudScan-report-MY-PC-20261201-101548.txt`.
 
 ## [3.1.0] - 2026-11-11
 
 ### Added
 
-- `eMudScan-cli.exe`, a second program for administrators, which scans from the command line: a console program, so command prompts and scripts wait for it and get its exit code. It is the same scanner as `eMudScan.exe` and works alone. Its exit code gives the worst status found (0: OK or information only, 1: warning, 2: update needed, 3: critical, 10: the scan could not run). `--report FILE` writes the report as text, JSON or CSV, by the extension of the file, and can be given several times; without it, the text report goes to the standard output. The log goes to the standard error output. `--drives C:,D:` chooses the drives. It never runs a fix, and makes no internet connection unless `--online` is given.
-- **Save report** can save the report as a JSON or a CSV file, for other programs and spreadsheets: choose the type in the list of types of its dialog. The JSON file has every item with all its fields, the fixes and the log; the CSV file has one row for each item, with commas. Their field names and keywords are in English in both languages. “The report”, in `docs/using.md`, describes the fields. **Copy report** still copies the text.
+- `eMudScan-cli.exe`, a console program that scans from the command line: `--report FILE` (text, JSON or CSV, by its extension), `--drives`, `--online`, `--lang`. It never runs a fix.
+- Exit codes of `eMudScan-cli.exe`: 0 OK or information, 1 warning, 2 update needed, 3 critical, 10 the scan could not run.
+- **Save report** can save a JSON or a CSV file, with field names in English; `docs/using.md` describes the fields.
 
 ### Changed
 
-- The language is chosen on the command line with `--lang en` or `--lang fr`, which replace `--en` and `--fr`.
-- In the log, the note “No drive selected…” comes below the first line, between two empty lines and without the indent of the results, instead of above it.
-- The name of a saved report has the seconds, such as `eMudScan-report-20261201-101548.txt`, so that two reports saved in the same minute have different names.
-- The About box, like the README, says that eMudScan is a technical tool for advanced users: security researchers, administrators and developers.
+- `--lang en` and `--lang fr` replace `--en` and `--fr`.
+- Log: the note “No drive selected…” comes below the first line, instead of above it.
+- The name of a saved report has the seconds: `eMudScan-report-20261201-101548.txt`.
+- The About box and the README say that eMudScan is a technical tool for advanced users: security researchers, administrators and developers.
 
 ### Fixed
 
-- No longer takes the version of a program for the version of its Python or Node.js. A program can start its own copy through a `python.exe` or `node.exe` of its own, which carries the version of the program: a high number passed for a fixed version, and the copy was shown as OK. eMudScan now reads the version of Python from Python’s own files, and finds its ssl library in the folder where the program keeps it.
-- The exe built by GitHub no longer says, in its Go build information, that it was built from modified files (“+dirty”): the Windows resources (icon, manifest, version information) now come out the same with any Go version.
+- The version of a program is no longer taken for that of its Python or Node.js, when it starts them through a `python.exe` or `node.exe` of its own: such a copy was shown as OK.
+- The exe built by GitHub is no longer marked “+dirty”: the Windows resources come out the same with any Go version.
 
 ## [3.0.1] - 2026-11-10
 
 ### Changed
 
-- In the main window, when a border between two frames is released over a line of the log or a row of a list, that line or row is shown whole if at least half of it was shown, and hidden otherwise, instead of always hidden.
+- Main window: a border released over a row shows that row whole if at least half of it was shown, and hides it otherwise.
 
 ### Fixed
 
-- The list of the Fix software window shows whole rows, as the lists of the main window do: when the window is resized, its height is rounded down to whole rows, and when the bar below the list is released over a row, that row is shown whole if at least half of it was shown, and hidden otherwise.
+- The list of the Fix software window shows whole rows, as the lists of the main window do.
 
 ## 3.0.0 - 2026-11-10
 
@@ -113,56 +126,56 @@ Changes since 2.0.0, where this repository starts.
 ### Added
 
 - Checks jetbrainsd, the background service of the JetBrains Toolbox App and IDEs, which has its own list of trusted certificates: version 0.9.9728 or later is fixed.
-- Checks the JetBrains IDEs and Gateway by their version, for their built-in browser, and names the Java runtime of an IDE or of the Toolbox App after it, with the version that fixes it.
-- Updates an outdated Python 3.14 or later installed with the Python Install Manager, with that manager, when it is installed.
-- Upgrades an outdated Python installed by uv with uv, after updating uv itself as it was installed (Scoop, WinGet, Chocolatey, its standalone installer or pipx), then removes the old copy once a fixed version is installed, naming the virtual environments found that use that copy, also in the warning before the fix runs.
-- Can replace the node.exe inside a program with the latest release of its Node.js release line from nodejs.org, once checked (its published SHA-256, its OpenJS Foundation signature and its version), after backing it up: a fix that is not ticked by default, since it changes a program that its publisher has not updated yet.
-- Can replace the ssl files of a 64-bit Python 3.11 to 3.15 inside a program with those of the fixed release of its line, from python.org’s embeddable package or python-build-standalone’s build (on GitHub), once checked against their SHA-256. Before and after, that Python runs eMudScan’s tests (its ssl and hashlib modules, the Windows roots, TLS 1.2 and 1.3 connections in memory, the rejection of a compromised chain); if one that passed before fails after, the original files are put back. A fix that is not ticked by default: a software that also has other fixes gets a second row for it in the Fix window. **Restore the backup** puts the original files back and removes those the fix added, all together, only when all the backups and marks of that fix are there, even after a copy that a crash interrupted.
-- Updates a Deno installed with its own installer with `deno upgrade`, Deno’s own updater (Deno 2.9.8 is fixed).
-- For the virtual environment of a Pipenv, Poetry or uv project whose lock file pins the outdated certifi, which the project’s next install would bring back, the detailed information gives the command that updates it in the project, which eMudScan never runs.
-- In the Fix software window, a double-click on a software opens its detailed information, where it can also be fixed or restored; the list is updated when they close.
-- The list of the Fix software window sorts by a click on a column header, as the lists of the main window do.
-- The list of the Fix software window has the right-click menu of the main window, and Ctrl+C copies its selected row. A reminder beside the number of selected software says so.
-- **Fix**, in the right-click menu of the lists, opens the Fix software window for the selected items that can be fixed, such as “Fix 3 items…”.
-- After the fixes, each result of the checks in the console of the Fix software window ends with a link to the detailed information of its software, such as “Detailed information on Inkscape…”.
-- The PowerShell commands, in the detailed information and in the Fix window, are shown in the colors that PowerShell 7 gives them.
-- The top of the report names the PC it was made on.
+- Checks the JetBrains IDEs and Gateway by their version, for their built-in browser, and names the Java runtime of an IDE or of the Toolbox App after it.
+- Updates an outdated Python 3.14 or later with the Python Install Manager, when it is installed.
+- Upgrades an outdated Python of uv with uv, after updating uv as it was installed, then removes the old copy and names the virtual environments that used it.
+- Optional fix: the node.exe inside a program is replaced with the latest release of its Node.js line from nodejs.org, once checked (SHA-256, OpenJS Foundation signature, version).
+- Optional fix: the ssl files of a 64-bit Python 3.11 to 3.15 inside a program are replaced with those of the fixed release of its line (python.org or python-build-standalone), checked by SHA-256.
+- Before and after that fix, the Python runs eMudScan’s tests (ssl, hashlib, Windows roots, TLS 1.2 and 1.3, a compromised chain); the original files are put back if one fails.
+- **Restore the backup** undoes the fix of a Python as a whole, even after a copy that a crash interrupted.
+- Updates a Deno installed with its own installer with `deno upgrade` (Deno 2.9.8 is fixed).
+- For a Pipenv, Poetry or uv project whose lock file pins the outdated certifi, the detailed information gives the command that updates it; eMudScan never runs it.
+- Fix software window: a double-click opens the detailed information of a software, the columns sort, and the list has the right-click menu of the main window and Ctrl+C.
+- **Fix**, in the right-click menu of the lists, opens the Fix software window for the selected items.
+- After the fixes, each result in the Fix console links to the detailed information of its software.
+- Syntax highlighting of the PowerShell commands, in the colors of PowerShell 7.
+- The top of the report names the PC.
 
 ### Changed
 
 - Shorter detailed information for Python: one sentence for the problem, then the recommended action, which names the program a bundled Python belongs to.
 - A finding in several places shows its explanation once, with the commands for each place.
-- “Back up the certificate files”, in the Fix window, is now “Back up the files to change”, since it also covers node.exe and the ssl files of a Python.
-- The detailed information no longer suggests updating everything installed with a package manager (`scoop update -a`, `winget upgrade --all`, `choco upgrade all`): eMudScan stays targeted, with the update of the software it found only.
-- The Fix window opened from the detailed information no longer has a **Stop** button: it fixes one software, and a fix that has started to change files always runs to its end.
-- The About box, like the README, says that eMudScan is intended for administrators, developers and advanced users.
+- “Back up the certificate files” is now “Back up the files to change”: it also covers node.exe and the ssl files of a Python.
+- The detailed information no longer suggests updating everything with a package manager (`scoop update -a`, `winget upgrade --all`, `choco upgrade all`).
+- The Fix window opened from the detailed information has no **Stop** button: a fix that has started to change files runs to its end.
+- The About box and the README say that eMudScan is intended for administrators, developers and advanced users.
 - The About box shows the link to the source code beside its title, and the sites that the fixes connect to as a list.
 - The texts name we-have-a-problem.com, a third-party site, instead of “the advisory”.
-- When the fixes run in a different order from the one shown in the Fix window, the warning before they run explains the order. Ticking a software now scrolls the console only as much as needed to show its commands.
-- The fixes stop at the first download that fails, before its fix changes anything, and after an update that fails when the servers of its package manager cannot be reached (eMudScan then checks them): the next fixes would most likely fail too. A red line says why.
-- The console of the Fix window shows the result of each command in a column on its left (a green ✔ or a red ✘), its warnings in yellow and its errors in red below it, and its exit code when it failed; the report puts the ✓ or ✗ before each command.
-- The console of the Fix window ends with a horizontal bar instead of “End of the fixes.”, with an empty line before and after it. In the report, the bar is a line of em dashes (—), as wide as the top of the report, and it also separates the sections.
-- The Fix window says “PowerShell commands that eMudScan will run” instead of “PowerShell commands to run”. Each check after the fixes says which stage finished, such as “Updates finished. Checking again whether the software is still vulnerable…”.
-- The details window is now named “Detailed information”, in the right-click menu, the reminders, the tooltip of the links to an item and the docs.
-- With several items selected, each entry of the right-click menu says how many things it acts on, counting once what the items share, such as “Open 2 software folders” for three items in two folders; **Search on Google** searches once per software. **Scan again** no longer asks before scanning more than two items, since it opens no window.
-- **Search on Google**, in the right-click menu, names what it searches for, such as **Search on Google: “cacert.pem”**; for more than three searches, it names the first three and says how many more.
-- The detailed information of several items opens in one window, instead of one window after another, and without asking first for more than two items. A block in its top right corner, which stays in place as the page scrolls, says which item is shown and goes to the first, previous, next or last one; Alt+Home, Alt+←, Alt+→ and Alt+End do the same.
-- At the end of the console of the Fix software window, the path of the report saved after the fixes is a link that shows it in File Explorer, as in the message that gives it.
-- After the fixes, a software still not fixed after all its fixes ran is unticked in the Fix software window, so that they do not run again by mistake; when an update installed no newer version, its result says so: “still not fixed (no newer version installed)”.
-- A certificate bundle made by curl shows the date of its certificate data, as curl wrote it at the top of the file: “Certificate data from Mozilla as of: 25 September 2026”. A bundle that belongs to no software no longer shows a software date: it was the modification date of the file, which only tells when the file was copied or downloaded.
+- The warning before the fixes explains their order when it differs from the one shown. Ticking a software scrolls the console only as much as needed.
+- The fixes stop at the first download that fails, and after an update that fails because the servers of its package manager cannot be reached.
+- Fix console: each command gets a green ✔ or a red ✘, its warnings in yellow, its errors in red, and its exit code when it failed; the report has ✓ or ✗ before each command.
+- The Fix console ends with a horizontal rule instead of “End of the fixes.”; in the report, a line of em dashes also separates the sections.
+- The Fix window says “PowerShell commands that eMudScan will run”, and each check after the fixes says which stage finished.
+- The details window is renamed “Detailed information” everywhere.
+- Right-click menu with several items: each entry counts what it acts on (“Open 2 software folders”); **Scan again** no longer asks first.
+- **Search on Google** names what it searches for, such as **Search on Google: “cacert.pem”**: the first three searches, then how many more.
+- The detailed information of several items opens in one window, with a block to go from one to another (Alt+Home, Alt+←, Alt+→, Alt+End).
+- Fix console: the path of the report saved after the fixes is a link that shows it in File Explorer.
+- A software still not fixed after its fixes is unticked; an update that installed no newer version says so: “still not fixed (no newer version installed)”.
+- A certificate bundle made by curl shows the date of its certificate data. A bundle that belongs to no software has no software date: it was the modification date of the file.
 
 ### Fixed
 
-- The web search for a certificate bundle of a software that eMudScan does not know is the software shown in the list with the file’s name, and the file’s name alone for a bundle that belongs to no software: it used the folder the file is in, such as “Downloads cacert.pem”.
-- Several homepages or Google searches, from the right-click menu, open in one start of the default browser, as tabs: Firefox, set to ask for a profile at start, asked once per page, and a page could get lost when the browser was already open.
-- The Fix window no longer shows “Back up the files to change” when no fix to run backs up a file, such as an update with pip.
-- No pip command where it cannot work: for a Python or virtual environment where pip is not installed, or for a Python marked as managed by the tool that installed it (EXTERNALLY-MANAGED, as uv does), which pip refuses to change.
-- No Scoop update command for a file in Scoop’s `persist` folder, which Scoop’s updates keep as it is.
-- The packages of a tool that uv installed are updated with `uv tool upgrade`, as uv asks, instead of pip, which uv does not put in its tools.
-- The packages of an application that pipx installed are updated with `pipx runpip`, which works whether or not its environment has pip of its own.
-- A file put back by **Restore the backup** has its original creation date again: eMudScan’s backups now keep it, where Windows gave them the date of the backup.
-- The summary of the certificate bundles is updated after fixes and restores: the files it lists are tested again, instead of keeping the results of the scan.
-- The color codes in the output of some commands, such as git when Scoop updates its buckets, no longer appear as garbage. The console of the Fix window shows these colors, and the report shows the text alone.
+- Web search for a certificate bundle: the software with the name of the file, or the name of the file alone, instead of the folder of the file (“Downloads cacert.pem”).
+- Several homepages or searches open in one start of the default browser, as tabs: Firefox asked for a profile once per page, and a page could get lost.
+- “Back up the files to change” is hidden when no fix to run backs up a file, such as an update with pip.
+- No pip command where it cannot work: where pip is not installed, or for a Python marked EXTERNALLY-MANAGED, as uv does.
+- No Scoop update command for a file in Scoop’s `persist` folder, which its updates keep as it is.
+- The packages of a tool that uv installed are updated with `uv tool upgrade`, instead of pip.
+- The packages of an application that pipx installed are updated with `pipx runpip`.
+- A file put back by **Restore the backup** has its original creation date again.
+- The summary of the certificate bundles is updated after fixes and restores.
+- The ANSI color codes in the output of commands, such as git under Scoop, are shown as colors in the Fix console and left out of the report.
 
 ## 2.0.0 - 2026-11-05
 
@@ -170,13 +183,15 @@ First public version.
 
 ### Added
 
-- Checks that Windows blocks the 16 compromised certificates (the 8 eMudhra intermediates and their copies cross-signed by Sectigo), offline and, if you allow it, with an online test against the advisory’s test sites, and whether an antivirus or a proxy inspects secure connections.
-- Checks browsers and internet apps (messaging, email, sync, VPN, remote access) by the block lists they receive or carry, including Microsoft Edge and the WebView2 that software uses or ships.
-- Checks other software: every certificate bundle on the scanned drives (certifi, pip, Git, curl…), Python, Node.js, Java, Go, Electron applications, programs built with PyInstaller and programs with their own root store.
-- Says what to do about each one, with the commands to run, and flags software that needs an update and is a year old or more.
-- Fixes what it can, once you confirm: an update through the package manager that installed the software (Scoop, WinGet, Chocolatey, pip or conda), Mozilla’s current certificate bundle in place of an outdated one, or the compromised certificates added to a Java block list. The certificate files are backed up first, and can be put back from the details window; each software is checked again, and a report is saved in your Downloads folder.
+- Checks that Windows blocks the 16 compromised certificates (8 eMudhra intermediates and their copies cross-signed by Sectigo), offline and with an optional online test.
+- Detects an antivirus or a proxy that inspects secure connections.
+- Checks browsers and internet apps by the block lists they receive or carry, including Microsoft Edge and WebView2.
+- Checks other software: certificate bundles (certifi, pip, Git, curl…), Python, Node.js, Java, Go, Electron applications, PyInstaller programs and built-in root stores.
+- Gives the recommended action for each item, with its commands, and flags software that needs an update and is a year old or more.
+- Fixes, once confirmed: package manager updates (Scoop, WinGet, Chocolatey, pip, conda), Mozilla’s certificate bundle, Java block lists. The files are backed up and can be restored.
+- After the fixes, each software is checked again, and a report is saved in the Downloads folder.
 - A report to copy or save. English and French.
-- Changes nothing on your PC until you confirm a fix. Clear the online test, and a scan makes no internet connection at all.
+- Changes nothing on the PC until a fix is confirmed. Without the online test, a scan makes no internet connection.
 
 [unreleased]: https://github.com/3c0/eMudScan/compare/4.0.0...HEAD
 [4.0.0]: https://github.com/3c0/eMudScan/compare/3.1.2...4.0.0

@@ -76,8 +76,8 @@ them is not merged:
   change to an existing one, `### Deprecated` for a feature that will be
   removed, `### Removed` for a removed feature, `### Fixed` for a bug fix and
   `### Security` for a vulnerability.
-  Write it on a single line (it becomes the release page): one short sentence,
-  or two for a bug fix or a vulnerability (the problem, then the fix).
+  Write it on a single line, for developers: technical words, 200 characters at
+  most.
 - Commit messages follow
   [Conventional Commits](https://www.conventionalcommits.org/):
   `type(scope): description`, in lowercase and without a final period. The type

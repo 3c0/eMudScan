@@ -63,6 +63,8 @@ PowerShell from System32 only (`sysDLL`), standard library only. Also:
 - Every text shown to the user is in `cmd/emudscan/texts.go`, in English and
   French, in the style of the existing ones: short, plain words, the same terms
   throughout.
+- `docs/using.md` tells the users only what they would not find or expect by
+  themselves: not what a common control does, nor how eMudScan works inside.
 - `AGENTS.md`, `docs/` and `.github/CONTRIBUTING.md` are wrapped at 80 columns,
   never inside a bold span, a code span or a link. `README.md`, `CHANGELOG.md`
   and the release notes have one line per paragraph or item.
@@ -71,8 +73,9 @@ PowerShell from System32 only (`sysDLL`), standard library only. Also:
 
 - `CHANGELOG.md` follows
   [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/): each change
-  that users can notice gets one line under `## [Unreleased]`, in `### Added`,
-  `### Changed`, `### Fixed`… Its lines do not link to commits.
+  that users can notice gets one entry under `## [Unreleased]`, in `### Added`,
+  `### Changed`, `### Fixed`… An entry is for developers: technical words, 200
+  characters at most, no link to commits.
 - `.github/release-notes/<version>.md` is for the users, while the changelog
   is for developers. It says what they can now do, in plain words, without file
   names: one sentence that sums up the version; `### Highlights`, the few main
