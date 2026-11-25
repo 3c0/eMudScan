@@ -111,6 +111,7 @@ var (
 	pSetBkColor           = modgdi32.NewProc("SetBkColor")
 	pSetTextColor         = modgdi32.NewProc("SetTextColor")
 	pGetTextExtentPoint32 = modgdi32.NewProc("GetTextExtentPoint32W")
+	pGetCharABCWidths     = modgdi32.NewProc("GetCharABCWidthsW")
 	pGetTextExtentExPoint = modgdi32.NewProc("GetTextExtentExPointW")
 	pGetTextMetricsW      = modgdi32.NewProc("GetTextMetricsW")
 	pGetGlyphOutlineW     = modgdi32.NewProc("GetGlyphOutlineW")

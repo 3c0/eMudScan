@@ -477,6 +477,25 @@ func (a *ui) textWidth(font uintptr, s string) int32 {
 	return sz.X
 }
 
+// leftBearing is the room that the first letter of s leaves before it, in font: its
+// ink starts that far after where the text is drawn.
+func (a *ui) leftBearing(font uintptr, s string) int32 {
+	u := utf16z(s)
+	if len(u) < 2 {
+		return 0
+	}
+	dc, _, _ := pGetDC.Call(a.hwnd)
+	old, _, _ := pSelectObject.Call(dc, font)
+	var abc [3]int32 // ABC: the room before the ink, the ink, the room after it
+	ok, _, _ := pGetCharABCWidths.Call(dc, uintptr(u[0]), uintptr(u[0]), uintptr(unsafe.Pointer(&abc)))
+	pSelectObject.Call(dc, old)
+	pReleaseDC.Call(a.hwnd, dc)
+	if ok == 0 {
+		return 0
+	}
+	return abc[0]
+}
+
 func (a *ui) move(h uintptr, x, y, w, hh int32) {
 	// NOZORDER|NOACTIVATE|NOCOPYBITS: a moved control is drawn again entirely (the lists
 	// and frames are drawn off screen, so this does not blink), never pieced together
@@ -565,23 +584,30 @@ func (a *ui) layout() {
 	rowH := s(26)
 	a.move(a.hOnline, m, y, s(18), rowH) // the box alone
 	lx := m + s(18) + s(2)
-	olw := a.textWidth(a.fontUI, T("chk.online")) + s(2)
-	a.move(a.hOnlineLbl, lx, y, olw, rowH)
-	sepX := lx + olw + s(14)
+	olw := a.textWidth(a.fontUI, T("chk.online"))
+	a.move(a.hOnlineLbl, lx, y, olw+s(2), rowH)
+	// as much room on each side of the separator: from the end of the underline of
+	// the label, and to the ink of the first letter of "Drives to scan:"
+	sepGap, sepW := s(15), max(s(1), 1)
+	sepX := lx + olw + sepGap
 	rowTop := y
-	a.move(a.hDrivesLbl, sepX+s(15), y, dl, rowH)
-	x0 := sepX + s(15) + dl + s(8)
+	dx := sepX + sepW + sepGap - a.leftBearing(a.fontUI, T("lbl.drives"))
+	a.move(a.hDrivesLbl, dx, y, dl, rowH)
+	// the boxes of the drives, each as wide as its box and its text, with as much
+	// room after each text as after "Drives to scan:"
+	driveGap := s(14)
+	x0 := dx + a.textWidth(a.fontUI, T("lbl.drives")) + driveGap
 	x := x0
 	for _, d := range a.drives {
-		w := a.textWidth(a.fontUI, d.label) + s(28)
+		w := a.checkWidth(d.h, d.label)
 		if x > x0 && x+w > W-m {
 			x = x0
 			y += rowH
 		}
 		a.move(d.h, x, y, w, rowH)
-		x += w + s(12)
+		x += w + driveGap
 	}
-	a.sep = rect{sepX, rowTop + s(3), sepX + max(s(1), 1), y + rowH - s(3)}
+	a.sep = rect{sepX, rowTop + s(3), sepX + sepW, y + rowH - s(3)}
 	y += s(32)
 
 	// buttons: Scan and Fix on the left, Copy report and Save report on the far right
