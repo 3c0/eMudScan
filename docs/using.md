@@ -76,11 +76,11 @@ hover over a cell to see its full content.
 
 The search box above the lists (Ctrl+F) keeps the items whose **Software** or
 **Component** column contains every word typed, in any order or case, including
-versions and package managers (`node 22`, `certifi`, `scoop`). Once a scan
-is finished, it has the focus: just type. The right
-end of the top line of each list then counts the items found ("Search found 2
-items: …"), and its shield shows their worst status. Esc clears it, as do
-**Scan** and **Scan again**.
+versions and package managers (`node 22`, `certifi`, `scoop`). It has the focus
+as soon as a scan starts: just type, even while the scan runs. The right end of
+the top line of each list then counts the items found ("Search found 2 items:
+…"), and its shield shows their worst status. Esc clears it, as do **Scan** and
+**Scan again**.
 
 Right-click one or more items for: **Detailed information**, **Fix**,
 **Open file location**, **Open software folder**, **Open homepage**,
@@ -469,6 +469,8 @@ import the file with **Data** > **From Text/CSV**.
 | Alt+←, Alt+→ | In the detailed information of several items: previous, next item |
 | Alt+Home, Alt+End | In the detailed information of several items: first, last item |
 | Ctrl+C, Ctrl+A | In a list: copy the selected items, select all |
+| Tab, Shift+Tab | The next control, the one before; inside a text, its links and copy buttons first |
+| Enter, Space | On a link or a copy button reached with Tab: open the link, copy |
 
 Hover over the **Scan**, **Copy report** and **Save report** buttons to see
 their keyboard shortcuts.

@@ -50,8 +50,12 @@ func optinWndProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 				pFillRect.Call(dc, uintptr(unsafe.Pointer(&r)), brush)
 			}
 			pDeleteObject.Call(brush)
+			// the focus of the box, which has no text of its own: around the label
+			drawFocusOf(dc, a.hOnline, hwnd, rect{0, max(ty-a.scale(1), 0), min(w+a.scale(2), rc.Right), min(uy+thick+a.scale(2), rc.Bottom)})
 		})
 		return 0
+	case wmUpdateUIState: // the focus of the box shows once the keyboard is used
+		pInvalidateRect.Call(hwnd, 0, 0)
 	case wmLButtonUp: // as the label of the box
 		send(a.hOnline, 0x00F5 /* BM_CLICK */, 0, 0)
 		return 0

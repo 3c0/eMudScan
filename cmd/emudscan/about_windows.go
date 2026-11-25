@@ -246,9 +246,11 @@ func (b *aboutBox) build(hwnd uintptr) {
 	// the text, justified to textW, in a text view, as high as it; its links have
 	// tooltips that say where they lead
 	b.doc = a.newTextView(hwnd, aboutBlocks(Tf("about.text", userAgent())), 9)
-	pSetWindowPos.Call(b.doc.hwnd, 0, uintptr(b.textX-1), uintptr(y), uintptr(textW+2), uintptr(lineH), 0x0004|0x0010) // laid out
-	textH := b.doc.height
-	pSetWindowPos.Call(b.doc.hwnd, 0, 0, 0, uintptr(textW+2), uintptr(textH), 0x0002|0x0004|0x0010) // NOMOVE
+	pad := s(6) // around the text: the frame of its focus does not touch it
+	b.doc.pad = pad
+	pSetWindowPos.Call(b.doc.hwnd, 0, uintptr(b.textX-1-pad), uintptr(y-pad), uintptr(textW+2+2*pad), uintptr(lineH), 0x0004|0x0010) // laid out
+	textH := b.doc.height - 2*pad
+	pSetWindowPos.Call(b.doc.hwnd, 0, 0, 0, uintptr(textW+2+2*pad), uintptr(textH+2*pad), 0x0002|0x0004|0x0010) // NOMOVE
 	// on the title's line, on the right: the link to the source code and new versions
 	pSelectObject.Call(dc, b.titleFont)
 	titleW := measure(b.title)
@@ -278,6 +280,8 @@ func (b *aboutBox) build(hwnd uintptr) {
 	pEnableWindow.Call(b.updateBtn, boolArg(!a.onlineOff && !a.running && !a.updateBusy))
 	addTool(tip, hwnd, b.updateBtn, nil, T("tip.update"))
 	addDisabledTool(tip, hwnd, b.updateBtn, T("tip.update")) // greyed out during a scan, or with the box cleared
+	// Tab: the link on the title's line first, then the text, the bar from left to right
+	tabOrder(repo, b.doc.hwnd, b.footLink, b.updateBtn, ok)
 	b.iconX, b.iconY = left, top
 	a.placeBox(hwnd, a.hwnd, w, y+pad+btnH+pad)
 	pSetFocus.Call(ok)
@@ -381,12 +385,12 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 			m := uintptr(s(14))
 			send(b.edit, 0x00D3 /* EM_SETMARGINS */, 0x1|0x2, m|m<<16)
 		}
+		b.copy, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up(T("dlg.copyAll")), uintptr(wsChild|wsVisible|wsTabStop),
+			0, 0, 10, 10, hwnd, idTextCopy, 0, 0) // on the left of OK: before it for Tab
+		send(b.copy, wmSetFont, a.fontUI, 0)
 		b.ok, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up("OK"), uintptr(wsChild|wsVisible|wsTabStop|0x1 /* BS_DEFPUSHBUTTON */),
 			0, 0, 10, 10, hwnd, 1 /* IDOK */, 0, 0)
 		send(b.ok, wmSetFont, a.fontUI, 0)
-		b.copy, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up(T("dlg.copyAll")), uintptr(wsChild|wsVisible|wsTabStop),
-			0, 0, 10, 10, hwnd, idTextCopy, 0, 0)
-		send(b.copy, wmSetFont, a.fontUI, 0)
 		b.barH = s(13) + s(30) + s(13)
 		if b.python {
 			a.placeBox(hwnd, b.over, s(900), s(700))

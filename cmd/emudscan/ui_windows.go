@@ -130,6 +130,7 @@ type ui struct {
 	dlgOwner   uintptr       // the window under the details, disabled while they are open: the Fix software window, or 0 for the main window
 	restoring  bool          // a restore of backups runs, from the details (restoreBackups)
 	dlgFocus   uintptr       // the control that had the focus before the details: it gets it back
+	lastFocus  uintptr       // the control of the main window that had the focus last (wndProc, WM_ACTIVATE)
 	detailBack []detailsBack // details left through a link, shown again when closed
 	navigating bool
 }
@@ -250,6 +251,73 @@ func (a *ui) applyFonts() {
 	a.setLogFont()
 }
 
+// tabOrder makes Tab go through the controls hs in this order, that of reading: each
+// one after the one before it in the z-order, which IsDialogMessage follows. The
+// controls of a window are in the order they were made, unless made otherwise.
+func tabOrder(hs ...uintptr) {
+	for i := 1; i < len(hs); i++ {
+		pSetWindowPos.Call(hs[i], hs[i-1], 0, 0, 0, 0, 0x0001|0x0002|0x0010) // SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE
+	}
+}
+
+// drawFocus draws the dotted frame that shows that h, a control drawn by eMudScan, has
+// the focus, in r: only once the keyboard has been used in its window, as Windows does
+// for its own controls, whose focus does not show after a click (UISF_HIDEFOCUS).
+func drawFocus(dc, h uintptr, r rect) { drawFocusOf(dc, h, h, r) }
+
+// drawFocusOf draws the focus of h in r, as drawFocus does, but shown or not as the
+// state of the window cues says: for a label that shows the focus of its box.
+func drawFocusOf(dc, h, cues uintptr, r rect) {
+	if f, _, _ := pGetFocus.Call(); f == h && send(cues, wmQueryUIState, 0, 0)&0x1 == 0 {
+		dottedFrame(dc, r)
+	}
+}
+
+// dottedFrame draws the frame of the focus along the edges of r: a dot every three
+// pixels, inverted, so that it shows on any background. DrawFocusRect, which Windows
+// draws for its own controls, inverts one pixel in two, which looks like a line on a
+// fine screen. The dots come from a brush of 3 × 3 pixels with one on its diagonal:
+// one pixel in three, on any row and any column.
+func dottedFrame(dc uintptr, r rect) {
+	w, h := r.Right-r.Left, r.Bottom-r.Top
+	if w < 2 || h < 2 {
+		return
+	}
+	if focusDots == 0 {
+		bits := [6]byte{0x80, 0, 0x40, 0, 0x20, 0} // its rows, of 16 bits each
+		bmp, _, _ := pCreateBitmap.Call(3, 3, 1, 1, uintptr(unsafe.Pointer(&bits[0])))
+		focusDots, _, _ = pCreatePatternBrush.Call(bmp) // kept, as its bitmap, for the session
+	}
+	old, _, _ := pSelectObject.Call(dc, focusDots)
+	// the pixels of the brush that are 0 take the text color, black, which inverts
+	// nothing; those that are 1, the background color, white, which inverts all
+	oldText, _, _ := pSetTextColor.Call(dc, 0)
+	oldBk, _, _ := pSetBkColor.Call(dc, 0xFFFFFF)
+	// the four edges: x, y, width, height
+	for _, e := range [4][4]int32{{r.Left, r.Top, w, 1}, {r.Left, r.Bottom - 1, w, 1}, {r.Left, r.Top + 1, 1, h - 2}, {r.Right - 1, r.Top + 1, 1, h - 2}} {
+		pPatBlt.Call(dc, uintptr(int(e[0])), uintptr(int(e[1])), uintptr(e[2]), uintptr(e[3]), 0x005A0049 /* PATINVERT */)
+	}
+	pSetBkColor.Call(dc, oldBk)
+	pSetTextColor.Call(dc, oldText)
+	pSelectObject.Call(dc, old)
+}
+
+// focusDots is the brush of dottedFrame.
+var focusDots uintptr
+
+// onlineBoxProc keeps the box of "Online checks and updates" from drawing its own
+// focus, a dotted frame around its text, which is empty: its label shows its focus
+// (optin_windows.go). Each time Windows shows or hides the focus of the window, the
+// box hides it again (UIS_SET, UISF_HIDEFOCUS), and its label follows.
+var onlineBoxProc = syscall.NewCallback(func(hwnd uintptr, msg uint32, wParam, lParam, id, ref uintptr) uintptr {
+	r, _, _ := pDefSubclassProc.Call(hwnd, uintptr(msg), wParam, lParam)
+	if msg == wmUpdateUIState {
+		pDefSubclassProc.Call(hwnd, wmUpdateUIState, 1|0x1<<16, 0)
+		pInvalidateRect.Call(g.hOnlineLbl, 0, 0)
+	}
+	return r
+})
+
 func (a *ui) child(exStyle uint32, class, text string, style uint32, id int) uintptr {
 	h, _, _ := pCreateWindowExW.Call(uintptr(exStyle), up(class), up(text),
 		uintptr(wsChild|wsVisible|style), 0, 0, 10, 10, a.hwnd, uintptr(id), 0, 0)
@@ -285,13 +353,24 @@ func (a *ui) createControls() {
 	}
 	a.hLogo = a.child(0, "eMudScanLogo", "", 0, 0)
 	a.hTitle = a.child(0, "STATIC", appTitle(), 0x80, 0)
-	a.hInfo = a.child(0, "eMudScanIcon", T("btn.about"), 0, 0)
+	a.hInfo = a.child(0, "eMudScanIcon", T("btn.about"), wsTabStop, 0)
 	a.hLangLbl = a.child(0, "STATIC", T("lbl.language"), 0x80|0x2|0x200 /* NOPREFIX|RIGHT|CENTERIMAGE */, 0)
 	a.hLang = a.child(0, "COMBOBOX", "", 0x3 /* CBS_DROPDOWNLIST */ |wsTabStop|wsVScroll, idLang)
 	for _, label := range []string{T("lang.auto"), "English", "Français"} {
 		send(a.hLang, cbAddString, 0, up(label))
 	}
 	send(a.hLang, cbSetCurSel, uintptr(a.langSel), 0)
+	// the online test, which the user can refuse; its tooltip shows what it sends
+	// the box alone, whose label is drawn by optin_windows.go; BS_NOTIFY: its focus,
+	// which its label shows
+	a.hOnline = a.child(0, "BUTTON", "", 3|0x4000|wsTabStop, idOnline)
+	pSetWindowSubclass.Call(a.hOnline, onlineBoxProc, 1, 0)
+	send(a.hOnline, wmUpdateUIState, 1|0x1<<16, 0) // UIS_SET, UISF_HIDEFOCUS
+	if !a.onlineOff {
+		send(a.hOnline, bmSetCheck, 1, 0)
+	}
+	a.hOnlineLbl = a.child(0, "eMudScanOptIn", T("chk.online"), 0, 0)
+	a.onlineTip = a.addTip([]uintptr{a.hOnline, a.hOnlineLbl}, Tf("tip.online", userAgent()))
 	a.hDrivesLbl = a.child(0, "STATIC", T("lbl.drives"), 0x80|0x200 /* NOPREFIX|CENTERIMAGE */, 0)
 	for i, d := range listDrives() {
 		h := a.child(0, "BUTTON", d.Label, 3|wsTabStop, idDrive0+i)
@@ -300,13 +379,6 @@ func (a *ui) createControls() {
 		}
 		a.drives = append(a.drives, driveCtl{h, d.Root, d.Label})
 	}
-	// the online test, which the user can refuse; its tooltip shows what it sends
-	a.hOnline = a.child(0, "BUTTON", "", 3|wsTabStop, idOnline) // the box; its label is drawn by optin_windows.go
-	if !a.onlineOff {
-		send(a.hOnline, bmSetCheck, 1, 0)
-	}
-	a.hOnlineLbl = a.child(0, "eMudScanOptIn", T("chk.online"), 0, 0)
-	a.onlineTip = a.addTip([]uintptr{a.hOnline, a.hOnlineLbl}, Tf("tip.online", userAgent()))
 	a.hCheck = a.iconButton(a.hwnd, T("btn.check"), idCheck, true, glyphPlay)
 	a.hFix = a.iconButton(a.hwnd, T("btn.fix"), idFixBtn, false, glyphFirstAid) // enabled once a scan has found something to fix
 	pEnableWindow.Call(a.hFix, 0)
@@ -327,14 +399,15 @@ func (a *ui) createControls() {
 	a.log = a.newLogView(a.hwnd, idLog)
 	a.log.onLink = a.showSavedReport
 	a.hLog = a.log.hwnd
+	// each list after its "Hide OK items" box, which is above it, in its frame's caption
 	// LVS_REPORT|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS (the image lists are shared and kept across resets)
+	a.win.hide = a.child(0, "BUTTON", T("chk.hideOK"), 3|wsTabStop, idHideWin)
 	a.hListWin = a.child(wsExClientEdge, "SysListView32", "", 0x1|0x8|0x40|0x8000|wsTabStop, idListWin)
 	a.win.h = a.hListWin
-	a.win.hide = a.child(0, "BUTTON", T("chk.hideOK"), 3|wsTabStop, idHideWin)
-	a.net.h = a.child(wsExClientEdge, "SysListView32", "", 0x1|0x8|0x40|wsTabStop, idListNet)
 	a.net.hide = a.child(0, "BUTTON", T("chk.hideOK"), 3|wsTabStop, idHideNet)
-	a.app.h = a.child(wsExClientEdge, "SysListView32", "", 0x1|0x8|0x40|wsTabStop, idListApp)
+	a.net.h = a.child(wsExClientEdge, "SysListView32", "", 0x1|0x8|0x40|wsTabStop, idListNet)
 	a.app.hide = a.child(0, "BUTTON", T("chk.hideOK"), 3|wsTabStop, idHideApp)
+	a.app.h = a.child(wsExClientEdge, "SysListView32", "", 0x1|0x8|0x40|wsTabStop, idListApp)
 	summary := T("hint.start")
 	if a.updatedFrom != "" {
 		summary = Tf("update.done", a.updatedFrom, appVersion)
@@ -1013,6 +1086,7 @@ func infoWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		pFillRect.Call(dc, uintptr(unsafe.Pointer(&rc)), a.brushWindow)
 		isz := a.infoSize()
 		pDrawIconEx.Call(dc, uintptr((rc.Right-isz)/2), uintptr((rc.Bottom-isz)/2), a.infoIcon, uintptr(isz), uintptr(isz), 0, 0, 3)
+		drawFocus(dc, hwnd, rc)
 		pEndPaint.Call(hwnd, uintptr(unsafe.Pointer(&ps)))
 		return 0
 	case wmSetCursor:
@@ -1023,6 +1097,25 @@ func infoWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmLButtonUp:
 		a.about()
 		return 0
+	case wmSetFocus, wmKillFocus, wmUpdateUIState:
+		pInvalidateRect.Call(hwnd, 0, 0)
+	case wmGetDlgCode: // Enter opens the About box, as Space does, rather than going to the window
+		if lParam != 0 {
+			if m := (*msgT)(ptr(lParam)); m.Message == wmKeyDown && m.WParam == 0x0D /* VK_RETURN */ {
+				return 0x4 // DLGC_WANTMESSAGE
+			}
+		}
+		return 0x80 // DLGC_WANTCHARS: a space is no mnemonic
+	case wmKeyDown:
+		if wParam == 0x0D { // VK_RETURN
+			a.about()
+			return 0
+		}
+	case wmKeyUp:
+		if wParam == 0x20 { // VK_SPACE, released, as for a button
+			a.about()
+			return 0
+		}
 	}
 	r, _, _ := pDefWindowProcW.Call(hwnd, uintptr(msg), wParam, lParam)
 	return r
@@ -1719,6 +1812,9 @@ func (a *ui) start() {
 	}
 	a.beginRun()
 	a.wholeScan = true
+	// a search can be typed while the scan runs (the lookup for a new version, which
+	// disables the window, took the focus away)
+	a.focusSearch()
 	send(a.hListWin, lvmDeleteAllItems, 0, 0)
 	for _, l := range a.lists() {
 		send(l.h, lvmDeleteAllItems, 0, 0)
@@ -1795,14 +1891,19 @@ func (a *ui) finish() {
 	if a.current != nil {
 		setText(a.hSummary, a.current.counts().text("summary.done"))
 	}
-	// after a scan, the search box is ready for typing: at once if the main window is
-	// the active one, else once the details are closed
 	if a.wholeScan {
-		if fg, _, _ := pGetForegroundWindow.Call(); fg == a.hwnd && pEnabled(a.hwnd) {
-			pSetFocus.Call(a.hSearch)
-		} else if a.dlg != nil {
-			a.dlgFocus = a.hSearch
-		}
+		a.focusSearch()
+	}
+}
+
+// focusSearch makes the search box ready for typing, when a scan starts and when it
+// ends: at once if the main window is the active one, else once the details are
+// closed.
+func (a *ui) focusSearch() {
+	if fg, _, _ := pGetForegroundWindow.Call(); fg == a.hwnd && pEnabled(a.hwnd) {
+		pSetFocus.Call(a.hSearch)
+	} else if a.dlg != nil {
+		a.dlgFocus = a.hSearch
 	}
 }
 
@@ -2210,6 +2311,9 @@ func (a *ui) openDetails(it Item, pos int) {
 	pShowWindow.Call(d.hwnd, 1)
 	pSetForegroundWindow.Call(d.hwnd) // also when it replaces other details (keys go to it)
 	pSetFocus.Call(d.view.hwnd)
+	// the text has the focus, for the keys that scroll it: its frame shows it at once,
+	// so that Close, the default button, is not taken for the control that has it
+	send(d.hwnd, 0x0127 /* WM_CHANGEUISTATE */, 2 /* UIS_CLEAR */ |0x1<<16 /* UISF_HIDEFOCUS */, 0)
 }
 
 // detailsGo shows item to of detailSet in the details window, in place of the one it
@@ -2476,6 +2580,15 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmSize:
 		a.relayout()
 		return 0
+	case 0x0006: // WM_ACTIVATE
+		// back in the main window, after the About box, a Fix window or a message, the
+		// focus is where it was, as in a dialog, so that Tab goes on from there
+		if loword(wParam) != 0 /* WA_INACTIVE */ && hiword(wParam) == 0 /* not minimized */ && a.lastFocus != 0 && pEnabled(a.lastFocus) {
+			if ok, _, _ := pIsWindow.Call(a.lastFocus); ok != 0 {
+				pSetFocus.Call(a.lastFocus)
+				return 0
+			}
+		}
 	case wmEraseBkgnd:
 		return 1 // all drawn by WM_PAINT, off screen
 	case wmPaint:
@@ -2578,8 +2691,10 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			if n := hiword(wParam); n == 1 || n == 8 {
 				pSetTimer.Call(hwnd, timerLang, 700, 0)
 			}
-		case id == idOnline:
+		case id == idOnline && hiword(wParam) == 0: // BN_CLICKED
 			a.onlineOff = send(a.hOnline, bmGetCheck, 0, 0) != 1
+		case id == idOnline: // BN_SETFOCUS, BN_KILLFOCUS: its label shows it
+			pInvalidateRect.Call(a.hOnlineLbl, 0, 0)
 		case id == idSearch && hiword(wParam) == 0x300: // EN_CHANGE
 			a.query = queryWords(getText(a.hSearch))
 			for _, l := range a.lists() {
@@ -2854,6 +2969,11 @@ func guiMain() {
 		r, _, _ := pGetMessageW.Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0)
 		if int32(r) <= 0 {
 			break
+		}
+		if f, _, _ := pGetFocus.Call(); f != 0 && f != a.lastFocus { // before the window is disabled or left, which takes it away
+			if child, _, _ := pIsChild.Call(hwnd, f); child != 0 {
+				a.lastFocus = f
+			}
 		}
 		if m.Message == wmKeyDown && m.WParam == 'Q' && ctrlDown() && !shiftDown() { // Ctrl+Q quits, from the details window too
 			send(hwnd, wmClose, 0, 0)

@@ -12,6 +12,7 @@ package main
 // cannot be selected.
 
 import (
+	"sort"
 	"syscall"
 	"time"
 	"unicode/utf16"
@@ -105,6 +106,97 @@ type logView struct {
 	// links (setLink): what a click on one does, and the link pressed
 	onLink   func(id int)
 	linkDown int
+	// what Tab reaches inside the log (tabTargets): the one with the focus, or -1 for
+	// the log itself
+	focusAt int
+}
+
+// tabTargets is what Tab reaches inside the log, as in a web page, in reading order:
+// the copy button, in its top right corner (-1), then the links, by their lines.
+// Enter or Space acts on it, as a click.
+func (v *logView) tabTargets() []int {
+	var out []int
+	if v.copyText != nil {
+		out = append(out, -1)
+	}
+	if v.onLink != nil {
+		for i := range v.lines {
+			if v.lines[i].link != 0 {
+				out = append(out, i)
+			}
+		}
+	}
+	return out
+}
+
+// focusTarget gives the focus to target i of tabTargets (-1: the log itself), and
+// scrolls so that it shows.
+func (v *logView) focusTarget(i int) {
+	v.focusAt = i
+	if ts := v.tabTargets(); i >= 0 && i < len(ts) && ts[i] >= 0 {
+		r := sort.Search(len(v.rows), func(r int) bool { return v.rows[r].line >= ts[i] }) // its first row
+		switch n := v.visibleRows(); {
+		case r < v.top:
+			v.scrollTo(r)
+		case r >= v.top+n:
+			v.scrollTo(r - n + 1)
+		}
+	}
+	pInvalidateRect.Call(v.hwnd, 0, 0)
+}
+
+// actTarget acts on the target with the focus, as a click on it does.
+func (v *logView) actTarget() {
+	ts := v.tabTargets()
+	switch {
+	case v.focusAt < 0 || v.focusAt >= len(ts):
+	case ts[v.focusAt] < 0:
+		v.copyAll()
+	default:
+		v.onLink(v.lines[ts[v.focusAt]].link)
+	}
+}
+
+// targetRects is where the target with the focus is drawn: the copy button, or the
+// link on each of its rows that shows; none for the log itself.
+func (v *logView) targetRects() []rect {
+	ts := v.tabTargets()
+	if v.focusAt < 0 || v.focusAt >= len(ts) {
+		return nil
+	}
+	pad := g.scale(2)
+	if ts[v.focusAt] < 0 {
+		r := v.copyRect()
+		return []rect{{r.Left - pad, r.Top - pad, r.Right + pad, r.Bottom + pad}}
+	}
+	ln := &v.lines[ts[v.focusAt]]
+	s, e := v.linkRange(ln)
+	dc, _, _ := pCreateCompatibleDC.Call(0)
+	defer pDeleteDC.Call(dc)
+	var out []rect
+	for r := v.top; r < len(v.rows) && r <= v.top+v.visibleRows(); r++ {
+		ref := v.rows[r]
+		if ref.line != ts[v.focusAt] {
+			continue
+		}
+		y := v.padY() + int32(r-v.top)*v.pitch
+		x0 := v.padX() + v.gutter()
+		var row *rect
+		for _, f := range ln.rows[ref.row] {
+			if e > f.off && s < f.off+f.n {
+				t := v.text[f.off : f.off+f.n]
+				i0, i1 := max(s-f.off, 0), min(e-f.off, f.n)
+				xa, xb := x0+f.x+v.measure(dc, f.font, t[:i0]), x0+f.x+v.measure(dc, f.font, t[:i1])
+				if row == nil {
+					out = append(out, rect{xa - pad, y, xb + pad, y + v.pitch})
+					row = &out[len(out)-1]
+				} else {
+					row.Right = xb + pad
+				}
+			}
+		}
+	}
+	return out
 }
 
 // copyRect is where the copy button is: in the top right corner, as in the details.
@@ -244,16 +336,16 @@ var logViews = map[uintptr]*logView{}
 func (a *ui) newLogView(parent uintptr, id int) *logView {
 	h, _, _ := pCreateWindowExW.Call(wsExClientEdge, up("eMudScanLog"), 0,
 		uintptr(wsChild|wsVisible|wsVScroll|wsTabStop), 0, 0, 10, 10, parent, uintptr(id), 0, 0)
-	v := &logView{hwnd: h}
+	v := &logView{hwnd: h, focusAt: -1}
 	logViews[h] = v
 	v.setFonts(a.dpi)
 	return v
 }
 
-// newConsoleView makes the console of the Fix window, as a child of parent: it is
-// not a tab stop (a click selects its text, the wheel scrolls it).
+// newConsoleView makes the console of the Fix window, as a child of parent: a tab
+// stop, for the keys that select, copy and scroll it, as a click and the wheel do.
 func (a *ui) newConsoleView(parent uintptr, id int) *logView {
-	return a.consoleView(parent, id, 0, true, consoleBg)
+	return a.consoleView(parent, id, wsTabStop, true, consoleBg)
 }
 
 // newPythonView makes a console that shows a Python script to read, in its own colors
@@ -268,7 +360,7 @@ func (a *ui) newPythonView(parent uintptr, id int) *logView {
 func (a *ui) consoleView(parent uintptr, id int, style uint32, marks bool, bg uint32) *logView {
 	h, _, _ := pCreateWindowExW.Call(0, up("eMudScanLog"), 0,
 		uintptr(wsChild|wsVisible|wsVScroll|style), 0, 0, 10, 10, parent, uintptr(id), 0, 0)
-	v := &logView{hwnd: h, console: true, marks: marks}
+	v := &logView{hwnd: h, console: true, marks: marks, focusAt: -1}
 	v.bg, _, _ = pCreateSolidBrush.Call(uintptr(bg))
 	logViews[h] = v
 	pSetWindowTheme.Call(h, up("DarkMode_Explorer"), 0) // a dark scroll bar, where Windows has one
@@ -373,7 +465,7 @@ func (v *logView) setFonts(dpi int) {
 // clear empties the log.
 func (v *logView) clear() {
 	v.text, v.lines, v.rows = nil, nil, nil
-	v.top, v.selA, v.selB = 0, 0, 0
+	v.top, v.selA, v.selB, v.focusAt = 0, 0, 0, -1
 	v.update()
 }
 
@@ -854,6 +946,14 @@ func (v *logView) paint() {
 		drawCopyIcon(dc, v.copyRect(), v.copyHover, time.Since(v.copied) < 1500*time.Millisecond)
 	}
 	pBitBlt.Call(hdc, 0, 0, uintptr(w), uintptr(h), dc, 0, 0, 0x00CC0020 /* SRCCOPY */)
+	// the focus: around the target that has it, else along the edges of the log
+	rs := v.targetRects()
+	if v.focusAt < 0 {
+		rs = []rect{{0, 0, w, h}}
+	}
+	for _, r := range rs {
+		drawFocus(hdc, v.hwnd, r)
+	}
 	pSelectObject.Call(dc, oldFont)
 	pSelectObject.Call(dc, oldBmp)
 	pDeleteObject.Call(bmp)
@@ -941,10 +1041,18 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		}
 		return 0
 	case wmGetDlgCode:
-		return viewDlgCode(lParam)
+		return innerDlgCode(viewDlgCode(lParam), lParam, v.focusAt, len(v.tabTargets()))
 	case wmKeyDown:
 		page := max(v.visibleRows()-1, 1)
 		switch ctrl := ctrlDown(); {
+		case wParam == 0x09: // Tab, Shift+Tab: the next target, the one before
+			if shiftDown() {
+				v.focusTarget(v.focusAt - 1)
+			} else {
+				v.focusTarget(v.focusAt + 1)
+			}
+		case (wParam == 0x0D || wParam == 0x20) && v.focusAt >= 0: // Enter, Space
+			v.actTarget()
 		case ctrl && wParam == 'C':
 			v.copySelection()
 		case ctrl && wParam == 'A':
@@ -988,6 +1096,7 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		}
 		return 0
 	case wmLButtonDown:
+		v.focusTarget(-1) // a click: the log, not what Tab reached
 		pt := point{xParam(lParam), yParam(lParam)}
 		if v.onCopy(pt) {
 			v.copyDown = true
@@ -1102,11 +1211,46 @@ func logWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			setClipboard(hwnd, string(utf16.Decode(v.text)))
 		}
 		return 0
-	case wmSetFocus, wmKillFocus:
+	case wmSetFocus:
+		// from Tab: the log itself; from Shift+Tab: its last target, as in a web page;
+		// back in its window (after a link opened a file), where it was
+		if keyDown(0x09) {
+			v.focusAt = -1
+			if n := len(v.tabTargets()); shiftDown() && n > 0 {
+				v.focusTarget(n - 1)
+			}
+		}
+		pInvalidateRect.Call(hwnd, 0, 0)
+	case wmKillFocus, wmUpdateUIState:
 		pInvalidateRect.Call(hwnd, 0, 0)
 	}
 	r, _, _ := pDefWindowProcW.Call(hwnd, uintptr(msg), wParam, lParam)
 	return r
+}
+
+// innerDlgCode adds to code, the answer of a view to WM_GETDLGCODE, the keys it keeps
+// for what Tab reaches inside it (links, copy buttons; n of them, the one with the
+// focus at, or -1 for the view itself): Tab while there is one further in its
+// direction, then the dialog manager goes on to the next control; Enter and Space on
+// one, which act on it; and the characters of these keys, which would else be taken
+// for mnemonics, with the default sound of Windows.
+func innerDlgCode(code, lParam uintptr, at, n int) uintptr {
+	const dlgcWantTab, dlgcWantMessage, dlgcWantChars = 0x2, 0x4, 0x80
+	if lParam == 0 {
+		return code
+	}
+	m := (*msgT)(ptr(lParam))
+	switch {
+	case m.Message == wmKeyDown && m.WParam == 0x09: // Tab
+		if back := shiftDown(); back && at >= 0 || !back && at < n-1 {
+			return code | dlgcWantTab
+		}
+	case m.Message == wmKeyDown && (m.WParam == 0x0D || m.WParam == 0x20) && at >= 0: // Enter, Space
+		return code | dlgcWantMessage
+	case m.Message == wmChar && (m.WParam == '\t' || m.WParam == '\r' || m.WParam == ' '):
+		return code | dlgcWantChars
+	}
+	return code
 }
 
 // viewDlgCode answers WM_GETDLGCODE for the text views (the log, the console, the

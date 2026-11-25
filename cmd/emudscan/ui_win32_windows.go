@@ -102,6 +102,8 @@ var (
 
 	pCreateFontW          = modgdi32.NewProc("CreateFontW")
 	pDeleteObject         = modgdi32.NewProc("DeleteObject")
+	pCreatePatternBrush   = modgdi32.NewProc("CreatePatternBrush")
+	pPatBlt               = modgdi32.NewProc("PatBlt")
 	pSelectObject         = modgdi32.NewProc("SelectObject")
 	pCreateBitmap         = modgdi32.NewProc("CreateBitmap")
 	pCreateDIBSection     = modgdi32.NewProc("CreateDIBSection")
@@ -185,11 +187,14 @@ const (
 	wmMouseWheel     = 0x020A
 	wmMouseLeave     = 0x02A3
 	wmKeyDown        = 0x0100
+	wmKeyUp          = 0x0101
 	wmChar           = 0x0102
 	wmSysKeyDown     = 0x0104
 	wmSetFocus       = 0x0007
 	wmKillFocus      = 0x0008
 	wmGetDlgCode     = 0x0087
+	wmUpdateUIState  = 0x0128
+	wmQueryUIState   = 0x0129
 	wmCaptureChanged = 0x0215
 	wmDpiChanged     = 0x02E0
 	wmApp            = 0x8000

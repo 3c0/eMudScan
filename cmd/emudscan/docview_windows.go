@@ -11,6 +11,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -82,9 +83,19 @@ type docView struct {
 	nav       docNav
 	onNav     func(to int) // a button of the navigation block was clicked: show item to
 	margin    int32        // around the text, when not the default one
+	pad       int32        // more room around the text, on each side: for the frame of the focus
 	lines     float64      // the lines of paragraphs and items, in times the font's height, when not 0.94
 	bar       bool         // it has a scroll bar
 	glider    glider       // the smooth scrolling
+	targets   []docTarget  // what Tab goes through inside the text, in reading order
+	focusAt   int          // the target with the focus, or -1: the view itself
+}
+
+// docTarget is what Tab reaches inside a docView, as in a web page: a link, made of
+// its fragments, or a copy button (btn ≥ 0). Enter or Space acts on it, as a click.
+type docTarget struct {
+	frags []int
+	btn   int
 }
 
 // docNav is the navigation block, shown for several items (n ≥ 2).
@@ -144,7 +155,7 @@ func (a *ui) makeDocView(parent uintptr, blocks []docBlock, bodyPt int, bar bool
 		pRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 		docClassOK = true
 	}
-	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1, nav: docNav{hover: -1, down: -1}, bar: bar}
+	v := &docView{blocks: blocks, downBtn: -1, hoverBtn: -1, tipFrag: -1, nav: docNav{hover: -1, down: -1}, bar: bar, focusAt: -1}
 	v.fonts = map[string]*docFont{}
 	mk := func(name string, pt, weight int, underline bool, face string) {
 		f := &docFont{h: createFont(pt, a.dpi, weight, underline, face)}
@@ -515,7 +526,7 @@ func (v *docView) layout() {
 	if v.margin > 0 {
 		m = v.margin
 	}
-	x0, xMax := m, rc.Right-m
+	x0, xMax := m+v.pad, rc.Right-m-v.pad
 	lines := 0.94
 	if v.lines > 0 {
 		lines = v.lines
@@ -532,7 +543,7 @@ func (v *docView) layout() {
 	}
 	labelW = min(labelW, (xMax-x0)*2/5)
 	gap := s(20)
-	y := m * 2 / 3
+	y := m*2/3 + v.pad
 	v.placeNav(L, rc)
 	// the lines beside the navigation block, at the top, end before it
 	beside := func(y int32) int32 {
@@ -605,9 +616,100 @@ func (v *docView) layout() {
 			y += s(8)
 		}
 	}
-	v.height = y + m*2/3
+	v.height = y + m*2/3 + v.pad
+	v.findTargets()
 	v.setScroll(v.scroll)
 	v.navTips()
+}
+
+// findTargets lists the links and the copy buttons, in reading order: by their top,
+// then from left to right.
+func (v *docView) findTargets() {
+	v.targets = nil
+	for i := 0; i < len(v.frags); {
+		link := v.frags[i].link
+		if link == "" {
+			i++
+			continue
+		}
+		t := docTarget{btn: -1}
+		for ; i < len(v.frags) && v.frags[i].link == link; i++ {
+			t.frags = append(t.frags, i)
+		}
+		v.targets = append(v.targets, t)
+	}
+	for i := range v.btns {
+		v.targets = append(v.targets, docTarget{btn: i})
+	}
+	sort.SliceStable(v.targets, func(i, j int) bool {
+		a, b := v.targetRects(v.targets[i])[0], v.targetRects(v.targets[j])[0]
+		return a.Top < b.Top || a.Top == b.Top && a.Left < b.Left
+	})
+	if v.focusAt >= len(v.targets) {
+		v.focusAt = -1
+	}
+}
+
+// targetRects is where a target is, in the document: a rectangle for each line of a
+// link, or that of a copy button.
+func (v *docView) targetRects(t docTarget) []rect {
+	if t.btn >= 0 {
+		return []rect{v.btns[t.btn].rc}
+	}
+	var out []rect
+	for _, i := range t.frags {
+		f := v.frags[i]
+		if n := len(out); n > 0 && out[n-1].Top == f.y {
+			out[n-1].Right = f.x + f.w
+			continue
+		}
+		out = append(out, rect{f.x, f.y, f.x + f.w, f.y + f.h})
+	}
+	return out
+}
+
+// focusTarget gives the focus to target i (-1: the view itself), and scrolls,
+// smoothly, so that it shows.
+func (v *docView) focusTarget(i int) {
+	v.focusAt = i
+	if i >= 0 && v.bar {
+		rs := v.targetRects(v.targets[i])
+		top, bottom, h, pad := rs[0].Top, rs[len(rs)-1].Bottom, v.clientH(), g.scale(12)
+		aim := v.scroll
+		if v.glider.on && v.scroll == v.glider.set {
+			aim = int32(v.glider.aim)
+		}
+		switch {
+		case top-pad < aim:
+			v.glide(top - pad - aim)
+		case bottom+pad > aim+h:
+			v.glide(bottom + pad - h - aim)
+		}
+	}
+	pInvalidateRect.Call(v.hwnd, 0, 0)
+}
+
+// actTarget acts on the target with the focus, as a click on it does.
+func (v *docView) actTarget() {
+	if v.focusAt < 0 {
+		return
+	}
+	if t := v.targets[v.focusAt]; t.btn >= 0 {
+		v.copyButton(t.btn)
+	} else {
+		v.openLink(v.frags[t.frags[0]].link)
+	}
+}
+
+// openLink opens a link: another element, whose details replace these, or a page, a
+// file or a folder.
+func (v *docView) openLink(link string) {
+	v.selA, v.selB = 0, 0
+	if key, ok := strings.CutPrefix(link, itemLinkPrefix); ok {
+		g.openItemRef(key)
+	} else {
+		openTarget(v.hwnd, link)
+	}
 }
 
 // setNav shows the navigation block for item pos of n (n < 2: no block).
@@ -620,7 +722,7 @@ func (v *docView) setNav(pos, n int) {
 // another item, or of the same one after a fix.
 func (v *docView) setBlocks(blocks []docBlock) {
 	v.blocks = blocks
-	v.selA, v.selB, v.scroll = 0, 0, 0
+	v.selA, v.selB, v.scroll, v.focusAt = 0, 0, 0, -1
 	v.down, v.downBtn, v.hoverBtn, v.downLink = false, -1, -1, ""
 	v.layout()
 }
@@ -1059,6 +1161,15 @@ func (v *docView) paint() {
 	}
 
 	pBitBlt.Call(hdc, 0, 0, uintptr(rc.Right), uintptr(rc.Bottom), dc, 0, 0, 0x00CC0020 /* SRCCOPY */)
+	// the focus: around the target that has it, else along the edges of the view
+	if v.focusAt < 0 {
+		drawFocus(hdc, v.hwnd, rc)
+	} else {
+		pad := s(2)
+		for _, r := range v.targetRects(v.targets[v.focusAt]) {
+			drawFocus(hdc, v.hwnd, rect{r.Left - pad, r.Top + oy, r.Right + pad, r.Bottom + oy})
+		}
+	}
 	pSelectObject.Call(dc, oldFont)
 	pSelectObject.Call(dc, oldBmp)
 	pDeleteObject.Call(bmp)
@@ -1276,11 +1387,19 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			v.glide(-delta * a.scale(40) / 120)
 			return 0
 		case wmGetDlgCode:
-			return viewDlgCode(lParam)
+			return innerDlgCode(viewDlgCode(lParam), lParam, v.focusAt, len(v.targets))
 		case wmKeyDown:
 			ctrl := ctrlDown()
 			step := a.scale(30)
 			switch {
+			case wParam == 0x09: // Tab, Shift+Tab: the next target, the one before
+				if shiftDown() {
+					v.focusTarget(v.focusAt - 1)
+				} else {
+					v.focusTarget(v.focusAt + 1)
+				}
+			case (wParam == 0x0D || wParam == 0x20) && v.focusAt >= 0: // Enter, Space
+				v.actTarget()
 			case ctrl && wParam == 'C':
 				v.copySelection()
 			case ctrl && wParam == 'A':
@@ -1325,6 +1444,7 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			}
 		case wmLButtonDown:
 			pSetFocus.Call(hwnd)
+			v.focusTarget(-1) // a click: the view, not what Tab reached
 			pt := point{xParam(lParam), yParam(lParam)}
 			if v.navPress(pt) {
 				return 0
@@ -1418,12 +1538,7 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 				case v.downBtn >= 0 && v.btnAt(p) == v.downBtn:
 					v.copyButton(v.downBtn)
 				case v.downLink != "" && v.linkAt(p) == v.downLink:
-					v.selA, v.selB = 0, 0
-					if key, ok := strings.CutPrefix(v.downLink, itemLinkPrefix); ok {
-						g.openItemRef(key) // another element: its details replace these
-					} else {
-						openTarget(hwnd, v.downLink)
-					}
+					v.openLink(v.downLink)
 				}
 			}
 			pInvalidateRect.Call(hwnd, 0, 0)
@@ -1492,7 +1607,17 @@ func docWndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			pKillTimer.Call(hwnd, wParam)
 			pInvalidateRect.Call(hwnd, 0, 0)
 			return 0
-		case wmSetFocus, wmKillFocus:
+		case wmSetFocus:
+			// from Tab: the view itself; from Shift+Tab: its last target, as in a web
+			// page; back in its window (after a link opened a page), where it was
+			if keyDown(0x09) {
+				v.focusAt = -1
+				if shiftDown() && len(v.targets) > 0 {
+					v.focusTarget(len(v.targets) - 1)
+				}
+			}
+			pInvalidateRect.Call(hwnd, 0, 0)
+		case wmKillFocus, wmUpdateUIState:
 			pInvalidateRect.Call(hwnd, 0, 0)
 		}
 	}

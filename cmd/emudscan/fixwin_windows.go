@@ -363,6 +363,7 @@ func (a *ui) openFixAll(ids ...int) {
 	send(d.list, lvmSetImageList, 1, a.imgStatus)
 	pSetWindowSubclass.Call(d.list, fixListProc, 1, 0)
 	a.addCellTips(d.list)
+	tabOrder(d.list, d.console.hwnd, d.bBackup, d.bFix, d.bStop, d.bClose) // the console and the buttons after the list, made after them
 	for i, key := range []string{"fix.colSoftware", "col.component", "fix.colFix", "fix.colPlace", "fix.colResult"} {
 		col := lvColumn{Mask: 0x1 | 0x2 | 0x4 | 0x8, Cx: 100, Text: u16(T(key)), SubItem: int32(i)}
 		send(d.list, lvmInsertColumnW, uintptr(i), uintptr(unsafe.Pointer(&col)))
