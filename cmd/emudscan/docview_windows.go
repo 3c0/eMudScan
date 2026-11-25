@@ -580,6 +580,8 @@ func (v *docView) layout() {
 			ind := s(18)
 			L.flow([]styled{{"▪", v.fonts["body"], text, ""}}, x0+s(4), x0+s(4), x0+ind, y, lines)
 			v.text = append(v.text, ' ')
+			f := &v.frags[len(v.frags)-1] // the bullet, with this space up to the item, which a selection fills
+			f.text, f.w = append(f.text, ' '), x0+ind-f.x
 			L.justify = true
 			y = L.flow(v.runsStyled(b.runs, v.fonts["body"], text), x0+ind, x0+ind, xMax, y, lines) + s(1)
 			L.justify = false
@@ -1025,6 +1027,9 @@ func (v *docView) paint() {
 			i0, i1 := max(selS-f.off, 0), min(selE-f.off, len(f.text))
 			L := &docLayouter{v: v, dc: dc}
 			xa, xb := f.x+L.measure(f.font, f.text[:i0]), f.x+L.measure(f.font, f.text[:i1])
+			if i1 == len(f.text) { // to its end: the space after a word of a justified line is wider than measured
+				xb = f.x + f.w
+			}
 			r := rect{xa, f.y + oy, xb, f.y + f.h + oy}
 			pFillRect.Call(dc, uintptr(unsafe.Pointer(&r)), hl)
 			pSetTextColor.Call(dc, uintptr(sysColor(14 /* COLOR_HIGHLIGHTTEXT */)))
