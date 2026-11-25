@@ -87,60 +87,45 @@ line: `_ssl.pyd` and the OpenSSL libraries it loads. For a 3.14 or a 3.15 laid
 out as python.org’s, they come from python.org’s embeddable package; else from
 python-build-standalone’s build (on GitHub), with `_hashlib.pyd` too for
 python.org’s 3.11 to 3.13, whose fixed releases python.org does not publish for
-Windows. The commands name one release, by its URL, and PowerShell checks the
-download against the SHA-256 written in them. eMudScan itself finds that release
-when a Fix window opens: on GitHub, in the list of SHA-256 of the latest release
-of python-build-standalone, whose releases are immutable; on python.org, in its
-list of releases, where it takes the latest one of the line that has Windows
-files. When it finds none, or when **Online checks and updates** is cleared, the
-commands name the release written in eMudScan (Python 3.14.10 or 3.15.2;
-python-build-standalone 20261124), and the window says so. The fix is a script
-that stops at its first command that fails. PowerShell backs up each file it
-replaces. It has two versions. The detailed information gives the one that runs
-without eMudScan, also when it is pasted into a PowerShell window: before and
-after the replacement, it tests that this Python loads its `ssl` module, it
-downloads into a folder of its own in your Temp folder (`eMudScan-fix`), and
-deletes that folder at its end. The **Fix software** window shows, and runs, the
-other one: before and after the replacement, that Python runs eMudScan’s tests
-([check_ssl.py](../cmd/emudscan/check_ssl.py), a file of the source code that
-eMudScan.exe contains as it is, and that the window shows when you click its
-name in the commands), with certificates made for the fix, valid one hour, and
-without connecting to anything: its `ssl` and `hashlib` modules load and give 7
-known results, the Windows roots load, TLS 1.2 and TLS 1.3 connections succeed
-in memory, and a chain through a compromised intermediate is rejected. If a test
-that passed before fails after, or the chain is not rejected, or if a file
-cannot be replaced, the original files are put back. This fix is not ticked by
-default in the **Fix software** window, since it changes a program that its
-publisher has not updated yet; close that program first. A free-threaded Python,
-or one for another processor, is left as it is.
+Windows. eMudScan looks for that release when a Fix window opens. When it finds
+none, or when **Online checks and updates** is cleared, the fix uses the release
+written in eMudScan (Python 3.14.10 or 3.15.2; python-build-standalone
+20261124). The download is checked against its SHA-256.
+
+Before and after the replacement, that Python runs eMudScan’s tests
+([check_ssl.py](../cmd/emudscan/check_ssl.py)), without connecting to anything:
+its `ssl` and `hashlib` modules load, the Windows roots load, TLS 1.2 and TLS
+1.3 connections succeed in memory, and a chain through a compromised
+intermediate is rejected. If a test that passed before fails after, the original
+files are put back. The detailed information gives a script that runs without
+eMudScan, and only tests that this Python loads its `ssl` module. A
+free-threaded Python, or one for another processor, is left as it is.
 
 Node.js 22.23.4, 24.22.1 and 26.12.1, and the later releases of these lines, no
-longer trust the compromised intermediates. A node.exe inside another program,
-of one of these release lines, can be replaced with nodejs.org’s node.exe of the
-latest release of its line, for the same processor: the same major version, so
-that the program’s native modules keep working. nodejs.org builds no 32-bit
-node.exe for Node.js 24 and later, so such a node.exe cannot be replaced. The
-commands name one release, by its URL. PowerShell checks the download against
-the SHA-256 written in them, then its signature by the OpenJS Foundation and the
-version it gives. Only then does it back up the original and replace it.
-eMudScan itself finds that release when a Fix window opens: in nodejs.org’s list
-of releases (`index.json`), then in the list of SHA-256 of that release
-(`SHASUMS256.txt`). When it finds none, or when **Online checks and updates** is
-cleared, the commands name the release written in eMudScan (Node.js 22.23.5,
-24.22.3 or 26.13.1), and the window says so. The SHA-256 checksums of these
-releases come from their `SHASUMS256.txt`, signed by a releaser of Node.js. The
-signed files are in [cmd/emudscan/testdata/node](../cmd/emudscan/testdata/node),
-and the tests check that eMudScan has their values. To check a signature, import
-the [Node.js release keys](https://github.com/nodejs/node#release-keys), then
-run `gpg --verify v22.23.5-SHASUMS256.txt.asc`. As for a Python, the fix is a
-script that stops at its first command that fails, and the detailed information
-gives the version that runs without eMudScan: it downloads into the
-`eMudScan-fix` folder of your Temp folder, and deletes that folder at its end.
-This fix is not ticked by default in the **Fix software** window, since it
-changes a program that its publisher has not updated yet; close that program
-first. Deno 2.9.8 is fixed: a Deno installed with its own installer is updated
-with `deno upgrade`, one installed with a package manager with that package
-manager.
+longer trust the compromised intermediates. A node.exe inside another program
+can be replaced with nodejs.org’s node.exe of the latest release of its line,
+for the same processor: the same major version, so that the program’s native
+modules keep working. eMudScan looks for that release when a Fix window opens.
+When it finds none, or when **Online checks and updates** is cleared, the fix
+uses the release written in eMudScan (Node.js 22.23.5, 24.22.3 or 26.13.1). The
+download is checked against its SHA-256, its signature by the OpenJS Foundation
+and the version it gives, before the original is backed up and replaced.
+nodejs.org builds no 32-bit node.exe for Node.js 24 and later, so such a
+node.exe cannot be replaced.
+
+The SHA-256 checksums written in eMudScan come from the `SHASUMS256.txt` of
+these releases, signed by a releaser of Node.js: the signed files are in
+[cmd/emudscan/testdata/node](../cmd/emudscan/testdata/node). To check a
+signature, import the
+[Node.js release keys](https://github.com/nodejs/node#release-keys), then run
+`gpg --verify v22.23.5-SHASUMS256.txt.asc`.
+
+Both fixes are not ticked by default in the **Fix software** window, since they
+change a program that its publisher has not updated yet; close that program
+first.
+
+Deno 2.9.8 is fixed: a Deno installed with its own installer is updated with
+`deno upgrade`, one installed with a package manager with that package manager.
 
 Certificate bundles are not judged by their version: each one is tested against
 the 12 test chains, so the result shows whether that file would really accept a

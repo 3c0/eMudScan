@@ -13,29 +13,21 @@ until you accept its warning (see [Fixing software](using.md#fixing-software)).
 Then:
 
 - the commands, and then what they show, are written to a new folder in your
-  temporary folder (`%TEMP%\eMudScan-fix-…`), from which PowerShell runs them
-  (Windows PowerShell, or PowerShell 7 on a PC without it); eMudScan deletes
-  that folder once they have run;
+  temporary folder (`%TEMP%\eMudScan-fix-…`), which eMudScan deletes once they
+  have run;
 - the commands change only what they show: they update software through its
   package manager, replace certificate bundles, the node.exe of programs and the
-  ssl files of their Pythons, and add the compromised certificates to Java
-  block lists, after backing up the files they replace, next to them, unless
-  you clear **Back up the files to change**;
+  ssl files of their Pythons, and add the compromised certificates to Java block
+  lists, after backing up the files they replace, next to them, unless you clear
+  **Back up the files to change**;
 - **Restore the backup**, in the detailed information window of a fixed
   software, moves these backups back in place of their files, once you accept
-  its warning; a file that needs administrator rights is moved by the command of
-  the detailed information, in a PowerShell started as for the fixes;
+  its warning;
 - replacing the ssl files of a Python also writes eMudScan’s tests into that
-  temporary folder: a Python script and certificates made for the fix, valid one
-  hour, whose SHA-256 the commands check before they run; the ssl files are
-  backed up in any case, so that the fix can put them back if a test fails, and
-  a file added beside them is marked by an empty file
-  (`libssl-3-x64.dll.emudscan-20261031-011500.added`), so that
-  **Restore the backup** removes it; if **Back up the files to change** is
-  cleared, these backups and marks are deleted once the tests pass;
+  temporary folder, and marks each file it adds beside the ssl files with an
+  empty file (`libssl-3-x64.dll.emudscan-20261031-011500.added`), so that
+  **Restore the backup** removes it;
 - package managers write what they usually write when they update software;
-- the commands that need administrator rights run in a PowerShell for which
-  Windows asks your permission; eMudScan itself does not need them;
 - at the end, the **Fix software** window saves the report in your Downloads
   folder.
 
@@ -145,13 +137,10 @@ sees your IP address and that User-Agent.
 A newer version is offered in a dialog, with its release notes. Nothing is
 downloaded until you accept it. Then eMudScan downloads its `eMudScan.exe` from
 github.com, which redirects to the host that serves the files of GitHub
-releases. eMudScan installs it only if its release is immutable and if three
-SHA-256 checksums are the same: the one that GitHub computed when the file was
-uploaded, the one written in the release notes, and the one of the downloaded
-file. The download, and a copy of eMudScan that installs it, are written into a
-folder of their own in your Temp folder, which is deleted after the update. If
-the folder of `eMudScan.exe` needs administrator rights, Windows asks for them,
-for the copy only.
+releases, into a folder of its own in your Temp folder, which is deleted after
+the update. It installs it only from an immutable release, and only if its
+SHA-256 is the one that GitHub computed and the one written in the release
+notes.
 
 ## Opting out
 

@@ -6,34 +6,22 @@
   <img src="images/main-window.png" width="860" alt="eMudScan’s main window after a scan: the online test option, the drives, the buttons, the log and the three lists">
 </p>
 
-From top to bottom:
-
-- **eMudScan and its version.** The ⓘ icon opens the About box: author, online
-  test, privacy, credits, licenses and disclaimer. **Language** (top right):
-  Automatic (Windows), English or Français. Changing it resets the window; the
-  choice is not saved.
-- **Online checks and updates**: checked by default. Hover over it to see what
-  is sent; clear it to scan without any internet connection (see
-  [Privacy](privacy.md)).
-- **Drives to scan**: local drives are selected by default; DVD, removable and
-  network drives are not. Nothing on an unselected drive is read or reported.
-- **Scan** starts the scan (it never starts on its own). It becomes **Stop**
-  during the scan, then **Scan again**. Meanwhile, the mouse pointer shows that
-  eMudScan is busy, except over **Stop**. **Fix**, beside it, fixes the software
-  that eMudScan can fix (see [Fixing software](#fixing-software)).
-  **Copy report** and **Save report** are on the right; once the report is in
-  the clipboard, **Copy report** says **Copied** for 2 seconds.
-- **Log**: one line per step. You can select and copy its text. The shield
-  before its title is animated while the scan runs, then shows the worst status
-  that the scan found. The right end of its top line shows what the scan is
-  reading and the time, then how long the scan took.
+- **Language** (top right): Automatic (Windows), English or Français. The choice
+  is not saved.
+- **Online checks and updates**: checked by default. Clear it to scan without
+  any internet connection (see [Privacy](privacy.md)).
+- **Drives to scan**: the local drives are selected by default. Nothing on an
+  unselected drive is read.
+- **Scan** starts the scan: it never starts on its own.
+- **Fix** fixes the software that eMudScan can fix (see
+  [Fixing software](#fixing-software)).
+- **Copy report** and **Save report**: see [The report](#the-report).
 - Three lists: **Windows certificate system**, **Browsers and internet apps**
-  (browsers, messaging, email, sync, VPN, remote access…) and **Other software**
-  (everything else). Drag the borders between them to resize them. The shield
-  before the title of each list shows the worst status of its items (a grey one
-  before the scan), and the right end of its top line counts them by status.
-  **Hide OK items**, after the title, hides the OK items of a list, which its
-  top line still counts (“5 OK (hidden)”).
+  (browsers, messaging, email, sync, VPN, remote access…) and
+  **Other software**. The shield of each list shows the worst status of its
+  items.
+- The ⓘ icon opens the About box: author, privacy, licenses, and
+  **Check for updates** (see [Updates](#updates)).
 
 ## Statuses
 
@@ -49,227 +37,107 @@ In the lists, each status has a shield; the log and the report use a symbol.
 
 ## The software lists
 
-- **Software**: the software as you know it, with its version and, when it was
-  installed with a package manager or from the Microsoft Store, how it was
-  installed (`hugo 0.152.2 [Scoop]`). For a part of a program (when the
-  **Component** column is filled in), the version is the program’s, as shown in
-  **Apps & features** or by its package manager, so that all the parts of a
-  program show the same version.
+- **Software**: its name, its version and, when it was installed with a package
+  manager or from the Microsoft Store, how (`hugo 0.152.2 [Scoop]`).
 - **Component**: the part being checked (certifi, Electron, Java…); empty when
   the software itself is checked.
 - **Software date**: when the publisher last updated the software
-  ([how it is determined](checks.md#software-date)). When the software needs an
-  update and is 12 months old or more, the date is shown in amber with its age:
-  a newer version may exist, or the software may no longer be maintained.
+  ([how it is determined](checks.md#software-date)). It is in amber, with its
+  age, when the software needs an update and is 12 months old or more: it may no
+  longer be maintained.
 
   <img src="images/software-date-amber.png" width="180" alt="Software date: 07/07/2025 · 15 months, in amber">
 
 - **Status**, **Outdated file**, **Software folder** and **Details**.
 
-The same finding in several places (two copies of Node.js inside the same
-program) is a single item: its **Outdated file** ends with *(+1)*, and its
-detailed information lists every copy, then their explanation once, with the
-commands for each copy. **Scan again** checks each copy; copies that no longer
-match get their own items again.
+A finding in several places, such as two copies of Node.js inside the same
+program, is a single item: its **Outdated file** ends with *(+1)*, and its
+detailed information lists every copy.
 
-Click a column header to sort, click a path to open it in File Explorer, and
-hover over a cell to see its full content.
+The search box (Ctrl+F) keeps the items whose **Software** or **Component**
+contains every word typed, in any order: `node 22`, `certifi`, `scoop`. Esc
+clears it.
 
-The search box above the lists (Ctrl+F) keeps the items whose **Software** or
-**Component** column contains every word typed, in any order or case, including
-versions and package managers (`node 22`, `certifi`, `scoop`). It has the focus
-as soon as a scan starts: just type, even while the scan runs. The right end of
-the top line of each list then counts the items found ("Search found 2 items:
-…"), and its shield shows their worst status. Esc clears it, as do **Scan** and
-**Scan again**.
-
-Right-click one or more items for: **Detailed information**, **Fix**,
-**Open file location**, **Open software folder**, **Open homepage**,
-**Search on Google**, **Scan again**, **Copy**, **Copy paths** and
-**Select all**. **Fix** opens the **Fix software** window for the selected items
-that can be fixed (see [Fixing software](#fixing-software)). **Scan again**
-first reads the installed software again, so a program you have just updated
-shows its new version. Meanwhile, as during a scan, the mouse pointer shows that
-eMudScan is busy, except over **Stop**.
-
-With several items selected, each entry says how many things it acts on, and
-counts once what the items share: for three items in two folders,
-**Open 2 software folders**. **Search on Google** searches once per software,
-and names what it searches for (the first three, then how many more), such as
-**Search on Google: “cacert.pem”**. For a certificate bundle, it searches for
-its software, without the name of the file; for a bundle that belongs to no
-software, for the name of the file. Several homepages or searches open in one
-start of your default browser, as tabs. The entries that
-open a window or a tab for each thing (**Open…** and **Search…**) ask first when
-there are more than two.
+Click a path to show it in File Explorer. Right-click one or more items to open
+their file location, folder or homepage, search for them on Google, scan them
+again, copy them or fix them.
 
 ## The detailed information window
 
-Double-click an item (or press Enter) to see its software date and where that
-date comes from, its folders, homepage and package, and the
-**recommended action**. Commands are shown in black blocks, with a copy button,
-for you to run. A line too long for its block ends with a gray ↩, and its rest
-starts with ↪ on the next row, at the indent of the line: it is still one line,
-and the signs are not copied. When eMudScan can run them for you,
-**Fix this software** does so, once you confirm (see
-[Fixing software](#fixing-software)).
+Double-click an item (or press Enter) to see where it is, its software date, its
+homepage and the **recommended action**, with the PowerShell commands to copy
+and run. When eMudScan can run them for you, **Fix this software** does so, once
+you confirm (see [Fixing software](#fixing-software)).
 
-With several items selected, **Detailed information on 3 items…** (or Enter)
-opens one window that shows them one at a time. The block in its top right
-corner says which one is shown (**2 / 3**) and goes to the first, previous, next
-or last item; it stays in place as the page scrolls. Alt+Home, Alt+←, Alt+→ and
-Alt+End do the same. A link to another item opens that item on its own; closing
-it brings you back.
+Commands marked **(Run as administrator)** need a PowerShell opened with
+**Run as administrator**. The **Fix this software** button asks for these rights
+itself.
 
-A path in your user folder is shown with the variable that names that folder, as
-File Explorer understands it: `%USERPROFILE%`, `%APPDATA%` or `%LOCALAPPDATA%`
-(`%LOCALAPPDATA%\Programs\App\app.exe`). So are the paths of the report, the log
-and the Fix window, and the commands name the folder as PowerShell does
-(`"$env:LOCALAPPDATA\Programs\App\app.exe"`): they are shorter, and your user
-name stays out of them. The links and the copied paths keep the full path.
+With several items selected, Enter opens one window for all of them: Alt+← and
+Alt+→ go from one item to the next.
 
 <p align="center">
   <img src="images/details-window.png" width="560" alt="The detailed information window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown, or with Fix this software">
 </p>
 
-Above the commands of a fix, a sentence says what to do with them: click
-**Fix this software**, or run them yourself in PowerShell (“To fix this
-vulnerability, click **Fix this software**, or run this script yourself in
-PowerShell 5.1, 7.6 or 7.7:”). The versions, which only scripts have, are those
-of Windows PowerShell and PowerShell that the tests run the scripts in, on
-GitHub. For the restore of backups, it names the button as it then reads,
-**Restore the backups**. When the commands need administrator rights, it ends
-with “in PowerShell (Run as administrator):”, the last words in bold red: open
-PowerShell with **Run as administrator** to run them yourself; the button asks
-for these rights itself. Commands that the button does not run, such as removing
-a setting, only say “Run this command in PowerShell:”.
-
-Before changing a file, these commands back it up next to the original, with the
-date and time in its name (`cacert.pem.emudscan-20261031-011500.bak`) and the
-dates of the original, which a restore puts back too. As long as such a backup
-exists, the detailed information window offers a command to restore it, and
-**Restore the backup** to run it for you (see
-[Restoring a backup](#restoring-a-backup)).
-
-In C:\ProgramData, any user can create folders, and often add files to the
-folders of others, so a program or a backup there may have been put there by
-someone else. For files that need administrator rights, eMudScan therefore gives
-the pip commands and the restore command only when the files and their folders
-belong to administrators, SYSTEM, TrustedInstaller or you, and gives no pip
-command for a Python whose folders other users can add files to: Python would
-load what they put there.
-
-For a browser that may not be protected, links open the test pages of
-we-have-a-problem.com in that browser, so that you can check for yourself.
-eMudScan starts only a browser registered in Windows or kept in a folder that
-only administrators or you can change (Program Files, Windows, your user
-folder): for another one, the detailed information gives the pages’ addresses to
-open in it.
+- **Paths.** A path in your user folder is shown with `%USERPROFILE%`,
+  `%APPDATA%` or `%LOCALAPPDATA%`, also in the report and the log: your user
+  name stays out of them.
+- **Backups.** Before changing a file, the commands back it up next to the
+  original, with the date and time in its name
+  (`cacert.pem.emudscan-20261031-011500.bak`). See
+  [Restoring a backup](#restoring-a-backup).
+- **Files that other users can change.** eMudScan gives no pip command and no
+  restore command to run as administrator when another user of the PC could have
+  put or changed the files, as in some folders of C:\ProgramData.
+- **Browsers.** For a browser that may not be protected, links open the test
+  pages of we-have-a-problem.com in that browser, so that you can check for
+  yourself.
 
 ## Fixing software
 
-eMudScan can run for you the commands that the detailed information gives to fix
-a software, and no others. One fix has two versions, the one that replaces the
-ssl files of a Python: the detailed information gives a script that you can copy
-and run without eMudScan, and the **Fix software** window shows, and runs, the
-same script with eMudScan’s own tests of that Python (see
-[Other software](checks.md#other-software)). The fixes:
+**Fix**, beside **Scan**, opens the **Fix software** window once a scan has
+found software that eMudScan can fix. **Fix** in the right-click menu of the
+lists opens it for the selected items only. The fixes are those of the detailed
+information:
 
-- an update through the package manager that installed the software or its
-  component: Scoop, WinGet, Chocolatey, the Python Install Manager, uv, pipx,
-  pip or conda, or Deno’s own updater;
-- an outdated certificate bundle replaced with Mozilla’s current one, which
-  PowerShell downloads from curl.se and checks against the SHA-256 checksum that
-  curl publishes;
+- an update through the package manager that installed the software: Scoop,
+  WinGet, Chocolatey, the Python Install Manager, uv, pipx, pip or conda, or
+  Deno’s own updater;
+- an outdated certificate bundle replaced with Mozilla’s current one, downloaded
+  from curl.se and checked (SHA-256);
 - the compromised certificates added to a Java block list;
 - the node.exe inside a program replaced with the latest release of its Node.js
-  release line, which eMudScan looks for when the Fix window opens, and which
-  PowerShell downloads from nodejs.org and checks against its SHA-256 checksum,
-  the OpenJS Foundation’s signature and its version (see
-  [Other software](checks.md#other-software)); this fix is not ticked by
-  default;
+  release line, downloaded from nodejs.org and checked (SHA-256, OpenJS
+  Foundation signature, version);
 - the ssl files of a Python inside a program replaced with those of the latest
-  release of its line, which eMudScan looks for when the Fix window opens, and
-  which PowerShell downloads from python.org or python-build-standalone and
-  checks against its SHA-256 checksum, with tests before and after (see
-  [Other software](checks.md#other-software)); this fix is not ticked by
-  default.
+  release of its line, downloaded from python.org or python-build-standalone and
+  checked (SHA-256, then tests before and after: the original files are put back
+  if one fails).
 
-The other commands of the detailed information, such as removing a setting, are
-left for you to run; restoring a backup has its own button (see
-[Restoring a backup](#restoring-a-backup)). Software that only its publisher,
-Windows Update, the Microsoft Store or a network administrator can fix is not
-listed: its detailed information says what to do.
+The last two change a program that its publisher has not updated yet: they are
+not ticked by default. See [Other software](checks.md#other-software).
 
-**Fix**, beside **Scan**, is enabled once a scan has found software that
-eMudScan can fix. It opens the **Fix software** window; **Fix** in the
-right-click menu of the lists opens it for the selected items only. When a fix
-downloads the latest release of a Python or a Node.js, eMudScan first looks for
-it: meanwhile, **Fix** and the other controls are greyed out, as during a scan.
-The window has, from top to bottom:
+Software that only its publisher, Windows Update, the Microsoft Store or a
+network administrator can fix is not listed: its detailed information says what
+to do.
 
-- **Select All**, **Select None**, how many software are selected, and a
-  reminder of what the list can do.
-- The software that eMudScan can fix, with its vulnerable component, the fix,
-  its location and, after the fixes, the result. They are all ticked, except
-  those whose fix replaces a component inside a program (its `node.exe`, the ssl
-  files of its Python), a heavier change: tick them yourself, or click
-  **Select All**. A software that has such a fix and others has a row for each,
-  so that the others stay ticked. A software found in several places has a row
-  for each. Click a location to show it in File Explorer. Double-click a
-  software to open its detailed information, where you can also fix it, or
-  restore its backup: the list is updated when they close. Right-click a
-  software for the menu of the main window: its detailed information, open its
-  file, folder or homepage, search for it, scan it again, or copy its row
-  (Ctrl+C) or its paths. Click a column header to sort the list by that column;
-  click it again to reverse the order. Drag the bar below the list to make it
-  taller or shorter, down to a single row.
-- The PowerShell commands that will run for the ticked software (or for the
-  software you click), grouped by software. A line drawn across the console
-  separates two software. Each one starts with its name, its location
-  (`# Location: …`), then, above the commands of each of its fixes, a line that
-  says which fix it is, such as `# Fix: Replace the ssl files of Python…`, or
-  `# Fix 1: Update with Scoop` and
-  `# Fix 2, if the update does not fix it: Replace the certificate bundle…`. The
-  console shows the same while the fixes run. A line too long for the console
-  ends with ↩ and goes on after ↪, as in the detailed information window. If
-  they run in a different order, the warning before they run explains it. When
-  copied, the line between two software is a comment, which PowerShell skips.
-  The button in their top right corner copies them, with their comments, as in
-  the detailed information window; after the fixes, it copies their results. You
-  can also select part of the text and copy it (Ctrl+C, or right-click). In the
-  fix of the ssl files of a Python, the name `check_ssl.py` is a link: click it
-  to read that file, in colors, the tests that the fix runs in that Python,
-  before you run anything; the button in its top right corner copies it. That
-  fix first says what `$emudscanFiles` is, which its commands use: the folder
-  that eMudScan makes for the fix in your Temp folder, with `check_ssl.py` and
-  its test certificates, and deletes after it. When the fix runs, its first
-  command shows that folder.
-- **Back up the files to change**, **Fix the selected software**, **Stop** and
-  **Close**.
+The window shows the PowerShell commands that will run, each software fix in a
+separate block. In the fix of a Python, `check_ssl.py` is a link to the tests
+that the fix runs in that Python.
 
 <p align="center">
   <img src="images/fix-window.png" width="860" alt="The Fix software window: the software that eMudScan can fix, Inkscape ticked, and the PowerShell commands that replace its outdated certificate bundle">
 </p>
 
-**Fix this software**, in the detailed information window, opens the same window
-for that software alone, without the list and without **Stop**, since a fix that
-has started to change files always runs to its end; its button is
-**Run the fix now**.
-
 **Back up the files to change**, ticked by default, backs up each file before it
-is replaced or changed (a certificate bundle, a Java block list, a node.exe, the
-ssl files of a Python), next to the original, as the detailed information window
-does (see above). It does not cover the updates made by package managers or pip,
-so it is shown only when a fix to run backs up a file. The ssl files of a Python
-are backed up in any case, so that the fix can put them back if a test fails; if
-the box is cleared, these backups are deleted once the tests pass.
+is replaced or changed, next to the original. It does not cover the updates made
+by package managers.
 
-Nothing runs until you accept a warning, which says what the commands do: they
-update software and replace files; package managers will not ask you anything,
-as the commands confirm the updates and accept the license agreements for you;
-and some changes cannot be undone. **Decline** is its default button. Close the
-software to fix and save your work first.
+Nothing runs until you accept a warning. Package managers will not ask you
+anything: the commands confirm the updates and accept the license agreements for
+you. Some changes cannot be undone. Close the software to fix and save your work
+first.
 
 <p align="center">
   <img src="images/fix-warning.png" width="520" alt="The warning shown before the fixes run: what the commands change, that some changes cannot be undone, and that eMudScan comes with no warranty; Decline is the default button">
@@ -277,64 +145,26 @@ software to fix and save your work first.
 
 Once you accept:
 
-1. Updates (Scoop, WinGet, Chocolatey, Python Install Manager, uv, pipx and
-   Deno’s updater) run first, followed by the other fixes for the software the
-   updates did not fix. In each stage, commands that require administrator
-   rights run last, together, so Windows asks for permission at most once per
-   stage.
-2. The commands run in Windows PowerShell 5.1, which is part of Windows. On a PC
-   where it was removed, they run in PowerShell 7 or later, installed in Program
-   Files (`C:\Program Files\PowerShell\7\pwsh.exe`); never in a `pwsh.exe` found
-   elsewhere, such as in the PATH, since some commands run as administrator. The
-   window names it above the commands and above their results, and the report
-   names it too. When there is neither, the window says so, and its button that
-   runs the fixes stays disabled. The commands that need administrator rights
-   run in a PowerShell for which Windows asks your permission, in a window that
-   shows Microsoft as the verified publisher. eMudScan itself does not need
-   them.
-3. The console shows each command in the colors of PowerShell 7, with its result
-   in the column on its left: “…” while it runs, then a green ✔ or a red ✘.
-   Below come what it showed, its warnings in yellow, its errors in red, then
-   its exit code when it failed, and a blank line after the commands of each
-   software. The fixes that change files (the ssl files of a Python, a
-   certificate bundle, a Java block list, the restore of backups) are scripts:
-   each of their lines is one command, a comment, or a line that opens or closes
-   a block. A script stops at its first command that fails (✘); in the fix of a
-   Python, inside `try`, the failure goes to `catch`, which puts the original
-   files back. Only the commands that ran have a result: a comment, a line of a
-   block, or a command that did not run, has none. The other fixes still run.
-   **Stop** never stops a command in the middle: PowerShell first ends the
-   commands it was given (those of one software, or all those that need
-   administrator rights), then a red line says “Fix interrupted!”, and the
-   software not reached is left as it was. A failed connection stops the fixes
-   in the same way, since the next ones would most likely fail too: a download
-   that fails, before its fix has changed anything, or an update that fails when
-   the servers of its package manager cannot be reached (see
-   [Privacy](privacy.md#what-a-fix-connects-to)). A red line says why.
-4. Each software is checked again: the console and the **Result** column say
-   whether it is fixed, and the lists show its new status. In the console of the
-   **Fix software** window, each result ends with a link to the detailed
-   information of that software (**Detailed information on Inkscape…**). A fixed
-   software loses its check box, so that it is not fixed twice: **Select All**
-   leaves it out, and the count of selected software no longer includes it. A
-   software still not fixed after all its fixes ran is unticked, so that they do
-   not run again by mistake: tick it to run them again. When an update installed
-   no newer version, its result says so (“still not fixed (no newer version
-   installed)”). The summary of the certificate bundles is updated too: the
-   files it lists are tested again.
-5. A last line reminds you to restart any fixed software that was open: the fix
-   takes effect the next time it starts.
+1. The updates run first, then the other fixes, for the software that the
+   updates did not fix.
+2. The commands run in Windows PowerShell 5.1 or, on a PC without it, in
+   PowerShell 7 installed in Program Files. For those that need administrator
+   rights, Windows asks your permission: once for the updates, once for the
+   other fixes.
+3. Each command gets a green ✔ or a red ✘. A fix stops at its first command that
+   fails; the other fixes still run. A failed connection stops them all.
+4. **Stop** lets the running fix end, then leaves the remaining software as it
+   was.
+5. Each software is checked again: the **Result** column says whether it is
+   fixed. A software still not fixed is unticked: tick it to run its fixes
+   again.
+6. The report is saved in your Downloads folder.
+
+Restart any fixed software that was open: the fix takes effect the next time it
+starts.
 
 <p align="center">
   <img src="images/fix-results.png" width="860" alt="The Fix software window after the fix of Inkscape: a green ✓ before each command, Inkscape checked again and fixed, with a link to its detailed information, and the link to the report saved in the Downloads folder">
-</p>
-
-The **Fix software** window then saves the report in your Downloads folder, and
-gives its path, in a message and at the end of the console, as a link that shows
-it in File Explorer.
-
-<p align="center">
-  <img src="images/report-saved.png" width="400" alt="The message that gives the path of the saved report, as a link that shows it in File Explorer">
 </p>
 
 To try the Fix function without changing anything, build the simulation: see
@@ -342,47 +172,25 @@ To try the Fix function without changing anything, build the simulation: see
 
 ### Restoring a backup
 
-Once a software has nothing left to fix, and as long as eMudScan’s backups of
-its files are there, **Fix this software**, in its detailed information window,
-becomes **Restore the backup** (or **Restore the backups**). Nothing changes
-until you accept a warning, which says that the software will then trust the
-compromised certificates again. eMudScan then moves each backup back in place of
-its file, as the command of the detailed information does, and removes the files
-that the fix added (the OpenSSL libraries added beside those of a Python). The
-ssl files of a Python are restored only all together, when all the backups and
-marks of that fix are there, since some of them alone would stop its `ssl`
-module from loading; this also works after a fix that a crash interrupted during
-the copy. A file in a folder that only administrators can change, such as
-Program Files, is moved by that command, in a PowerShell for which
-Windows asks your permission: eMudScan itself does not need administrator
-rights. The software is then checked again, and a message says whether its files
-are back; if it needs fixing, its detailed information offers
-**Fix this software** again. The report keeps what was done.
+Once a software is fixed, and as long as its backups are there,
+**Fix this software** becomes **Restore the backup** in its detailed information
+window. Once you accept a warning, the files are put back as they were: the
+software then trusts the compromised certificates again.
 
 ## The report
 
-**Copy report** and **Save report** include every item, with the same
-explanations as the detailed information windows, without their commands and
-without what eMudScan offers to do itself: a report says what was found on the
-PC and what to do about it, and the windows say how. After fixes, it says what
-came of them: the result of each software and, for a command that failed, that
-command and what it showed. Its top gives eMudScan’s version, the date, the name
-of your PC and its Windows version. Before you share a report, remove what you
-want to keep private, such as the name of your PC or your user name in the
-paths. Apart from the fixes, saving a report is the only time eMudScan writes a
-file.
+**Copy report** and **Save report** include every item with its explanation,
+without the commands. After fixes, the report also gives their results.
 
-A saved report is named after your PC, the date and the time, such as
-`eMudScan-report-MY-PC-20261201-101548.txt`: the reports of several PCs can be
-kept in one folder. In the dialog of **Save report**, you can change this name.
+Its top gives eMudScan’s version, the date, the name of your PC and its Windows
+version. Before you share a report, remove what you want to keep private, such
+as the name of your PC or your user name in the paths.
 
-Each time a report is saved, by **Save report** or by the **Fix software**
-window, a note at the end of the log gives its path, as a link that shows the
-file in File Explorer: you find your reports again there, until the next scan.
-The reports do not have these notes.
+A saved report is named after your PC, the date and the time:
+`eMudScan-report-MY-PC-20261201-101548.txt`. The log ends with a link to each
+report saved since the last scan.
 
-**Save report** lets you choose the type of the file, in the list of types of
-its dialog:
+**Save report** lets you choose the type of the file:
 
 | Type | File | Use |
 |---|---|---|
@@ -390,15 +198,10 @@ its dialog:
 | JSON | `.json` | For other programs: every item with all its fields |
 | CSV | `.csv` | For a spreadsheet: one row for each item |
 
-The type you chose is offered first the next time, until you close eMudScan.
-The content of a file is always what its name says: a name that you type with
-one of these extensions gets its type.
-
 The files are in UTF-8; the text and the CSV start with a byte order mark, for
 Notepad and Excel. In the JSON and CSV files, the names of the fields and the
-keywords are in English in both languages. The texts (summary, details, log)
-are in the language of the window, and the paths are written as in the text
-report.
+keywords are in English in both languages; the texts are in the language of the
+window.
 
 ### The JSON file
 
@@ -440,22 +243,21 @@ which is also the worst status of a report without items.
 
 ### The CSV file
 
-The CSV file has one row of column names, then one row for each item. The
-values are separated by commas, whatever the regional settings of Windows. Its
-columns:
+One row of column names, then one row for each item, with commas, whatever the
+regional settings of Windows:
 
 `pc`, `windows`, `created`, `tool_version`, `group`, `status`, `program`,
-`program_version`, `component`, `component_version`, `summary`,
-`software_date`, `file`, `folder`, `copies`, `fix`
+`program_version`, `component`, `component_version`, `summary`, `software_date`,
+`file`, `folder`, `copies`, `fix`
 
 The values are those of the JSON fields. `copies` gives the other places of the
-finding, and `fix` the kinds of its fixes, separated by ` | `. The explanations,
-the commands and the log are only in the text and JSON files.
+finding, and `fix` the kinds of its fixes, separated by ` | `. The explanations
+and the log are only in the text and JSON files.
 
 A value that starts with `=`, `+`, `-` or `@` gets an apostrophe before it, so
 that a spreadsheet does not run it as a formula. If Excel shows each row in one
-cell (its list separator is not the comma, as with French regional settings),
-import the file with **Data** > **From Text/CSV**.
+cell, as with French regional settings, import the file with **Data** >
+**From Text/CSV**.
 
 ## Keyboard shortcuts
 
@@ -474,51 +276,19 @@ import the file with **Data** > **From Text/CSV**.
 | Tab, Shift+Tab | The next control, the one before; inside a text, its links and copy buttons first |
 | Enter, Space | On a link or a copy button reached with Tab: open the link, copy |
 
-Hover over the **Scan**, **Copy report** and **Save report** buttons to see
-their keyboard shortcuts.
-
-## The About box
-
-The ⓘ icon next to the version opens it: what eMudScan does, who made it, its
-license, what fixes change and connect to, the online test and what it sends
-(including your Windows edition and version), the reference data and the
-disclaimer. **Licenses and notices** shows the full license texts.
-**Check for updates** closes the box and looks for a new version of eMudScan
-(see [Updates](#updates)); it is greyed out when **Online checks and updates**
-is cleared, and while a scan runs.
-
 ## Updates
 
 With **Online checks and updates** checked, eMudScan looks for a new version of
-itself when a scan starts, once in a session, before the scan runs, and each
-time you click **Check for updates** in the About box. Meanwhile, **Scan** is
-greyed out, the mouse pointer shows that eMudScan is busy, and the log says so
-in a section of its own, **eMudScan Update**, then gives the answer: the new
-version, or that yours is the latest one. The scan keeps that section at the top
-of its log. A newer version is offered in a dialog that shows the release notes
-of the new versions, the newest first, up to 10, in a frame that scrolls:
-**Update now** or **Not now**. Those of the latest version show at once; those
-of the other new versions come right after. With **Not now**, you are back in
-the main window, and the scan starts as usual when you clicked **Scan**. With
-**Update now**, it does not start: the new version opens, ready to scan. So an
-update never stops a scan.
+itself at the first scan of a session, and when you click **Check for updates**
+in the About box. A new version is offered with its release notes: click
+**Update now** to install it, or **Not now** to return to the main window.
 
-When there is no new version, **Check for updates** says so in a message; when
-GitHub cannot be reached, it says why.
+**Update now** downloads the new `eMudScan.exe` from GitHub and checks it
+(immutable release, SHA-256) before it replaces yours. If the folder of
+`eMudScan.exe` needs administrator rights, such as Program Files, Windows asks
+for them. No backup of the old version is kept.
 
-**Update now** downloads the new `eMudScan.exe` from GitHub, with a progress
-bar, and checks it: its release must be immutable, and its SHA-256 checksum must
-be the one that GitHub computed and the one written in its release notes.
-**Cancel** stops the download and closes the dialog. When the download or a
-check fails, the dialog says why, and **Try again** downloads it again.
-
-Then eMudScan closes, and a copy of it, from a folder of its own in Temp,
-replaces `eMudScan.exe` with the new version in one step, so that it is never
-half written, and starts it. The new version deletes that folder. If the folder
-of `eMudScan.exe` needs administrator rights, such as Program Files, Windows
-asks for them, for the copy only. No backup of the old version is kept. If the
-update fails, the old version starts again, and a message says why and gives the
-release page. `eMudScan-cli.exe` never updates itself. See
+`eMudScan-cli.exe` never updates itself. See
 [Privacy](privacy.md#the-updates-of-emudscan).
 
 ## Command line
@@ -530,11 +300,9 @@ release page. `eMudScan-cli.exe` never updates itself. See
 
 ### Scanning without the window
 
-`eMudScan-cli.exe` is a second program, for administrators who scan from a
-script or a deployment tool. It is the same scanner, as a console program: it
-works alone, without `eMudScan.exe`, and command prompts wait for it. It scans,
-then exits. It asks nothing, never runs a fix, and needs no administrator
-rights.
+`eMudScan-cli.exe` is the same scanner as a console program, for administrators
+who scan from a script or a deployment tool. It works alone, without
+`eMudScan.exe`. It never runs a fix, and needs no administrator rights.
 
 | Option | Effect |
 |---|---|
@@ -544,9 +312,8 @@ rights.
 | `--lang en`, `--lang fr` | The language of the log and the reports |
 | `--help` | Show the options |
 
-The log is written to the standard error output while the scan runs. Without
-`--report`, the text report is then written to the standard output. A wrong
-option stops the scan before it starts.
+The log goes to the standard error output. Without `--report`, the text report
+goes to the standard output.
 
 The exit code gives the worst status found:
 
@@ -572,9 +339,6 @@ In PowerShell:
 $LASTEXITCODE
 ```
 
-To keep a report, prefer `--report` to redirecting the standard output: the
-file is then written by eMudScan itself, and no shell changes its characters.
-
 ## If your antivirus flags eMudScan.exe
 
 Some antivirus programs flag new programs that are not code-signed, such as
@@ -584,16 +348,16 @@ copy of `eMudScan.exe`:
 - Its SHA-256 must match the one on its
   [release page](https://github.com/3c0/eMudScan/releases). In PowerShell:
   `Get-FileHash eMudScan.exe`.
-- The release page links to the results of an antivirus scan of
-  `eMudScan.exe` made on the release date.
+- The release page links to the results of an antivirus scan of `eMudScan.exe`
+  made on the release date.
 - With the [GitHub CLI](https://cli.github.com/), you can verify that GitHub
   built it from eMudScan’s source code:
   `gh attestation verify eMudScan.exe -R 3c0/eMudScan`.
 
 Only your antivirus’s publisher can fix a false positive: report the file to
 them, usually through a form on their website. eMudScan’s author cannot change
-what an antivirus reports, so please do not report false positives in
-eMudScan’s issues.
+what an antivirus reports, so please do not report false positives in eMudScan’s
+issues.
 
 You can also build `eMudScan.exe` yourself from its source code, and check that
 you get the same file as the one of a release: see
