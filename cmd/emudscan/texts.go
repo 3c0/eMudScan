@@ -799,6 +799,7 @@ Code de sortie\u00a0: 0 OK ou information seule, 1 avertissement, 2 mise à jour
 	"saved.note":       {"Report saved: %s", "Rapport enregistré\u00a0: %s"}, // in the log, and by eMudScan-cli.exe
 	"saveError":        {"The report could not be saved: %v", "Le rapport n’a pas pu être enregistré\u00a0: %v"},
 	"dlg.copyBlock":    {"Copy these commands", "Copier ces commandes"},
+	"dlg.copyScript":   {"Copy this script", "Copier ce script"},
 	"dlg.copiedBlock":  {"Commands copied to the clipboard.", "Commandes copiées dans le presse-papiers."},
 	"dlg.menuCopy":     {"Copy\tCtrl+C", "Copier\tCtrl+C"},
 	"dlg.menuCopyAll":  {"Copy all", "Tout copier"},

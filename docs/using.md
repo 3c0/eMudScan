@@ -239,10 +239,11 @@ The window has, from top to bottom:
   can also select part of the text and copy it (Ctrl+C, or right-click). In the
   fix of the ssl files of a Python, the name `check_ssl.py` is a link: click it
   to read that file, in colors, the tests that the fix runs in that Python,
-  before you run anything. That fix first says what `$emudscanFiles` is, which
-  its commands use: the folder that eMudScan makes for the fix in your Temp
-  folder, with `check_ssl.py` and its test certificates, and deletes after it.
-  When the fix runs, its first command shows that folder.
+  before you run anything; the button in its top right corner copies it. That
+  fix first says what `$emudscanFiles` is, which its commands use: the folder
+  that eMudScan makes for the fix in your Temp folder, with `check_ssl.py` and
+  its test certificates, and deletes after it. When the fix runs, its first
+  command shows that folder.
 - **Back up the files to change**, **Fix the selected software**, **Stop** and
   **Close**.
 

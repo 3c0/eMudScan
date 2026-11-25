@@ -376,6 +376,9 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 				runs = append(runs, logRun{"\n", rgb(r, g, bl), false, false})
 				b.script.appendScript(runs, false) // its long lines with the wrap signs
 			}
+			// the button in its top right corner copies it, as in the consoles
+			b.script.copyText = func() string { return b.text }
+			b.script.copyTip = func() string { return T("dlg.copyScript") }
 		} else {
 			b.font = createFont(9, a.dpi, 400, false, "Consolas")
 			text := strings.ReplaceAll(b.text, "\n", "\r\n")
@@ -385,9 +388,11 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 			m := uintptr(s(14))
 			send(b.edit, 0x00D3 /* EM_SETMARGINS */, 0x1|0x2, m|m<<16)
 		}
-		b.copy, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up(T("dlg.copyAll")), uintptr(wsChild|wsVisible|wsTabStop),
-			0, 0, 10, 10, hwnd, idTextCopy, 0, 0) // on the left of OK: before it for Tab
-		send(b.copy, wmSetFont, a.fontUI, 0)
+		if !b.python { // the script has its own copy button
+			b.copy, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up(T("dlg.copyAll")), uintptr(wsChild|wsVisible|wsTabStop),
+				0, 0, 10, 10, hwnd, idTextCopy, 0, 0) // on the left of OK: before it for Tab
+			send(b.copy, wmSetFont, a.fontUI, 0)
+		}
 		b.ok, _, _ = pCreateWindowExW.Call(0, up("BUTTON"), up("OK"), uintptr(wsChild|wsVisible|wsTabStop|0x1 /* BS_DEFPUSHBUTTON */),
 			0, 0, 10, 10, hwnd, 1 /* IDOK */, 0, 0)
 		send(b.ok, wmSetFont, a.fontUI, 0)
@@ -395,6 +400,10 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 		if b.python {
 			a.placeBox(hwnd, b.over, s(900), s(700))
 			b.script.scrollTo(0)
+			// the script has the focus, for the keys that scroll it: its frame shows it
+			// at once, once the box shows (posted: Windows sets what shows when the box
+			// opens, after this)
+			pPostMessageW.Call(hwnd, 0x0127 /* WM_CHANGEUISTATE */, 2 /* UIS_CLEAR */ |0x1<<16 /* UISF_HIDEFOCUS */, 0)
 		} else {
 			a.placeBox(hwnd, b.over, s(660), s(540))
 			send(b.edit, 0x00B1 /* EM_SETSEL */, 0, 0)
@@ -414,7 +423,9 @@ func licProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 		}
 		pSetWindowPos.Call(b.edit, 0, 0, uintptr(top), uintptr(w), uintptr(max(h-b.barH-top, 0)), 0x0004|0x0010)
 		pSetWindowPos.Call(b.ok, 0, uintptr(w-s(16)-s(88)), uintptr(h-b.barH+s(13)), uintptr(s(88)), uintptr(s(30)), 0x0004|0x0010)
-		pSetWindowPos.Call(b.copy, 0, uintptr(s(16)), uintptr(h-b.barH+s(13)), uintptr(s(110)), uintptr(s(30)), 0x0004|0x0010)
+		if b.copy != 0 {
+			pSetWindowPos.Call(b.copy, 0, uintptr(s(16)), uintptr(h-b.barH+s(13)), uintptr(s(110)), uintptr(s(30)), 0x0004|0x0010)
+		}
 		pInvalidateRect.Call(hwnd, 0, 0)
 		return 1
 	case wmGetMinMaxInfo:
