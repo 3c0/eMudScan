@@ -76,8 +76,12 @@ them is not merged:
   change to an existing one, `### Deprecated` for a feature that will be
   removed, `### Removed` for a removed feature, `### Fixed` for a bug fix and
   `### Security` for a vulnerability.
-  Write it on a single line, for developers: technical words, 200 characters at
-  most.
+  An entry is for developers, written as
+  [Common Changelog](https://github.com/vweevers/common-changelog) asks: one
+  line per change, in the imperative, starting with a verb (“Add…”, “Rename…”,
+  “Fix…”), in technical words, with the previous behavior when it changed. A
+  simple change stays short; an important feature or a major rewrite may take up
+  to 650 characters. A change that breaks a use starts with `**Breaking:**`.
 - Commit messages follow
   [Conventional Commits](https://www.conventionalcommits.org/):
   `type(scope): description`, in lowercase and without a final period. The type

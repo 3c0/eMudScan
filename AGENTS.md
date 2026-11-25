@@ -74,8 +74,13 @@ PowerShell from System32 only (`sysDLL`), standard library only. Also:
 - `CHANGELOG.md` follows
   [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/): each change
   that users can notice gets one entry under `## [Unreleased]`, in `### Added`,
-  `### Changed`, `### Fixed`… An entry is for developers: technical words, 200
-  characters at most, no link to commits.
+  `### Changed`, `### Fixed`… An entry is for developers, written as
+  [Common Changelog](https://github.com/vweevers/common-changelog) asks: one
+  line per change, in the imperative, starting with a verb (“Add…”, “Rename…”,
+  “Fix…”), in technical words, with the previous behavior when it changed. A
+  simple change stays short; an important feature or a major rewrite may take up
+  to 650 characters. A change that breaks a use starts with `**Breaking:**`. No
+  link to commits.
 - `.github/release-notes/<version>.md` is for the users, while the changelog
   is for developers. It says what they can now do, in plain words, without file
   names: one sentence that sums up the version; `### Highlights`, the few main
