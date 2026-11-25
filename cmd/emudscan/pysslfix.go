@@ -33,7 +33,7 @@ import (
 type pySSLSource struct {
 	version, url, sha256 string
 	zip                  bool   // python.org's embeddable package, its files at its root; else python-build-standalone's archive, in python\DLLs
-	tag                  string // python-build-standalone's release, such as "20261110"
+	tag                  string // python-build-standalone's release, such as "20261124"
 }
 
 func (s pySSLSource) from() string {
@@ -58,18 +58,18 @@ var pbsFiles = []string{"_ssl.pyd", "_hashlib.pyd", "libssl-3-x64.dll", "libcryp
 
 // pbsTag is the release of python-build-standalone written here.
 const (
-	pbsTag      = "20261110"
+	pbsTag      = "20261124"
 	pbsReleases = "https://github.com/astral-sh/python-build-standalone/releases/"
 	pbsRelease  = pbsReleases + "download/" + pbsTag + "/"
 )
 
 // pbsSSL: python-build-standalone pbsTag, x64, by minor version.
 var pbsSSL = map[string]pySSLSource{
-	"3.11": {version: "3.11.18", url: pbsRelease + "cpython-3.11.18%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "f31751f4a8483f5ac7cd77ad83f8dfb80d9f2a7245bff1585e27516c777fb46f", tag: pbsTag},
-	"3.12": {version: "3.12.16", url: pbsRelease + "cpython-3.12.16%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "355ee61b8207b91574491b1c6dc9b0ebb4408fc56bfafe498f3ef439314b52dc", tag: pbsTag},
-	"3.13": {version: "3.13.18", url: pbsRelease + "cpython-3.13.18%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "2e0fed09d48989f64c9305da9ff2d37a41c0d13ab2aa6283405b2b620dfbf805", tag: pbsTag},
-	"3.14": {version: "3.14.10", url: pbsRelease + "cpython-3.14.10%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "32b6cf90a03e2bc15fda8d2ab7ff78c4870f138887d612932650ce764efaab8f", tag: pbsTag},
-	"3.15": {version: "3.15.2", url: pbsRelease + "cpython-3.15.2%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "ecd90d78accb906e3d47f6cdb409a610da10475f94d15ebdd8cb2e0561b71df6", tag: pbsTag},
+	"3.11": {version: "3.11.18", url: pbsRelease + "cpython-3.11.18%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "ae1f5a86e700982f23eefec97fd71622a5719b5b7b952c0a43bad94c63a47825", tag: pbsTag},
+	"3.12": {version: "3.12.16", url: pbsRelease + "cpython-3.12.16%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "96694b50dcfde13d56e40346ddaa552a9cd650290e9b933cecf83c1d82226960", tag: pbsTag},
+	"3.13": {version: "3.13.18", url: pbsRelease + "cpython-3.13.18%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "a455077dd29dd8637b3ab6d745fc0a210d3504a0dd6bd31195ce1e11a81ec9ae", tag: pbsTag},
+	"3.14": {version: "3.14.10", url: pbsRelease + "cpython-3.14.10%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "72d45d2d16c509293999550c684003b0411ab9ec6e473675d1df2af5be050790", tag: pbsTag},
+	"3.15": {version: "3.15.2", url: pbsRelease + "cpython-3.15.2%2B" + pbsTag + "-x86_64-pc-windows-msvc-install_only_stripped.tar.gz", sha256: "547cdbb844edc425b235513fdf0267f64e8e59c8f484527bb7ef92d3aad91dd9", tag: pbsTag},
 }
 
 // pyorgFiles is where python.org has the files of its releases, each in the folder of

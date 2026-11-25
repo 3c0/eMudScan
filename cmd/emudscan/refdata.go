@@ -30,7 +30,9 @@ var dataFS = refdata.FS
 // licensesText is what the About box shows under "Licenses and notices": the
 // notice and the license of the reference data (Apache License 2.0, section 4
 // asks for both with any copy), then the license of Go, whose standard library is
-// built into the program (its license asks for its notice in binary copies).
+// built into the program (its license asks for its notice in binary copies), and a
+// notice about python-build-standalone, whose files the fix of a Python downloads:
+// eMudScan includes none of them, but names where they come from, and their license.
 func licensesText() string {
 	read := func(name string) string {
 		b, _ := dataFS.ReadFile(name)
@@ -47,6 +49,8 @@ func licensesText() string {
 		read("LICENSE-we-have-a-problem.txt"),
 		rule + "\n" + T("lic.go") + "\n" + rule,
 		read("LICENSE-go.txt"),
+		rule + "\n" + T("lic.pbs") + "\n" + rule,
+		T("lic.pbsNote"),
 	}
 	return strings.Join(parts, "\n\n") + "\n"
 }

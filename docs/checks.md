@@ -94,7 +94,7 @@ of python-build-standalone, whose releases are immutable; on python.org, in its
 list of releases, where it takes the latest one of the line that has Windows
 files. When it finds none, or when **Online checks and updates** is cleared, the
 commands name the release written in eMudScan (Python 3.14.10 or 3.15.2;
-python-build-standalone 20261110), and the window says so. The fix is a script
+python-build-standalone 20261124), and the window says so. The fix is a script
 that stops at its first command that fails. PowerShell backs up each file it
 replaces. It has two versions. The detailed information gives the one that runs
 without eMudScan, also when it is pasted into a PowerShell window: before and

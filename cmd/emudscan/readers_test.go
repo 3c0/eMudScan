@@ -142,6 +142,7 @@ func TestLicensesText(t *testing.T) {
 		"END OF TERMS AND CONDITIONS",
 		"Copyright 2009 The Go Authors.",
 		"Redistributions in binary form must reproduce the above",
+		"python-build-standalone (Mozilla Public License 2.0)\nSource: github.com/astral-sh/python-build-standalone",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("missing %q", want)

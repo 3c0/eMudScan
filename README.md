@@ -115,4 +115,4 @@ Copyright © 2026 [3c0](https://github.com/3c0). eMudScan is free software, lice
 
 The reference data comes from [emudhra.we-have-a-problem.com](https://emudhra.we-have-a-problem.com) by Dennis Jackson and contributors ([source](https://github.com/galadran/we-have-a-problem.com), Apache License 2.0).
 
-eMudScan is an independent tool. It is not affiliated with or endorsed by eMudhra, Sectigo, Microsoft, the publishers of the software it checks, or the authors of emudhra.we-have-a-problem.com.
+eMudScan is an independent tool. It is not affiliated with or endorsed by eMudhra, Sectigo, Microsoft, the publishers of the software it checks, or the authors of emudhra.we-have-a-problem.com. The same goes for the publishers of the files that its fixes download: the Python Software Foundation, Astral, the OpenJS Foundation and the curl project.
