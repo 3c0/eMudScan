@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - In the detailed information, the Fix windows and the log, a word too long for its line, such as a URL or a path, is cut after a slash, a backslash or a hyphen, instead of in the middle of a name such as x86_64.
 - In the Fix software window, a click on a row scrolls the console so that the head of its software is at its top. A click on a copy of a software, such as one of two copies of Python inside the same program, did not scroll it at all.
 - `scripts/build.ps1` now works in Windows PowerShell 5.1, where it stopped with “no Go files”: it no longer gives go an empty `-tags` option, which Windows PowerShell 5.1 does not pass.
+- A button that is greyed out, such as **Fix** before a scan, or **Check for updates** during a scan, now shows its tooltip, which says when it can be used. A greyed-out button gets no mouse messages, so its tooltip never showed.
 
 ## [3.1.2] - 2026-11-12
 

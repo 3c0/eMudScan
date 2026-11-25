@@ -628,6 +628,7 @@ func (a *ui) layout() {
 	for _, l := range a.lists() {
 		a.fitColumns(l, false)
 	}
+	placeDisabledTools(a.hwnd)
 }
 
 // listClientWidth is the width available to the columns of a list: its client width,
@@ -1988,6 +1989,7 @@ func (a *ui) reset() {
 		pDestroyWindow.Call(t)
 	}
 	a.fixedTips = nil
+	delete(disabledTools, a.hwnd)
 	childList = nil
 	pEnumChildWindows.Call(a.hwnd, collectChilds, 0)
 	for _, h := range childList {

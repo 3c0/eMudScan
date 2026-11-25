@@ -200,6 +200,7 @@ func aboutProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 		b.paint(hwnd, wParam, rc)
 		return 1
 	case wmDestroy:
+		delete(disabledTools, hwnd)
 		if b.doc != nil {
 			b.doc.destroy()
 		}
@@ -276,6 +277,7 @@ func (b *aboutBox) build(hwnd uintptr) {
 	send(b.updateBtn, wmSetFont, a.fontUI, 0)
 	pEnableWindow.Call(b.updateBtn, boolArg(!a.onlineOff && !a.running && !a.updateBusy))
 	addTool(tip, hwnd, b.updateBtn, nil, T("tip.update"))
+	addDisabledTool(tip, hwnd, b.updateBtn, T("tip.update")) // greyed out during a scan, or with the box cleared
 	b.iconX, b.iconY = left, top
 	a.placeBox(hwnd, a.hwnd, w, y+pad+btnH+pad)
 	pSetFocus.Call(ok)

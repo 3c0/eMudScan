@@ -811,7 +811,7 @@ Code de sortie\u00a0: 0 OK ou information seule, 1 avertissement, 2 mise à jour
 	"about.caption":    {"eMudScan - About", "eMudScan - À propos"},
 	"about.licenses":   {"Licenses and notices", "Licences et mentions"},
 	"about.update":     {"Check for updates", "Rechercher des mises à jour"},
-	"tip.update":       {"Closes this box and asks GitHub for the latest release of eMudScan. Only when “Online checks and updates” is checked, and not during a scan.", "Ferme cette fenêtre et demande à GitHub la dernière version d’eMudScan. Seulement quand «\u00a0Vérifications et mises à jour en ligne\u00a0» est cochée, et pas pendant un scan."},
+	"tip.update":       {"Closes this box and asks GitHub for the latest release of eMudScan.\nOnly when “Online checks and updates” is checked, and not during a scan.", "Ferme cette fenêtre et demande à GitHub la dernière version d’eMudScan.\nSeulement quand «\u00a0Vérifications et mises à jour en ligne\u00a0» est cochée, et pas pendant un scan."},
 
 	// the update of eMudScan (update.go): the dialog and the messages
 	"log.updateTitle":     {"eMudScan Update", "Mise à jour d’eMudScan"},

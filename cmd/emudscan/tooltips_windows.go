@@ -45,8 +45,46 @@ func (a *ui) addTip(ctls []uintptr, text string) uintptr {
 		ti := toolInfo{Flags: 0x1 | 0x10 /* TTF_IDISHWND|TTF_SUBCLASS */, Hwnd: a.hwnd, ID: c, Text: u16(text)}
 		ti.Size = uint32(unsafe.Sizeof(ti))
 		send(tip, ttmAddToolW, 0, uintptr(unsafe.Pointer(&ti)))
+		addDisabledTool(tip, a.hwnd, c, text)
 	}
 	return tip
+}
+
+// disabledTool shows the tip of a control while it is disabled. A disabled control
+// gets no mouse messages, which go to its parent: its own tool, the control, never
+// shows. This one, the control's rectangle in its parent, shows the same tip then;
+// placeDisabledTools keeps it on the control.
+type disabledTool struct{ tip, ctl, id uintptr }
+
+var disabledTools = map[uintptr][]disabledTool{} // by parent
+
+// addDisabledTool adds to tip, with text, the rectangle of ctl in parent.
+func addDisabledTool(tip, parent, ctl uintptr, text string) {
+	id := uintptr(0x7F00 + len(disabledTools[parent])) // apart from the other tools of parent
+	ti := toolInfo{Flags: 0x10 /* TTF_SUBCLASS */, Hwnd: parent, ID: id, Rect: ctlRect(parent, ctl), Text: u16(strings.ReplaceAll(text, "\n", "\r\n"))}
+	ti.Size = uint32(unsafe.Sizeof(ti))
+	send(tip, ttmAddToolW, 0, uintptr(unsafe.Pointer(&ti)))
+	disabledTools[parent] = append(disabledTools[parent], disabledTool{tip, ctl, id})
+}
+
+// placeDisabledTools moves the tools of the disabled controls of parent onto them,
+// once they have moved.
+func placeDisabledTools(parent uintptr) {
+	for _, d := range disabledTools[parent] {
+		ti := toolInfo{Hwnd: parent, ID: d.id, Rect: ctlRect(parent, d.ctl)}
+		ti.Size = uint32(unsafe.Sizeof(ti))
+		send(d.tip, ttmNewToolRectW, 0, uintptr(unsafe.Pointer(&ti)))
+	}
+}
+
+// ctlRect is where ctl is in the client area of parent.
+func ctlRect(parent, ctl uintptr) rect {
+	var r rect
+	pGetWindowRect.Call(ctl, uintptr(unsafe.Pointer(&r)))
+	corners := (*[2]point)(unsafe.Pointer(&r))
+	pScreenToClient.Call(parent, uintptr(unsafe.Pointer(&corners[0])))
+	pScreenToClient.Call(parent, uintptr(unsafe.Pointer(&corners[1])))
+	return r
 }
 
 // newTooltip creates a tooltip window for the tools of a window (a dialog).
