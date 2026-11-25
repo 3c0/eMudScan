@@ -75,7 +75,7 @@ fi
 changes=$(awk '/^## \[Unreleased\]$/ {on = 1; next} on && /^(## |\[[^]]*\]: )/ {exit} on' CHANGELOG.md)
 echo "$changes" | grep -q '[^[:space:]]' || fail "CHANGELOG.md has no changes under \"## [Unreleased]\": list the changes of $v there first."
 notes=".github/release-notes/$v.md"
-grep -q '[^[:space:]]' "$notes" 2>/dev/null || fail "$notes is missing or empty: write the release notes of $v there first (New, Improved, Fixed: a short line for each change a user can notice)."
+grep -q '[^[:space:]]' "$notes" 2>/dev/null || fail "$notes is missing or empty: write the release notes of $v there first (what the users can now do: see \"Publishing a version\" in docs/building.md)."
 git ls-files --error-unmatch "$notes" >/dev/null 2>&1 || fail "$notes is not committed: commit it first."
 if [ -n "$first" ]; then
 	grep -q '^\[unreleased\]: .*/commits/main$' CHANGELOG.md || fail "the [unreleased] link at the end of CHANGELOG.md does not give the commits of main."

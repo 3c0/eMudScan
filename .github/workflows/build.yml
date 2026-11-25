@@ -68,10 +68,11 @@ jobs:
             exit 1
           fi
           # The release page is not the changelog: its "In this version" part is
-          # .github/release-notes/<version>.md, written for the users (New, Improved,
-          # Fixed: a short line for each change they can notice). The page links to
-          # the changelog for the full list, which must have the version's section
-          # (Keep a Changelog: "## [3.1.0] - 2026-12-01").
+          # .github/release-notes/<version>.md, written for the users (a sentence that
+          # sums up the version, Highlights, Also in this version, Fixed: what they
+          # can now do, see docs/building.md). The page links to the changelog for
+          # the full list, which must have the version's section (Keep a Changelog:
+          # "## [3.1.0] - 2026-12-01").
           heading="## [$version] - ${date:0:4}-${date:4:2}-${date:6:2}"
           if ! grep -qxF "$heading" CHANGELOG.md; then
             echo "::error::CHANGELOG.md has no section \"$heading\""

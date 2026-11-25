@@ -73,9 +73,14 @@ PowerShell from System32 only (`sysDLL`), standard library only. Also:
   [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/): each change
   that users can notice gets one line under `## [Unreleased]`, in `### Added`,
   `### Changed`, `### Fixed`… Its lines do not link to commits.
-- The same change gets a short line in `.github/release-notes/<version>.md`,
-  under `### New`, `### Improved` or `### Fixed`, in plain words, without file
-  names.
+- `.github/release-notes/<version>.md` is for the users, while the changelog
+  is for developers. It says what they can now do, in plain words, without file
+  names: one sentence that sums up the version; `### Highlights`, the few main
+  changes, each with a title in bold, one or two sentences and a link to the
+  documentation; `### Also in this version`, a short line for each other change
+  they can notice; `### Fixed`, what happens now. It says “you can now click…”,
+  and never gives an order (“click…”). Minor changes are left to the changelog.
+  [docs/building.md](docs/building.md#publishing-a-version) has the details.
 
 ## Commits
 

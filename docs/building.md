@@ -44,11 +44,25 @@ Its history is linear (no merge commits):
 1. Check that `## [Unreleased]` in `CHANGELOG.md` lists the version’s changes,
    in its Added, Changed, Fixed… subsections.
 2. Write the release notes of the version in `.github/release-notes/3.1.0.md`,
-   and commit them. They are not the changelog: they tell the users what they
-   can now see or do, under `### New`, `### Improved` and `### Fixed`, with one
-   short line for each change they can notice, in plain words, without file
-   names or explanations. A change that a user cannot notice is left out. The
-   release page links to the changelog for the full list.
+   and commit them. The changelog is for developers and lists every change; the
+   release notes are for the users, and say what they can now do:
+   - first, one sentence that sums up the version;
+   - `### Highlights`: the few changes that matter most, the most useful first,
+     each with a title in bold, one or two sentences that say what the users can
+     now do and why it helps, and a link to its part of the documentation of
+     that version;
+   - `### Also in this version`: the other changes that a user can notice, a
+     short line each, related changes in one line;
+   - `### Fixed`: what happens now, not what was wrong in the code.
+
+   They are written in plain words, without file names or explanations, and say
+   “you can now click **Scan**”, never an order such as “click **Scan**”. A
+   change that a user cannot notice is left out, and minor ones are left to the
+   changelog. A version that only fixes has the sentence and `### Fixed`. The
+   update dialog of eMudScan shows them too: it reads headings, paragraphs,
+   lists of one level, bold, code and links, and the first 4,000 characters; it
+   shows no image and no table. The release page links to the changelog for the
+   full list.
 3. In Git Bash, at the root of eMudScan, on an up-to-date `main` (`git pull`),
    run `sh scripts/release.sh 3.1.0` with the new version (three numbers, as
    explained at the top of [CHANGELOG.md](../CHANGELOG.md)).
