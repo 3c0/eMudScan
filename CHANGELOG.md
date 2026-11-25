@@ -6,8 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [4.0.0] - 2026-11-25
-
 ### Added
 
 - Self-update: eMudScan asks GitHub for its latest release at the first scan of a session and from **Check for updates** in the About box, with **Online checks and updates** checked.
@@ -193,8 +191,7 @@ First public version.
 - A report to copy or save. English and French.
 - Changes nothing on the PC until a fix is confirmed. Without the online test, a scan makes no internet connection.
 
-[unreleased]: https://github.com/3c0/eMudScan/compare/4.0.0...HEAD
-[4.0.0]: https://github.com/3c0/eMudScan/compare/3.1.2...4.0.0
+[unreleased]: https://github.com/3c0/eMudScan/compare/3.1.2...HEAD
 [3.1.2]: https://github.com/3c0/eMudScan/compare/3.1.1...3.1.2
 [3.1.1]: https://github.com/3c0/eMudScan/compare/3.1.0...3.1.1
 [3.1.0]: https://github.com/3c0/eMudScan/compare/3.0.1...3.1.0

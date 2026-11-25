@@ -129,6 +129,14 @@ protects tags, so set it to **Disabled** meanwhile, run
 `git push origin :refs/tags/3.1.0`, `git tag -f 3.1.0` and
 `git push origin 3.1.0`, then set it back to **Active**.
 
+### Withdrawing a version
+
+A published version is never changed. To withdraw one, delete its release on
+GitHub, put its entries back under `## [Unreleased]` in `CHANGELOG.md`, without
+its section and its link, make the `[unreleased]` link compare the version
+before it with `HEAD`, rename its release notes to the next version, and publish
+that version.
+
 ## Publishing a hotfix
 
 A hotfix brings small or urgent fixes to the latest version, such as 3.1.1

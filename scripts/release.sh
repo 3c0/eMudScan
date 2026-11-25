@@ -46,6 +46,7 @@ esac
 prev=$(sed -n 's/^const appVersion = "\(.*\)"$/\1/p' "$model")
 [ -n "$prev" ] || fail "no appVersion in $model."
 first="" # the first version tag of a repository without any yet
+from=""  # the version that the changelog compares the new one with
 if [ -z "$(git tag -l)" ]; then
 	[ "$v" = "$prev" ] || fail "this repository has no version tag yet: the first one is $prev, the version in $model."
 	[ "$branch" = main ] || fail "the first version is published from main."
@@ -80,7 +81,14 @@ git ls-files --error-unmatch "$notes" >/dev/null 2>&1 || fail "$notes is not com
 if [ -n "$first" ]; then
 	grep -q '^\[unreleased\]: .*/commits/main$' CHANGELOG.md || fail "the [unreleased] link at the end of CHANGELOG.md does not give the commits of main."
 else
-	grep -q '^\[unreleased\]: .*/compare/'"$prev"'\.\.\.HEAD$' CHANGELOG.md || fail "the [unreleased] link at the end of CHANGELOG.md does not compare $prev with HEAD."
+	# the version that the changelog compares with: the current one, or the one
+	# before it when the current one was withdrawn and left out of the changelog
+	from=$(sed -n 's|^\[unreleased\]: .*/compare/\([0-9.]*\)\.\.\.HEAD$|\1|p' CHANGELOG.md)
+	if grep -q "^## \[$prev\] - " CHANGELOG.md; then
+		[ "$from" = "$prev" ] || fail "the [unreleased] link at the end of CHANGELOG.md does not compare $prev with HEAD."
+	else
+		[ -n "$from" ] && grep -q "^## \[$from\] - " CHANGELOG.md || fail "CHANGELOG.md has no section for $prev: its [unreleased] link must compare the version before it with HEAD."
+	fi
 fi
 
 # 2. what it will publish
@@ -131,7 +139,7 @@ awk -v v="$v" -v d="$date" '
 	{ print }
 ' "$model" >"$tmp/model" && cp "$tmp/model" "$model"
 # the first version links to its release, the others to their changes since the previous one
-p=$prev
+p=$from
 [ -z "$first" ] || p=""
 awk -v v="$v" -v p="$p" -v day="$day" '
 	$0 == "## [Unreleased]" { print; print ""; print "## [" v "] - " day; next }
