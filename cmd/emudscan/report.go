@@ -12,7 +12,9 @@ import (
 func runAllChecks(c *checker, drives []string, extraRoots []string) {
 	start := time.Now()
 	c.setScan(scanRun{drives: drives})
-	c.line(StPending, Tf("log.start", appName, appVersionDate(), windowsVersionString(), time.Now().Format("2006-01-02 15:04")))
+	if !c.headed {
+		c.line(StPending, scanHeader())
+	}
 	if drives != nil && len(drives) == 0 { // no drive ticked in the window, or --drives none
 		c.note(StInfo, T("log.noDrive"))
 	}
@@ -31,6 +33,12 @@ func runAllChecks(c *checker, drives []string, extraRoots []string) {
 	took := time.Since(start)
 	c.setScan(scanRun{drives: drives, took: took, complete: true})
 	c.section(c.counts().text("log.done", fmtElapsed(took)))
+}
+
+// scanHeader is the first line of the log of a scan: the versions of eMudScan and of
+// Windows, and the time.
+func scanHeader() string {
+	return Tf("log.start", appName, appVersionDate(), windowsVersionString(), time.Now().Format("2006-01-02 15:04"))
 }
 
 func fmtElapsed(d time.Duration) string {

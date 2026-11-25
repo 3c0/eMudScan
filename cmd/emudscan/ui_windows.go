@@ -111,6 +111,7 @@ type ui struct {
 	// the update of eMudScan (update_ui_windows.go)
 	updateLooked  bool   // looked for once in the session, for a scan
 	updateBusy    bool   // looking
+	updateLogged  bool   // the lookup for a scan is in the log, which the scan keeps
 	summaryBefore string // the summary, shown again after the lookup
 	updatedFrom   string // this eMudScan was just updated, from this version
 
@@ -1658,12 +1659,12 @@ func (a *ui) start() {
 	}
 	a.items, a.shown, a.winIdx = map[int]Item{}, map[int]Item{}, map[int]int{}
 	a.redrawCaptions()
-	a.logText.Reset()
-	a.log.clear()
-	a.logPending = false
-	a.savedReports, a.logNoted = nil, false
+	if !a.updateLogged { // else started by the lookup for a new version, whose line stays
+		a.clearLog()
+	}
 	c := newChecker(guiReporter{}, func() bool { return a.cancel.Load() })
 	c.offline = a.onlineOff
+	c.headed, a.updateLogged = a.updateLogged, false
 	a.current = c
 	go func() {
 		defer func() {
@@ -1674,6 +1675,14 @@ func (a *ui) start() {
 		}()
 		runAllChecks(c, drives, nil)
 	}()
+}
+
+// clearLog empties the log, and its copy for the reports.
+func (a *ui) clearLog() {
+	a.logText.Reset()
+	a.log.clear()
+	a.logPending = false
+	a.savedReports, a.logNoted = nil, false
 }
 
 func (a *ui) startRecheck(ids []int) {

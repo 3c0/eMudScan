@@ -358,6 +358,7 @@ type checker struct {
 	afterFinish func(*Item)                            // completes an element once its check is done (package managers)
 	refresh     func()                                 // reads again what may have changed before "Scan again" (installed software)
 	offline     bool                                   // the user turned the online test off: no connection at all
+	headed      bool                                   // the log has its first line already (scanHeader): the window wrote it
 	dated       func(kind string, r result) lastUpdate // when the software of a result was last updated
 	mu          sync.Mutex
 	nextID      int

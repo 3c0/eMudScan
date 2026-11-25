@@ -479,14 +479,16 @@ is cleared, and while a scan runs.
 
 With **Online checks and updates** checked, eMudScan looks for a new version of
 itself when a scan starts, once in a session, before the scan runs, and each
-time you click **Check for updates** in the About box. Meanwhile, the summary
-says so. A newer version is offered in a dialog that shows the release notes of
-the new versions, the newest first, up to 10, in a frame that scrolls:
-**Update now** or **Not now**. Those of the latest version show at once; those
-of the other new versions come right after. With **Not now**, you are back in
-the main window, and the scan starts as usual when you clicked **Scan**. With
-**Update now**, it does not start: the new version opens, ready to scan. So an
-update never stops a scan.
+time you click **Check for updates** in the About box. Meanwhile, **Scan** is
+greyed out, and the log says so in a section of its own, **eMudScan Update**,
+then gives the answer: the new version, or that yours is the latest one. The
+scan keeps that section at the top of its log. A newer version is offered in a
+dialog that shows the release notes of the new versions, the newest first, up to
+10, in a frame that scrolls: **Update now** or **Not now**. Those of the latest
+version show at once; those of the other new versions come right after. With
+**Not now**, you are back in the main window, and the scan starts as usual when
+you clicked **Scan**. With **Update now**, it does not start: the new version
+opens, ready to scan. So an update never stops a scan.
 
 When there is no new version, **Check for updates** says so in a message; when
 GitHub cannot be reached, it says why.

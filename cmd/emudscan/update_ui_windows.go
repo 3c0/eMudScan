@@ -12,6 +12,7 @@ package main
 // its checks, then eMudScan closes for the new version.
 
 import (
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"unsafe"
@@ -40,14 +41,29 @@ type updateNews struct {
 
 // lookForUpdate looks for a newer eMudScan, in the background: when the user asks,
 // each time, or for a scan, once in a session; never during a scan, nor when "Online
-// checks and updates" is cleared. Meanwhile, the summary says so and the window is
-// disabled. It reports whether it looks: a scan then starts once it has
-// (updateEvent).
+// checks and updates" is cleared. It reports whether it looks: a scan then starts
+// once it has (updateEvent). Meanwhile, the window is disabled, and at once, so that
+// the click shows: the Scan button is greyed out, the log and the summary say that
+// eMudScan looks, the log in a section of its own, "eMudScan Update". For a scan, the
+// log starts anew with its first line (scanHeader), then this section, which the
+// scan keeps. When the user asks, the section comes after the log.
 func (a *ui) lookForUpdate(asked bool) bool {
 	if a.updateBusy || a.onlineOff || a.running || !asked && a.updateLooked {
 		return false
 	}
 	a.updateLooked, a.updateBusy = true, true
+	a.setButton(a.hCheck, getText(a.hCheck), btnGlyphs[a.hCheck], false)
+	var runs []logRun
+	switch {
+	case !asked:
+		a.clearLog()
+		a.updateLogged = true
+		runs = a.logRuns(uiEvent{lkind: LogLine, st: StPending, text: scanHeader()})
+	case a.logText.Len() > 0 && !strings.HasSuffix(a.logText.String(), "\n"):
+		runs = []logRun{{"\r\n", rgb(32, 32, 32), false, false}} // after "Ready…"
+	}
+	runs = append(runs, a.logRuns(uiEvent{lkind: LogSection, text: T("log.updateTitle")})...)
+	a.appendLog(append(runs, a.logRuns(uiEvent{lkind: LogStart, st: StPending, text: T("log.update") + " …"})...), true)
 	a.summaryBefore = getText(a.hSummary)
 	setText(a.hSummary, T("update.looking"))
 	pEnableWindow.Call(a.hwnd, 0)
@@ -70,6 +86,15 @@ func (a *ui) updateEvent(e uiEvent) {
 		return
 	}
 	a.updateBusy = false
+	st, text := StOK, strings.TrimSuffix(Tf("update.latest", appVersion), ".")
+	switch {
+	case n.found:
+		st, text = StInfo, Tf("update.title", n.rel.version)
+	case n.err != nil:
+		st, text = StInfo, reason(n.err)
+	}
+	a.appendLog(a.logRuns(uiEvent{lkind: LogEnd, st: st, text: text}), true)
+	a.setButton(a.hCheck, getText(a.hCheck), btnGlyphs[a.hCheck], true)
 	setText(a.hSummary, a.summaryBefore)
 	pEnableWindow.Call(a.hwnd, 1)
 	switch {
