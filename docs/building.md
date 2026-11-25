@@ -42,7 +42,7 @@ Its history is linear (no merge commits):
 ## Publishing a version
 
 1. Check that `## [Unreleased]` in `CHANGELOG.md` lists the version’s changes,
-   in its Security, Fixed, Changed… subsections.
+   in its Added, Changed, Fixed… subsections.
 2. Write the release notes of the version in `.github/release-notes/3.1.0.md`,
    and commit them. They are not the changelog: they tell the users what they
    can now see or do, under `### New`, `### Improved` and `### Fixed`, with one

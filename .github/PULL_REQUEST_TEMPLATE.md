@@ -10,6 +10,6 @@
 - [ ] Every new or changed text exists in both English and French (`cmd/emudscan/texts.go`), in the style of the existing texts.
 - [ ] eMudScan still changes nothing until the user confirms a fix: no file or registry writes outside the Fix function, no connection beyond those of the opt-in **Online checks and updates**, no DLL loaded by name (`sysDLL`).
 - [ ] For a change to the Fix function: a fix runs only commands that the detailed information shows (`newFix`), and `scripts/build.sh --simulate` (or `scripts\build.ps1 -Simulate`) passes too.
-- [ ] One line in `CHANGELOG.md` under `## [Unreleased]`, in the section for its type (Security, Fixed, Changed, Added…), if users will notice the change.
+- [ ] One line in `CHANGELOG.md` under `## [Unreleased]`, in the section for its type (Added, Changed, Fixed, Security…), if users will notice the change.
 
 By opening this pull request, I agree that my contribution is licensed under the GNU GPL 3.0 or later, like eMudScan.

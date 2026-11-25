@@ -71,11 +71,11 @@ them is not merged:
   `cmd/emudscan/testdata/`.
 - A user-visible change gets one line in `CHANGELOG.md`, which follows
   [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): under
-  `## [Unreleased]`, in the section for its type. The sections come in this
-  order, the most urgent first: `### Security` for a vulnerability, `### Fixed`
-  for a bug fix, `### Removed` for a removed feature, `### Deprecated` for a
-  feature that will be removed, `### Changed` for a change to an existing one
-  and `### Added` for a new feature.
+  `## [Unreleased]`, in the section for its type. The sections come in the
+  order of Keep a Changelog: `### Added` for a new feature, `### Changed` for a
+  change to an existing one, `### Deprecated` for a feature that will be
+  removed, `### Removed` for a removed feature, `### Fixed` for a bug fix and
+  `### Security` for a vulnerability.
   Write it on a single line (it becomes the release page): one short sentence,
   or two for a bug fix or a vulnerability (the problem, then the fix).
 - Commit messages follow
