@@ -19,7 +19,8 @@ issue (see [SECURITY.md](SECURITY.md)).
   to check before opening it.
 - `main` has a linear history, without merge commits: pull requests are merged
   with **Rebase and merge** or **Squash and merge**. To bring your branch up to
-  date, rebase it on `main` (`git rebase main`) instead of merging `main` into it.
+  date, rebase it on `main` (`git rebase main`) instead of merging `main` into
+  it.
 - The GitHub build runs on a pull request from a fork once the maintainer
   approves it.
 
@@ -77,7 +78,8 @@ them is not merged:
   and `### Added` for a new feature.
   Write it on a single line (it becomes the release page): one short sentence,
   or two for a bug fix or a vulnerability (the problem, then the fix).
-- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
+- Commit messages follow
+  [Conventional Commits](https://www.conventionalcommits.org/):
   `type(scope): description`, in lowercase and without a final period. The type
   is `feat` for a new feature, `fix` for a bug fix, and `perf`, `refactor`,
   `test`, `docs`, `build` or `chore` for the rest, such as

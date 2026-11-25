@@ -81,8 +81,8 @@ the command that updates it there (`pipenv update certifi`,
 `poetry update certifi`, `uv sync --upgrade-package certifi`). eMudScan never
 runs it, since it changes your project.
 
-Until a program that ships a 64-bit Python 3.11 to 3.15 is updated, eMudScan
-can replace the ssl files of that Python with those of the latest release of its
+Until a program that ships a 64-bit Python 3.11 to 3.15 is updated, eMudScan can
+replace the ssl files of that Python with those of the latest release of its
 line: `_ssl.pyd` and the OpenSSL libraries it loads. For a 3.14 or a 3.15 laid
 out as python.org’s, they come from python.org’s embeddable package; else from
 python-build-standalone’s build (on GitHub), with `_hashlib.pyd` too for
@@ -94,26 +94,25 @@ of python-build-standalone, whose releases are immutable; on python.org, in its
 list of releases, where it takes the latest one of the line that has Windows
 files. When it finds none, or when **Online checks and updates** is cleared, the
 commands name the release written in eMudScan (Python 3.14.10 or 3.15.2;
-python-build-standalone 20261110), and the window says so.
-The fix is a script that stops at its first command that fails.
-PowerShell backs up each file it replaces. It has two versions. The detailed
-information gives the one that runs without eMudScan, also when it is pasted
-into a PowerShell window: before and after the replacement, it tests that this
-Python loads its `ssl` module, it downloads into a folder of its own in your
-Temp folder (`eMudScan-fix`), and deletes that folder at its end. The **Fix
-software** window shows, and runs, the other one: before and after the replacement,
-that Python runs eMudScan’s tests
+python-build-standalone 20261110), and the window says so. The fix is a script
+that stops at its first command that fails. PowerShell backs up each file it
+replaces. It has two versions. The detailed information gives the one that runs
+without eMudScan, also when it is pasted into a PowerShell window: before and
+after the replacement, it tests that this Python loads its `ssl` module, it
+downloads into a folder of its own in your Temp folder (`eMudScan-fix`), and
+deletes that folder at its end. The **Fix software** window shows, and runs, the
+other one: before and after the replacement, that Python runs eMudScan’s tests
 ([check_ssl.py](../cmd/emudscan/check_ssl.py), a file of the source code that
 eMudScan.exe contains as it is, and that the window shows when you click its
-name in the commands), with certificates made for the fix, valid one
-hour, and without connecting to anything: its `ssl` and `hashlib` modules load
-and give 7 known results, the Windows roots load, TLS 1.2 and TLS 1.3
-connections succeed in memory, and a chain through a compromised intermediate
-is rejected. If a test that passed before fails after, or the chain is not
-rejected, or if a file cannot be replaced, the original files are put back. This fix is not ticked by default in
-the **Fix software** window, since it changes a program that its publisher has
-not updated yet; close that program first. A free-threaded Python, or one for
-another processor, is left as it is.
+name in the commands), with certificates made for the fix, valid one hour, and
+without connecting to anything: its `ssl` and `hashlib` modules load and give 7
+known results, the Windows roots load, TLS 1.2 and TLS 1.3 connections succeed
+in memory, and a chain through a compromised intermediate is rejected. If a test
+that passed before fails after, or the chain is not rejected, or if a file
+cannot be replaced, the original files are put back. This fix is not ticked by
+default in the **Fix software** window, since it changes a program that its
+publisher has not updated yet; close that program first. A free-threaded Python,
+or one for another processor, is left as it is.
 
 Node.js 22.23.4, 24.22.1 and 26.12.1, and the later releases of these lines, no
 longer trust the compromised intermediates. A node.exe inside another program,
@@ -149,10 +148,10 @@ compromised certificate.
 
 **Dart and Flutter:** on Windows, Dart copies the Windows certificate stores
 into its own TLS library, without the Windows block list. The Dart SDK and the
-Flutter SDK are checked by their version (Dart 3.13.7 and Flutter 3.47.8 or later
-are fixed), or by the block list in `dart.exe`. An app built with Flutter is
-checked by the block list in its engine (`flutter_windows.dll`), and without it,
-is judged like other software that copies the Windows root store. The engine
+Flutter SDK are checked by their version (Dart 3.13.7 and Flutter 3.47.8 or
+later are fixed), or by the block list in `dart.exe`. An app built with Flutter
+is checked by the block list in its engine (`flutter_windows.dll`), and without
+it, is judged like other software that copies the Windows root store. The engine
 copies in Flutter projects are not reported: they are rebuilt with the Flutter
 SDK.
 
@@ -167,10 +166,10 @@ runtime of an IDE or of the Toolbox App is shown as a part of it, with the
 version that fixes it. Copies of IDEs that Gradle downloads to build plugins are
 not reported.
 
-jetbrainsd, the background service of the JetBrains Toolbox App
-and of the JetBrains IDEs, checks its connections with its own built-in list of
-trusted certificates, which neither Windows nor the IDEs’ Java changes. eMudScan
-checks the one installed for each user
+jetbrainsd, the background service of the JetBrains Toolbox App and of the
+JetBrains IDEs, checks its connections with its own built-in list of trusted
+certificates, which neither Windows nor the IDEs’ Java changes. eMudScan checks
+the one installed for each user
 (`%LOCALAPPDATA%\JetBrains\Daemon\bundles\current\jetbrainsd\bin\jetbrainsd.exe`):
 version 0.9.9728 or later is fixed, and so is a version whose program holds the
 fingerprints of the compromised certificates, which this version adds to it. The

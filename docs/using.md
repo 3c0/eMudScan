@@ -19,8 +19,8 @@ From top to bottom:
   network drives are not. Nothing on an unselected drive is read or reported.
 - **Scan** starts the scan (it never starts on its own). It becomes **Stop**
   during the scan, then **Scan again**. **Fix**, beside it, fixes the software
-  that eMudScan can fix (see [Fixing software](#fixing-software)). **Copy report**
-  and **Save report** are on the right.
+  that eMudScan can fix (see [Fixing software](#fixing-software)).
+  **Copy report** and **Save report** are on the right.
 - **Log**: one line per step. You can select and copy its text. The shield
   before its title is animated while the scan runs, then shows the worst status
   that the scan found. The right end of its top line shows what the scan is
@@ -30,8 +30,8 @@ From top to bottom:
   (everything else). Drag the borders between them to resize them. The shield
   before the title of each list shows the worst status of its items (a grey one
   before the scan), and the right end of its top line counts them by status.
-  **Hide OK items**, after the title, hides the OK items of a list, which its top
-  line still counts (“5 OK (hidden)”).
+  **Hide OK items**, after the title, hides the OK items of a list, which its
+  top line still counts (“5 OK (hidden)”).
 
 ## Statuses
 
@@ -103,12 +103,13 @@ there are more than two.
 ## The detailed information window
 
 Double-click an item (or press Enter) to see its software date and where that
-date comes from, its folders, homepage and package, and the **recommended
-action**. Commands are shown in black blocks, with a copy button, for you to run.
-A line too long for its block ends with a gray ↩, and its rest starts with ↪ on
-the next row, at the indent of the line: it is still one line, and the signs are
-not copied. When eMudScan can run them for you, **Fix this software** does so, once you
-confirm (see [Fixing software](#fixing-software)).
+date comes from, its folders, homepage and package, and the
+**recommended action**. Commands are shown in black blocks, with a copy button,
+for you to run. A line too long for its block ends with a gray ↩, and its rest
+starts with ↪ on the next row, at the indent of the line: it is still one line,
+and the signs are not copied. When eMudScan can run them for you,
+**Fix this software** does so, once you confirm (see
+[Fixing software](#fixing-software)).
 
 With several items selected, **Detailed information on 3 items…** (or Enter)
 opens one window that shows them one at a time. The block in its top right
@@ -121,8 +122,8 @@ A path in your user folder is shown with the variable that names that folder, as
 File Explorer understands it: `%USERPROFILE%`, `%APPDATA%` or `%LOCALAPPDATA%`
 (`%LOCALAPPDATA%\Programs\App\app.exe`). So are the paths of the report, the log
 and the Fix window, and the commands name the folder as PowerShell does
-(`"$env:LOCALAPPDATA\Programs\App\app.exe"`): they are shorter, and your user name
-stays out of them. The links and the copied paths keep the full path.
+(`"$env:LOCALAPPDATA\Programs\App\app.exe"`): they are shorter, and your user
+name stays out of them. The links and the copied paths keep the full path.
 
 <p align="center">
   <img src="images/details-window.png" width="560" alt="The detailed information window of Inkscape: its copy of certifi is outdated; update Inkscape, or replace the file with the commands shown, or with Fix this software">
@@ -182,12 +183,14 @@ same script with eMudScan’s own tests of that Python (see
   release line, which eMudScan looks for when the Fix window opens, and which
   PowerShell downloads from nodejs.org and checks against its SHA-256 checksum,
   the OpenJS Foundation’s signature and its version (see
-  [Other software](checks.md#other-software)); this fix is not ticked by default;
+  [Other software](checks.md#other-software)); this fix is not ticked by
+  default;
 - the ssl files of a Python inside a program replaced with those of the latest
   release of its line, which eMudScan looks for when the Fix window opens, and
   which PowerShell downloads from python.org or python-build-standalone and
   checks against its SHA-256 checksum, with tests before and after (see
-  [Other software](checks.md#other-software)); this fix is not ticked by default.
+  [Other software](checks.md#other-software)); this fix is not ticked by
+  default.
 
 The other commands of the detailed information, such as removing a setting, are
 left for you to run; restoring a backup has its own button (see
@@ -283,24 +286,24 @@ Once you accept:
    run in a PowerShell for which Windows asks your permission, in a window that
    shows Microsoft as the verified publisher. eMudScan itself does not need
    them.
-3. The console shows each command in the colors of PowerShell 7, with its
-   result in the column on its left: “…” while it runs, then a green ✔ or a red
-   ✘. Below come what it showed, its warnings in yellow, its errors in red, then
+3. The console shows each command in the colors of PowerShell 7, with its result
+   in the column on its left: “…” while it runs, then a green ✔ or a red ✘.
+   Below come what it showed, its warnings in yellow, its errors in red, then
    its exit code when it failed, and a blank line after the commands of each
    software. The fixes that change files (the ssl files of a Python, a
    certificate bundle, a Java block list, the restore of backups) are scripts:
    each of their lines is one command, a comment, or a line that opens or closes
    a block. A script stops at its first command that fails (✘); in the fix of a
    Python, inside `try`, the failure goes to `catch`, which puts the original
-   files back. Only the commands that ran have
-   a result: a comment, a line of a block, or a command that did not run, has
-   none. The other fixes still run. **Stop** never stops a command in the middle: PowerShell
-   first ends the commands it was given (those of one software, or all those
-   that need administrator rights), then a red line says “Fix interrupted!”, and
-   the software not reached is left as it was. A failed connection stops the
-   fixes in the same way, since the next ones would most likely fail too: a
-   download that fails, before its fix has changed anything, or an update that
-   fails when the servers of its package manager cannot be reached (see
+   files back. Only the commands that ran have a result: a comment, a line of a
+   block, or a command that did not run, has none. The other fixes still run.
+   **Stop** never stops a command in the middle: PowerShell first ends the
+   commands it was given (those of one software, or all those that need
+   administrator rights), then a red line says “Fix interrupted!”, and the
+   software not reached is left as it was. A failed connection stops the fixes
+   in the same way, since the next ones would most likely fail too: a download
+   that fails, before its fix has changed anything, or an update that fails when
+   the servers of its package manager cannot be reached (see
    [Privacy](privacy.md#what-a-fix-connects-to)). A red line says why.
 4. Each software is checked again: the console and the **Result** column say
    whether it is fixed, and the lists show its new status. In the console of the
@@ -355,10 +358,11 @@ are back; if it needs fixing, its detailed information offers
 **Copy report** and **Save report** include every item, with the same
 explanations as the detailed information windows, without their commands and
 without what eMudScan offers to do itself: a report says what was found on the
-PC and what to do about it, and the windows say how. After fixes, it says what came of them: the result of each software
-and, for a command that failed, that command and what it showed. Its top gives eMudScan’s version, the date, the
-name of your PC and its Windows version. Before you share a report, remove what
-you want to keep private, such as the name of your PC or your user name in the
+PC and what to do about it, and the windows say how. After fixes, it says what
+came of them: the result of each software and, for a command that failed, that
+command and what it showed. Its top gives eMudScan’s version, the date, the name
+of your PC and its Windows version. Before you share a report, remove what you
+want to keep private, such as the name of your PC or your user name in the
 paths. Apart from the fixes, saving a report is the only time eMudScan writes a
 file.
 

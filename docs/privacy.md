@@ -30,9 +30,9 @@ Then:
   hour, whose SHA-256 the commands check before they run; the ssl files are
   backed up in any case, so that the fix can put them back if a test fails, and
   a file added beside them is marked by an empty file
-  (`libssl-3-x64.dll.emudscan-20261031-011500.added`), so that **Restore the
-  backup** removes it; if **Back up the files to change** is cleared, these
-  backups and marks are deleted once the tests pass;
+  (`libssl-3-x64.dll.emudscan-20261031-011500.added`), so that
+  **Restore the backup** removes it; if **Back up the files to change** is
+  cleared, these backups and marks are deleted once the tests pass;
 - package managers write what they usually write when they update software;
 - the commands that need administrator rights run in a PowerShell for which
   Windows asks your permission; eMudScan itself does not need them;
