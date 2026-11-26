@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-11-26
+
 ### Added
 
 - Add self-update. eMudScan asks the GitHub API for its latest release at the first scan of a session and from **Check for updates** in the About box, and shows the release notes of up to 10 new versions. It installs only an immutable release whose `eMudScan.exe` has the SHA-256 that the API and the release notes give. A copy of itself, run from a folder in Temp that only the user, SYSTEM and the administrators can open, writes the new exe under a random name beside the old one, checks it, and renames it over `eMudScan.exe` in one step, with one UAC prompt when the folder needs it. `eMudScan-cli.exe` never updates itself ([`67ed9d1`](https://github.com/3c0/eMudScan/commit/67ed9d1), [`441fb9c`](https://github.com/3c0/eMudScan/commit/441fb9c))
@@ -176,7 +178,8 @@ First public version.
 - Add a report to copy or save, in English and French ([`b33749f`](https://github.com/3c0/eMudScan/commit/b33749f))
 - Change nothing on the PC until a fix is confirmed, and make no internet connection when the online test is cleared ([`b33749f`](https://github.com/3c0/eMudScan/commit/b33749f))
 
-[unreleased]: https://github.com/3c0/eMudScan/compare/3.1.2...HEAD
+[unreleased]: https://github.com/3c0/eMudScan/compare/4.0.1...HEAD
+[4.0.1]: https://github.com/3c0/eMudScan/compare/3.1.2...4.0.1
 [3.1.2]: https://github.com/3c0/eMudScan/compare/3.1.1...3.1.2
 [3.1.1]: https://github.com/3c0/eMudScan/compare/3.1.0...3.1.1
 [3.1.0]: https://github.com/3c0/eMudScan/compare/3.0.1...3.1.0

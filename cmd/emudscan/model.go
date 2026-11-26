@@ -11,10 +11,10 @@ import (
 
 const appName = "eMudScan"
 
-const appVersion = "4.0.0"
+const appVersion = "4.0.1"
 
 // appDate is the date of this version (YYYYMMDD), written with appVersion.
-const appDate = "20261125"
+const appDate = "20261126"
 
 // buildRev is the commit of a build that is not of a release, which the build
 // scripts set (-ldflags "-X main.buildRev=ae7832d"), with "-modified" when the files
