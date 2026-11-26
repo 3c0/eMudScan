@@ -79,8 +79,10 @@ PowerShell from System32 only (`sysDLL`), standard library only. Also:
   line per change, in the imperative, starting with a verb (“Add…”, “Rename…”,
   “Fix…”), in technical words, with the previous behavior when it changed. A
   simple change stays short; an important feature or a major rewrite may take up
-  to 650 characters. A change that breaks a use starts with `**Breaking:**`. No
-  link to commits.
+  to 650 characters. A change that breaks a use starts with `**Breaking:**`. It
+  ends with the short hashes of its commits, as links, in parentheses:
+  ``([`1a2b3c4`](https://github.com/3c0/eMudScan/commit/1a2b3c4))``. A commit
+  cannot name itself, so add them in a later commit, before the release.
 - `.github/release-notes/<version>.md` is for the users, while the changelog
   is for developers. It says what they can now do, in plain words, without file
   names: one sentence that sums up the version; `### Highlights`, the few main

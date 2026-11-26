@@ -81,7 +81,10 @@ them is not merged:
   line per change, in the imperative, starting with a verb (“Add…”, “Rename…”,
   “Fix…”), in technical words, with the previous behavior when it changed. A
   simple change stays short; an important feature or a major rewrite may take up
-  to 650 characters. A change that breaks a use starts with `**Breaking:**`.
+  to 650 characters. A change that breaks a use starts with `**Breaking:**`. It
+  ends with the short hashes of its commits, as links, in parentheses:
+  ``([`1a2b3c4`](https://github.com/3c0/eMudScan/commit/1a2b3c4))``. A commit
+  cannot name itself, so add them in a later commit, before the release.
 - Commit messages follow
   [Conventional Commits](https://www.conventionalcommits.org/):
   `type(scope): description`, in lowercase and without a final period. The type
